@@ -44,7 +44,7 @@ A lightweight, self-hosted PHP web application that allows registered users to u
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/yourusername/datadock.git
+   git clone https://github.com/ZacharyKeatings/DataDock.git
    cd datadock
    ```
 
@@ -66,9 +66,6 @@ A lightweight, self-hosted PHP web application that allows registered users to u
 
 ## 📦 To-Do / Planned Features
 
-- ✅ Admin panel expansion
-- ✅ File purge breakdown
-- ⏳ Role management UI
 - ⏳ Expired file auto-deletion (cron)
 - ⏳ Public sharing links (with expiration)
 - ⏳ Email notifications for expiring files

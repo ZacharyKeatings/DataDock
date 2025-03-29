@@ -35,6 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $section === 'site') {
 ?>
 
 <h2>Admin Panel</h2>
+<?php if (!empty($_SESSION['flash_success'])): ?>
+    <div class="success"><?= sanitize_data($_SESSION['flash_success']) ?></div>
+    <?php unset($_SESSION['flash_success']); ?>
+<?php endif; ?>
 <div style="display: flex; gap: 20px;">
     <aside style="min-width: 200px;">
         <nav class="sidebar">
@@ -87,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $section === 'site') {
 
             // Fetch users with file stats
             $stmt = $pdo->query("
-                SELECT u.id, u.username, u.email, u.created_at, 
+                SELECT u.id, u.username, u.email, u.role, u.created_at, 
                     COUNT(f.id) AS file_count, 
                     COALESCE(SUM(f.filesize), 0) AS total_size
                 FROM users u
@@ -107,24 +111,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $section === 'site') {
                         <th>Files</th>
                         <th>Storage Used</th>
                         <th>Actions</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($users as $user): ?>
-                        <tr>
-                            <td><?= sanitize_data($user['created_at']) ?></td>
-                            <td><?= sanitize_data($user['username']) ?></td>
-                            <td><?= sanitize_data($user['email']) ?></td>
-                            <td><?= (int) $user['file_count'] ?></td>
-                            <td><?= format_filesize($user['total_size']) ?></td>
-                            <td>
-                                <form method="post" onsubmit="return confirm('Delete this user and all their files?')">
-                                    <input type="hidden" name="delete_user_id" value="<?= $user['id'] ?>">
-                                    <button type="submit" style="width:auto;">Delete</button>
+                <?php foreach ($users as $user): ?>
+                    <tr>
+                        <td><?= sanitize_data($user['created_at']) ?></td>
+                        <td><?= sanitize_data($user['username']) ?></td>
+                        <td><?= sanitize_data($user['email']) ?></td>
+                        <td><?= sanitize_data($user['file_count']) ?></td>
+                        <td><?= format_filesize($user['total_size']) ?></td>
+                        <td>
+                            <?php if ($user['id'] !== $_SESSION['user_id']): ?>
+                                <form method="post" action="admin_change_role.php" onsubmit="return confirm('Are you sure you want to change this user’s role?')" style="display:inline-block;">
+                                    <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                    <select name="role">
+                                        <option value="user" <?= $user['role'] === 'user' ? 'selected' : '' ?>>User</option>
+                                        <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
+                                    </select>
+                                    <button type="submit">Update</button>
                                 </form>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                            <?php else: ?>
+                                <?= sanitize_data($user['role']) ?> (You)
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($user['id'] !== $_SESSION['user_id']): ?>
+                                <form method="post" action="admin_delete_user.php" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                    <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                    <button type="submit">Delete</button>
+                                </form>
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+
                 </tbody>
             </table>
         <?php elseif ($section === 'files'): ?>
