@@ -93,4 +93,4 @@ Pull requests are welcome. Please open an issue to discuss any major changes bef
 
 ## 📄 License
 
-This project is open-source and licensed under the [MIT License](LICENSE).
+This project is open-source and licensed under the [UniLicense](LICENSE).
