@@ -35,6 +35,28 @@ footer {
     font-size: 0.9em;
 }
 
+.sidebar {
+    width: 200px;
+    float: left;
+    background: #f0f0f0;
+    padding: 20px;
+    border-right: 1px solid #ccc;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.sidebar a {
+    color: #012b2d; /* Or any dark color that contrasts with your sidebar background */
+    display: block;
+    padding: 10px;
+    text-decoration: none;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+    background: #ddd;
+    color: #000;
+}
 
 /* Forms */
 label {
