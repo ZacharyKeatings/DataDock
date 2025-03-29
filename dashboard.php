@@ -11,7 +11,10 @@ require_login();
 $userId = $_SESSION['user_id'];
 
 // Fetch user's files
-$stmt = $pdo->prepare("SELECT * FROM files WHERE user_id = ? ORDER BY upload_date DESC");
+$stmt = $pdo->prepare("SELECT * FROM files 
+    WHERE user_id = ? 
+    AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) 
+    ORDER BY upload_date DESC");
 $stmt->execute([$userId]);
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -43,8 +46,12 @@ $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <td><?= sanitize_data($file['original_name']) ?></td>
                 <td><?= sanitize_data($file['filetype']) ?></td>
                 <td><?= number_format($file['filesize'] / 1024, 2) ?> KB</td>
-                <td><?= sanitize_data($file['upload_date']) ?></td>
-                <td><?= $file['expiry_date'] ? sanitize_data($file['expiry_date']) : 'Never' ?></td>
+                <td><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></td>
+                <td>
+                    <?= $file['expiry_date']
+                        ? '<span class="utc-datetime" data-utc="' . htmlspecialchars($file['expiry_date']) . '"></span>'
+                        : 'Never' ?>
+                </td>
                 <td>
                     <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
                         <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumb" style="height: 40px;">
@@ -63,5 +70,20 @@ $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php else: ?>
     <p>You haven't uploaded any files yet.</p>
 <?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const elements = document.querySelectorAll('.utc-datetime');
+    elements.forEach(el => {
+        const utc = el.dataset.utc;
+        if (utc) {
+            const local = new Date(utc + ' UTC');
+            el.textContent = local.toLocaleString();
+        } else {
+            el.textContent = '—';
+        }
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -19,7 +19,7 @@ $durations = [
     '1_week'     => '+1 week',
     '1_month'    => '+1 month',
     '1_year'     => '+1 year',
-    'forever'    => null,
+    'never'    => null,
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload'])) {
@@ -54,16 +54,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload'])) {
             }
         }
 
-        // Set expiry
+        // Set expiry and upload in UTC
+        $uploadDate = (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s');
         $expiryDate = null;
         if ($durations[$durationKey] !== null) {
-            $expiryDate = (new DateTime())->modify($durations[$durationKey])->format('Y-m-d H:i:s');
+            $expiryDate = (new DateTime('now', new DateTimeZone('UTC')))
+                ->modify($durations[$durationKey])
+                ->format('Y-m-d H:i:s');
         }
 
         // Insert into DB
         $stmt = $pdo->prepare("INSERT INTO files 
-            (user_id, filename, original_name, filetype, filesize, thumbnail_path, expiry_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?)");
+            (user_id, filename, original_name, filetype, filesize, thumbnail_path, upload_date, expiry_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $_SESSION['user_id'],
             $filename,
@@ -71,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload'])) {
             $filetype,
             $filesize,
             $thumbnail,
+            $uploadDate,
             $expiryDate
         ]);
 

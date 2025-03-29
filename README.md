@@ -66,9 +66,10 @@ A lightweight, self-hosted PHP web application that allows registered users to u
 
 ## 📦 To-Do / Planned Features
 
-- ⏳ Expired file auto-deletion (cron)
 - ⏳ Public sharing links (with expiration)
 - ⏳ Email notifications for expiring files
+- ⏳ Email registration confirmation
+- ⏳ Expanded site settings page
 
 ---
 
