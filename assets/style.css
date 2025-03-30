@@ -77,6 +77,23 @@ input[type=password] {
     box-sizing: border-box;
 }
 
+.drop-zone {
+    border: 2px dashed #ccc;
+    padding: 75px;
+    text-align: center;
+    color: #555;
+    background: #f9f9f9;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    margin-bottom: 10px;
+}
+
+.drop-zone.dragover {
+    background: #e0f7fa;
+    border-color: #038c96;
+}
+
 button {
     margin-top: 20px;
     width: 100%;

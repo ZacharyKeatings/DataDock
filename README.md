@@ -2,6 +2,8 @@
 
 A lightweight, self-hosted PHP web application that allows registered users to upload, manage, and share files securely. Includes an admin dashboard for site management, user control, and file purging functionality.
 
+> ⭐ **If you found this project useful, please consider [starring the repository](https://github.com/ZacharyKeatings/DataDock)** — it helps others discover the project and keeps development going!
+
 ---
 
 ## ✨ Features
@@ -16,12 +18,15 @@ A lightweight, self-hosted PHP web application that allows registered users to u
 
 ### 👑 Admin Panel
 - Update site settings (e.g., site name)
+- Enable/disable user registration
+- Set max upload size limit
 - View and manage all registered users
-- Delete users and their uploaded files
+- Change user roles and delete users
 - Purge expired files manually with:
   - Total files deleted
   - Total size freed
   - Filetype breakdown
+- View all uploaded files (with admin delete/download options)
 
 ---
 
