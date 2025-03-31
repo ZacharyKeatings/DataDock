@@ -26,7 +26,8 @@ function install_database($host, $user, $pass, $dbname) {
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS files (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_id INT DEFAULT NULL,
+                guest_id VARCHAR(64) DEFAULT NULL,
                 filename VARCHAR(255) NOT NULL,
                 original_name VARCHAR(255),
                 filetype VARCHAR(100),
@@ -37,6 +38,8 @@ function install_database($host, $user, $pass, $dbname) {
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ");
+
+        $pdo->exec("CREATE INDEX idx_guest_id ON files(guest_id)");
 
         // Create the login_attempts table
         $pdo->exec("
@@ -99,6 +102,11 @@ function create_settings_file($siteName) {
         "        'max_attempts' => 5,\n" .
         "        'lockout_minutes' => 15,\n" .
         "        'lockout_window' => 10\n" .
+        "    ],\n" .
+        "    'guest_uploads' => [\n" .
+        "        'enabled' => false,\n" .
+        "        'max_files' => 5,\n" .
+        "        'max_storage' => 5242880\n" .
         "    ]\n" .
         "];\n?>";
 

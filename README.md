@@ -19,9 +19,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Session-based authentication
 - [x]  Change user roles and delete users (admin only)
 - [x]  Enable/disable user registration
+- [x]  Optional guest uploads with quota enforcement (file count + size)
 - [ ]  Enforce max storage and file limits per user
 - [ ]  User account & profile system
-- [ ]  Guest uploads (file uploads without login)
 - [ ]  Public file browsing (anonymous access to uploads)
 - [ ]  Default file expiry duration setting
 - [ ]  Enforce unique email toggle
@@ -44,6 +44,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Admin panel with user and file management
 - [x]  Update site settings (e.g., site name, max upload size)
 - [x]  Enable/disable brute force protection and configure thresholds
+- [x]  Configure guest upload limits (max files and storage)
 - [x]  Manual purging of expired files with stats
 - [x]  View all uploaded files (with admin delete/download options)
 - [ ]  Sidebar-based admin panel UI improvements
@@ -73,7 +74,6 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  `config/` directory secured via `.htaccess`
 - [x]  CSRF-safe architecture (form-only POST)
 - [x]  Brute-force login protection (with configurable limits and lockout window)
-- [ ]  Brute-force login protection
 - [ ]  CAPTCHA on login/register forms
 - [ ]  Session timeout duration setting
 

@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/functions.php';
 $siteName = get_site_name();
 $pageTitle = $pageTitle ?? $siteName;
 $currentPage = get_current_page();
+$guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,6 +19,7 @@ $currentPage = get_current_page();
         <nav>
             <strong><?= sanitize_data($siteName) ?></strong> |
             <a href="index.php"<?= $currentPage === 'index.php' ? ' class="active"' : '' ?>>Home</a>
+
             <?php if (!empty($_SESSION['user_id'])): ?>
                 <a href="dashboard.php"<?= $currentPage === 'dashboard.php' ? ' class="active"' : '' ?>>Your Files</a>
                 <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
@@ -27,7 +29,12 @@ $currentPage = get_current_page();
                 <?php endif; ?>
 
                 <a href="logout.php">Logout (<?= sanitize_data($_SESSION['username']) ?>)</a>
+
             <?php else: ?>
+                <?php if ($guestUploadsEnabled): ?>
+                    <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
+                <?php endif; ?>
+
                 <a href="login.php"<?= $currentPage === 'login.php' ? ' class="active"' : '' ?>>Login</a>
                 <a href="register.php"<?= $currentPage === 'register.php' ? ' class="active"' : '' ?>>Register</a>
             <?php endif; ?>
@@ -36,7 +43,7 @@ $currentPage = get_current_page();
     <div class="container">
     <?php
     $installPath = __DIR__ . '/../install.php';
-    if (file_exists($installPath)) {
+    if (!empty($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'admin' && file_exists($installPath)) {
         echo '
         <div class="warning">
             <button class="close-btn" onclick="this.parentElement.style.display=\'none\'">✖</button>
