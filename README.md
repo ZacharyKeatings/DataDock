@@ -15,75 +15,75 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 ## 📦 Features
 
 ### ✅ User & Account Settings
-- ✅ User registration, login, and dashboard
-- ✅ Session-based authentication
-- ✅ Change user roles and delete users (admin only)
-- ✅ Enable/disable user registration
-- [ ] Enforce max storage and file limits per user
-- [ ] User account & profile system
-- [ ] Guest uploads (file uploads without login)
-- [ ] Public file browsing (anonymous access to uploads)
-- [ ] Default file expiry duration setting
-- [ ] Enforce unique email toggle
+- [x]  User registration, login, and dashboard
+- [x]  Session-based authentication
+- [x]  Change user roles and delete users (admin only)
+- [x]  Enable/disable user registration
+- [ ]  Enforce max storage and file limits per user
+- [ ]  User account & profile system
+- [ ]  Guest uploads (file uploads without login)
+- [ ]  Public file browsing (anonymous access to uploads)
+- [ ]  Default file expiry duration setting
+- [ ]  Enforce unique email toggle
 
 ### 🗂️ File Upload & Storage Settings
-- ✅ File upload with optional expiry
-- ✅ Auto-thumbnail generation for image files
-- ✅ Upload file size validation (frontend + backend)
-- ✅ Drag-and-drop + preview file upload support
-- ✅ Date/time storage in UTC with frontend conversion
-- [ ] File management view for all users (admin panel)
-- [ ] Allowed file types (restrict extensions/MIME types)
-- [ ] Max number of files per user
-- [ ] Max total storage per user (quota)
-- [ ] Enable/disable thumbnail generation
-- [ ] Custom storage path support
-- [ ] File upload progress bar
+- [x]  File upload with optional expiry
+- [x]  Auto-thumbnail generation for image files
+- [x]  Upload file size validation (frontend + backend)
+- [x]  Drag-and-drop + preview file upload support
+- [x]  Date/time storage in UTC with frontend conversion
+- [ ]  File management view for all users (admin panel)
+- [ ]  Allowed file types (restrict extensions/MIME types)
+- [ ]  Max number of files per user
+- [ ]  Max total storage per user (quota)
+- [ ]  Enable/disable thumbnail generation
+- [ ]  Custom storage path support
+- [ ]  File upload progress bar
 
 ### 👑 Admin Panel
-- ✅ Admin panel with user and file management
-- ✅ Update site settings (e.g., site name, max upload size)
-- ✅ Enable/disable brute force protection and configure thresholds
-- ✅ Manual purging of expired files with stats
-- ✅ View all uploaded files (with admin delete/download options)
-- [ ] Sidebar-based admin panel UI improvements
-- [ ] Maintenance mode toggle (admin-only access)
-- [ ] Debug mode toggle (verbose errors)
-- [ ] Log file path and verbosity setting
+- [x]  Admin panel with user and file management
+- [x]  Update site settings (e.g., site name, max upload size)
+- [x]  Enable/disable brute force protection and configure thresholds
+- [x]  Manual purging of expired files with stats
+- [x]  View all uploaded files (with admin delete/download options)
+- [ ]  Sidebar-based admin panel UI improvements
+- [ ]  Maintenance mode toggle (admin-only access)
+- [ ]  Debug mode toggle (verbose errors)
+- [ ]  Log file path and verbosity setting
 
 ### 💬 Interface & Branding Settings
-- ✅ Install.php warning if not deleted post-setup
-- [ ] Custom logo and favicon URLs
-- [ ] Welcome banner or message field
-- [ ] Install.php warning toggle
-- [ ] Dark mode / light mode UI toggle
-- [ ] Mobile responsiveness improvements
-- [ ] Localization/multilanguage support
-- [ ] Accessibility (WCAG) improvements
+- [x]  Install.php warning if not deleted post-setup
+- [ ]  Custom logo and favicon URLs
+- [ ]  Welcome banner or message field
+- [ ]  Install.php warning toggle
+- [ ]  Dark mode / light mode UI toggle
+- [ ]  Mobile responsiveness improvements
+- [ ]  Localization/multilanguage support
+- [ ]  Accessibility (WCAG) improvements
 
 ### 📧 Email / Notification Settings
-- [ ] Admin contact email field
-- [ ] Email notifications on upload, expiry, etc.
-- [ ] SMTP configuration (host, port, user, pass, encryption)
-- [ ] Email registration confirmation
+- [ ]  Admin contact email field
+- [ ]  Email notifications on upload, expiry, etc.
+- [ ]  SMTP configuration (host, port, user, pass, encryption)
+- [ ]  Email registration confirmation
 
 ### 🔒 Security Settings
-- ✅ Secure password hashing
-- ✅ Session management and role-based access
-- ✅ `config/` directory secured via `.htaccess`
-- ✅ CSRF-safe architecture (form-only POST)
-- ✅ Brute-force login protection (with configurable limits and lockout window)
-- [ ] Brute-force login protection
-- [ ] CAPTCHA on login/register forms
-- [ ] Session timeout duration setting
+- [x]  Secure password hashing
+- [x]  Session management and role-based access
+- [x]  `config/` directory secured via `.htaccess`
+- [x]  CSRF-safe architecture (form-only POST)
+- [x]  Brute-force login protection (with configurable limits and lockout window)
+- [ ]  Brute-force login protection
+- [ ]  CAPTCHA on login/register forms
+- [ ]  Session timeout duration setting
 
 ### 🔁 Versioning & Updates
-- [ ] Version display in admin panel
-- [ ] One-click update system (GitHub release fetcher)
-- [ ] Changelog and release notes viewer
+- [ ]  Version display in admin panel
+- [ ]  One-click update system (GitHub release fetcher)
+- [ ]  Changelog and release notes viewer
 
 ### ⚠️ Reporting & Abuse
-- [ ] Users can report files for malicious/adult content
+- [ ]  Users can report files for malicious/adult content
 
 ---
 
@@ -121,7 +121,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
    - Site name
    - Admin user info
 
-5. ✅ You're live!  
+5. [x]  You're live!  
    **Delete `install.php` immediately.**
 
 ---
