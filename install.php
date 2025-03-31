@@ -38,6 +38,29 @@ function install_database($host, $user, $pass, $dbname) {
             )
         ");
 
+        // Create the login_attempts table
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT DEFAULT NULL,
+                anon_id VARCHAR(64) DEFAULT NULL,
+                success TINYINT(1) NOT NULL DEFAULT 0,
+                attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+        ");
+
+        // Create the login_ip_attempts table
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS login_ip_attempts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                success TINYINT(1) NOT NULL DEFAULT 0,
+                attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ");
+
         return true;
     } catch (PDOException $e) {
         return $e->getMessage();
@@ -67,9 +90,21 @@ try {
 }
 
 function create_settings_file($siteName) {
-    $settings = "<?php\n\$settings = [\n    'site_name' => " . var_export($siteName, true) . "\n];\n?>";
+    $settings = "<?php\n\$settings = [\n" .
+        "    'site_name' => " . var_export($siteName, true) . ",\n" .
+        "    'registration_enabled' => true,\n" .
+        "    'max_file_size' => 5242880,\n" .
+        "    'brute_force' => [\n" .
+        "        'enabled' => true,\n" .
+        "        'max_attempts' => 5,\n" .
+        "        'lockout_minutes' => 15,\n" .
+        "        'lockout_window' => 10\n" .
+        "    ]\n" .
+        "];\n?>";
+
     file_put_contents(__DIR__ . '/config/settings.php', $settings);
 }
+
 
 function secure_config_folder() {
     $htaccessContent = "Order deny,allow\nDeny from all";

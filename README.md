@@ -6,27 +6,84 @@ A lightweight, self-hosted PHP web application that allows registered users to u
 
 ---
 
-## ✨ Features
+# DataDock Roadmap
 
-### ✅ General Users
-- Register/login/logout with secure password hashing
-- Upload files with optional expiry times
-- View and download your uploaded files
-- Auto-thumbnail generation for images
-- Friendly dashboard with file info and actions
-- Session-based authentication
+A forward-looking plan for upcoming features, improvements, and maintenance of the DataDock self-hosted file manager.
+
+---
+
+## 📦 Features
+
+### ✅ User & Account Settings
+- ✅ User registration, login, and dashboard
+- ✅ Session-based authentication
+- ✅ Change user roles and delete users (admin only)
+- ✅ Enable/disable user registration
+- [ ] Enforce max storage and file limits per user
+- [ ] User account & profile system
+- [ ] Guest uploads (file uploads without login)
+- [ ] Public file browsing (anonymous access to uploads)
+- [ ] Default file expiry duration setting
+- [ ] Enforce unique email toggle
+
+### 🗂️ File Upload & Storage Settings
+- ✅ File upload with optional expiry
+- ✅ Auto-thumbnail generation for image files
+- ✅ Upload file size validation (frontend + backend)
+- ✅ Drag-and-drop + preview file upload support
+- ✅ Date/time storage in UTC with frontend conversion
+- [ ] File management view for all users (admin panel)
+- [ ] Allowed file types (restrict extensions/MIME types)
+- [ ] Max number of files per user
+- [ ] Max total storage per user (quota)
+- [ ] Enable/disable thumbnail generation
+- [ ] Custom storage path support
+- [ ] File upload progress bar
 
 ### 👑 Admin Panel
-- Update site settings (e.g., site name)
-- Enable/disable user registration
-- Set max upload size limit
-- View and manage all registered users
-- Change user roles and delete users
-- Purge expired files manually with:
-  - Total files deleted
-  - Total size freed
-  - Filetype breakdown
-- View all uploaded files (with admin delete/download options)
+- ✅ Admin panel with user and file management
+- ✅ Update site settings (e.g., site name, max upload size)
+- ✅ Enable/disable brute force protection and configure thresholds
+- ✅ Manual purging of expired files with stats
+- ✅ View all uploaded files (with admin delete/download options)
+- [ ] Sidebar-based admin panel UI improvements
+- [ ] Maintenance mode toggle (admin-only access)
+- [ ] Debug mode toggle (verbose errors)
+- [ ] Log file path and verbosity setting
+
+### 💬 Interface & Branding Settings
+- ✅ Install.php warning if not deleted post-setup
+- [ ] Custom logo and favicon URLs
+- [ ] Welcome banner or message field
+- [ ] Install.php warning toggle
+- [ ] Dark mode / light mode UI toggle
+- [ ] Mobile responsiveness improvements
+- [ ] Localization/multilanguage support
+- [ ] Accessibility (WCAG) improvements
+
+### 📧 Email / Notification Settings
+- [ ] Admin contact email field
+- [ ] Email notifications on upload, expiry, etc.
+- [ ] SMTP configuration (host, port, user, pass, encryption)
+- [ ] Email registration confirmation
+
+### 🔒 Security Settings
+- ✅ Secure password hashing
+- ✅ Session management and role-based access
+- ✅ `config/` directory secured via `.htaccess`
+- ✅ CSRF-safe architecture (form-only POST)
+- ✅ Brute-force login protection (with configurable limits and lockout window)
+- [ ] Brute-force login protection
+- [ ] CAPTCHA on login/register forms
+- [ ] Session timeout duration setting
+
+### 🔁 Versioning & Updates
+- [ ] Version display in admin panel
+- [ ] One-click update system (GitHub release fetcher)
+- [ ] Changelog and release notes viewer
+
+### ⚠️ Reporting & Abuse
+- [ ] Users can report files for malicious/adult content
 
 ---
 
@@ -66,15 +123,6 @@ A lightweight, self-hosted PHP web application that allows registered users to u
 
 5. ✅ You're live!  
    **Delete `install.php` immediately.**
-
----
-
-## 📦 To-Do / Planned Features
-
-- ⏳ Public sharing links (with expiration)
-- ⏳ Email notifications for expiring files
-- ⏳ Email registration confirmation
-- ⏳ Expanded site settings page
 
 ---
 
