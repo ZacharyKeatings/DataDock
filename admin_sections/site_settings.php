@@ -14,6 +14,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $section === 'site') {
     $guestMaxFiles = isset($_POST['guest_max_files']) ? (int) $_POST['guest_max_files'] : 0;
     $guestMaxStorage = isset($_POST['guest_max_storage']) ? (int) $_POST['guest_max_storage'] : 0;
 
+    $userMaxFilesEnabled = isset($_POST['user_max_files_enabled']);
+    $userMaxStorageEnabled = isset($_POST['user_max_storage_enabled']);
+    $userMaxFiles = isset($_POST['user_max_files']) ? (int) $_POST['user_max_files'] : 0;
+    $userMaxStorage = isset($_POST['user_max_storage']) ? (int) $_POST['user_max_storage'] : 0;
+
+    if ($userMaxFilesEnabled && $userMaxFiles < 1) {
+        $errors[] = "Max files per user must be a positive number.";
+    }
+    if ($userMaxStorageEnabled && $userMaxStorage < 1) {
+        $errors[] = "Max storage per user must be a positive number.";
+    }
+
     if ($newName === '') {
         $errors[] = "Site name cannot be empty.";
     } elseif ($maxFileSize <= 0) {
@@ -37,7 +49,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $section === 'site') {
             "        'enabled' => " . ($guestUploadsEnabled ? 'true' : 'false') . ",\n" .
             "        'max_files' => $guestMaxFiles,\n" .
             "        'max_storage' => $guestMaxStorage\n" .
-            "    ]\n" .
+            "    ],\n" .
+            "    'user_limits' => [\n" .
+            "        'max_files_enabled' => " . ($userMaxFilesEnabled ? 'true' : 'false') . ",\n" .
+            "        'max_files' => $userMaxFiles,\n" .
+            "        'max_storage_enabled' => " . ($userMaxStorageEnabled ? 'true' : 'false') . ",\n" .
+            "        'max_storage' => $userMaxStorage\n" .
+            "    ],\n" .
             "];\n?>";
 
         if (file_put_contents($settingsFile, $updatedSettings)) {
@@ -52,6 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $section === 'site') {
 // Read saved settings for display
 $registrationEnabled = $settings['registration_enabled'] ?? true;
 $maxFileSize = $settings['max_file_size'] ?? 5242880;
+$userLimits = $settings['user_limits'] ?? [];
+$userMaxFilesEnabled = $userLimits['max_files_enabled'] ?? false;
+$userMaxFiles = $userLimits['max_files'] ?? 100;
+$userMaxStorageEnabled = $userLimits['max_storage_enabled'] ?? false;
+$userMaxStorage = $userLimits['max_storage'] ?? 104857600;
 
 $bruteForceEnabled = $settings['brute_force']['enabled'] ?? true;
 $maxAttempts = $settings['brute_force']['max_attempts'] ?? 5;
@@ -78,6 +101,21 @@ $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
 
     <label for="max_file_size">Max File Size (in bytes)</label>
     <input type="number" name="max_file_size" id="max_file_size" value="<?= sanitize_data($maxFileSize) ?>" required>
+
+    <h4>User Upload Limits</h4>
+
+    <label>
+        <input type="checkbox" id="user_max_files_enabled" name="user_max_files_enabled" <?= $userMaxFilesEnabled ? 'checked' : '' ?>>
+        Enforce Max Files Per User
+    </label>
+    <input type="number" name="user_max_files" id="user_max_files" value="<?= sanitize_data($userMaxFiles) ?>" min="0" <?= !$userMaxFilesEnabled ? 'disabled' : '' ?>>
+
+    <label>
+        <input type="checkbox" id="user_max_storage_enabled" name="user_max_storage_enabled" <?= $userMaxStorageEnabled ? 'checked' : '' ?>>
+        Enforce Max Storage Per User (in bytes)
+    </label>
+    <input type="number" name="user_max_storage" id="user_max_storage" value="<?= sanitize_data($userMaxStorage) ?>" min="0" <?= !$userMaxStorageEnabled ? 'disabled' : '' ?>>
+
 
     <h4>Guest Permission</h4>
 
@@ -126,6 +164,27 @@ $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
 
     brute_force_toggle.addEventListener('change', updateBruteForceInputs);
     updateBruteForceInputs(); // Initial load
+</script>
+
+<script>
+    const userLimitsToggles = {
+        files: document.getElementById('user_max_files_enabled'),
+        storage: document.getElementById('user_max_storage_enabled')
+    };
+
+    const userLimitsFields = {
+        files: document.getElementById('user_max_files'),
+        storage: document.getElementById('user_max_storage')
+    };
+
+    function updateUserLimitsInputs() {
+        userLimitsFields.files.disabled = !userLimitsToggles.files.checked;
+        userLimitsFields.storage.disabled = !userLimitsToggles.storage.checked;
+    }
+
+    userLimitsToggles.files.addEventListener('change', updateUserLimitsInputs);
+    userLimitsToggles.storage.addEventListener('change', updateUserLimitsInputs);
+    updateUserLimitsInputs(); // Initial load
 </script>
 
 <script>

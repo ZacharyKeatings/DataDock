@@ -1,5 +1,6 @@
 <?php
 $resetSuccess = false;
+require_once __DIR__ . '/../includes/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset']) && $_POST['confirm_reset'] === 'yes') {
     try {
@@ -21,23 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset']) && $
         $deleteFiles(__DIR__ . '/../thumbnails/');
 
         // 4. Reset settings
-        $defaultSettings = "<?php\n\$settings = [\n" .
-            "    'site_name' => 'DataDock',\n" .
-            "    'registration_enabled' => true,\n" .
-            "    'max_file_size' => 5242880,\n" .
-            "    'brute_force' => [\n" .
-            "        'enabled' => true,\n" .
-            "        'max_attempts' => 5,\n" .
-            "        'lockout_minutes' => 15,\n" .
-            "        'lockout_window' => 10\n" .
-            "    ],\n" .
-            "    'guest_uploads' => [\n" .
-            "        'enabled' => false,\n" .
-            "        'max_files' => 0,\n" .
-            "        'max_storage' => 0\n" .
-            "    ]\n" .
-            "];\n?>";
-        file_put_contents(__DIR__ . '/../config/settings.php', $defaultSettings);
+        write_default_settings_file();
 
         $resetSuccess = true;
     } catch (Exception $e) {

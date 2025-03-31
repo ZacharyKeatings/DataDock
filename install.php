@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/includes/functions.php';
 // --- PHP Functions Section ---
 
 function install_database($host, $user, $pass, $dbname) {
@@ -92,28 +93,6 @@ try {
     file_put_contents(__DIR__ . '/config/db.php', $config);
 }
 
-function create_settings_file($siteName) {
-    $settings = "<?php\n\$settings = [\n" .
-        "    'site_name' => " . var_export($siteName, true) . ",\n" .
-        "    'registration_enabled' => true,\n" .
-        "    'max_file_size' => 5242880,\n" .
-        "    'brute_force' => [\n" .
-        "        'enabled' => true,\n" .
-        "        'max_attempts' => 5,\n" .
-        "        'lockout_minutes' => 15,\n" .
-        "        'lockout_window' => 10\n" .
-        "    ],\n" .
-        "    'guest_uploads' => [\n" .
-        "        'enabled' => false,\n" .
-        "        'max_files' => 0,\n" .
-        "        'max_storage' => 0\n" .
-        "    ]\n" .
-        "];\n?>";
-
-    file_put_contents(__DIR__ . '/config/settings.php', $settings);
-}
-
-
 function secure_config_folder() {
     $htaccessContent = "Order deny,allow\nDeny from all";
     file_put_contents(__DIR__ . '/config/.htaccess', $htaccessContent);
@@ -183,7 +162,7 @@ $pageTitle = "Install";
                     $result = install_database($host, $user, $pass, $dbname);
                     if ($result === true) {
                         create_db_config_file($host, $user, $pass, $dbname);
-                        create_settings_file($siteName);
+                        write_default_settings_file($siteName);
                         secure_config_folder();
 
                         // Create directories for uploads and thumbnails

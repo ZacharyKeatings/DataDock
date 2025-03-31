@@ -28,5 +28,34 @@ function format_filesize($size) {
 }
 
 /**
- * Additional helper functions can be added here.
+ * Generate the default settings.php file with initial site configuration.
+ *
+ * @param string $siteName The name of the site to be set in the settings file.
+ * @return void
  */
+function write_default_settings_file($siteName = 'DataDock') {
+    $settings = "<?php\n\$settings = [\n" .
+        "    'site_name' => " . var_export($siteName, true) . ",\n" .
+        "    'registration_enabled' => true,\n" .
+        "    'max_file_size' => 5242880,\n" .
+        "    'brute_force' => [\n" .
+        "        'enabled' => true,\n" .
+        "        'max_attempts' => 5,\n" .
+        "        'lockout_minutes' => 15,\n" .
+        "        'lockout_window' => 10\n" .
+        "    ],\n" .
+        "    'guest_uploads' => [\n" .
+        "        'enabled' => false,\n" .
+        "        'max_files' => 0,\n" .
+        "        'max_storage' => 0\n" .
+        "    ],\n" .
+        "    'user_limits' => [\n" .
+        "        'max_files_enabled' => false,\n" .
+        "        'max_files' => 100,\n" .
+        "        'max_storage_enabled' => false,\n" .
+        "        'max_storage' => 104857600\n" . // 100MB
+        "    ]\n" .
+        "];\n?>";
+
+    file_put_contents(__DIR__ . '/../config/settings.php', $settings);
+}

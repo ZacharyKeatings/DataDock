@@ -9,6 +9,8 @@ $guestAllowed = $settings['guest_uploads']['enabled'] ?? false;
 $guestMaxFiles = $settings['guest_uploads']['max_files'] ?? 0;
 $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 0;
 
+
+
 $userId = $_SESSION['user_id'] ?? null;
 $isGuest = !$userId && $guestAllowed;
 
@@ -57,6 +59,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
         }
         if ($guestMaxStorage > 0 && $stats['total_size'] >= $guestMaxStorage) {
             $errors[] = "You have reached the guest storage limit of " . format_filesize($guestMaxStorage) . ".";
+        }
+    }
+
+    if ($userId && ($userFileLimitEnabled || $userStorageLimitEnabled)) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) AS file_count, COALESCE(SUM(filesize), 0) AS total_size FROM files WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $userStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($userFileLimitEnabled && $userStats['file_count'] >= $userMaxFiles) {
+            $errors[] = "You have reached your file upload limit of $userMaxFiles files.";
+        }
+        if ($userStorageLimitEnabled && $userStats['total_size'] >= $userMaxStorage) {
+            $errors[] = "You have reached your total storage limit of " . format_filesize($userMaxStorage) . ".";
         }
     }
 

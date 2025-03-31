@@ -20,7 +20,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Change user roles and delete users (admin only)
 - [x]  Enable/disable user registration
 - [x]  Optional guest uploads with quota enforcement (file count + size)
-- [ ]  Enforce max storage and file limits per user
+- [x]  Enforce max storage and file limits per user
 - [ ]  User account & profile system
 - [ ]  Public file browsing (anonymous access to uploads)
 - [ ]  Default file expiry duration setting
@@ -32,10 +32,10 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Upload file size validation (frontend + backend)
 - [x]  Drag-and-drop + preview file upload support
 - [x]  Date/time storage in UTC with frontend conversion
+- [x]  Max number of files per user
+- [x]  Max total storage per user (quota)
 - [ ]  File management view for all users (admin panel)
 - [ ]  Allowed file types (restrict extensions/MIME types)
-- [ ]  Max number of files per user
-- [ ]  Max total storage per user (quota)
 - [ ]  Enable/disable thumbnail generation
 - [ ]  Custom storage path support
 - [ ]  File upload progress bar
