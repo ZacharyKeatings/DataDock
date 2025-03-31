@@ -47,6 +47,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Configure guest upload limits (max files and storage)
 - [x]  Manual purging of expired files with stats
 - [x]  View all uploaded files (with admin delete/download options)
+- [x]  Reset site to post-install state (remove all users, files, and settings except admin)
 - [ ]  Sidebar-based admin panel UI improvements
 - [ ]  Maintenance mode toggle (admin-only access)
 - [ ]  Debug mode toggle (verbose errors)

@@ -32,6 +32,7 @@ $section = $_GET['section'] ?? 'site';
                 <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
                 <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
                 <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
+                <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
             </ul>
         </nav>
     </aside>
@@ -56,6 +57,8 @@ $section = $_GET['section'] ?? 'site';
                 include __DIR__ . '/admin_sections/user_management.php';
             } elseif ($section === 'files') {
                 include __DIR__ . '/admin_sections/file_management.php';
+            } elseif ($section === 'reset') {
+                include __DIR__ . '/admin_sections/reset_site.php';
             } else {
                 echo "<p>Unknown section.</p>";
             }

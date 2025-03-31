@@ -105,8 +105,8 @@ function create_settings_file($siteName) {
         "    ],\n" .
         "    'guest_uploads' => [\n" .
         "        'enabled' => false,\n" .
-        "        'max_files' => 5,\n" .
-        "        'max_storage' => 5242880\n" .
+        "        'max_files' => 0,\n" .
+        "        'max_storage' => 0\n" .
         "    ]\n" .
         "];\n?>";
 

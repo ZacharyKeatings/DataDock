@@ -69,6 +69,8 @@ $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
     <label for="site_name">Site Name</label>
     <input type="text" name="site_name" id="site_name" value="<?= sanitize_data($siteName) ?>" required>
 
+    <h4>User Permissions</h4>
+
     <label>
         <input type="checkbox" name="registration_enabled" <?= $registrationEnabled ? 'checked' : '' ?>>
         Enable User Registration
@@ -76,6 +78,19 @@ $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
 
     <label for="max_file_size">Max File Size (in bytes)</label>
     <input type="number" name="max_file_size" id="max_file_size" value="<?= sanitize_data($maxFileSize) ?>" required>
+
+    <h4>Guest Permission</h4>
+
+    <label>
+        <input type="checkbox" id="guest_uploads_enabled" name="guest_uploads_enabled" <?= $guestUploadsEnabled ? 'checked' : '' ?>>
+        Allow Guest Uploads
+    </label>
+
+    <label for="guest_max_files">Guest Max Files</label>
+    <input type="number" name="guest_max_files" id="guest_max_files" value="<?= sanitize_data($guestMaxFiles) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
+
+    <label for="guest_max_storage">Guest Max Storage (in bytes)</label>
+    <input type="number" name="guest_max_storage" id="guest_max_storage" value="<?= sanitize_data($guestMaxStorage) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
 
     <h4>Brute Force Protection</h4>
 
@@ -92,17 +107,6 @@ $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
 
     <label for="lockout_window">Attempt Window (minutes)</label>
     <input type="number" name="lockout_window" id="lockout_window" value="<?= sanitize_data($lockoutWindow) ?>" min="1" required>
-
-    <label>
-        <input type="checkbox" id="guest_uploads_enabled" name="guest_uploads_enabled" <?= $guestUploadsEnabled ? 'checked' : '' ?>>
-        Allow Guest Uploads
-    </label>
-
-    <label for="guest_max_files">Guest Max Files</label>
-    <input type="number" name="guest_max_files" id="guest_max_files" value="<?= sanitize_data($guestMaxFiles) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
-
-    <label for="guest_max_storage">Guest Max Storage (in bytes)</label>
-    <input type="number" name="guest_max_storage" id="guest_max_storage" value="<?= sanitize_data($guestMaxStorage) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
 
     <button type="submit">Update</button>
 </form>
