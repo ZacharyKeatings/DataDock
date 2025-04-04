@@ -1,0 +1,8 @@
+# .gitignore
+/config/db.php
+/config/settings.php
+/uploads/
+/thumbnails/
+*.log
+*.bak
+.DS_Store
