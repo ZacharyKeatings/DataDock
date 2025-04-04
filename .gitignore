@@ -6,3 +6,5 @@
 *.log
 *.bak
 .DS_Store
+*.zip
+*.tar.gz
