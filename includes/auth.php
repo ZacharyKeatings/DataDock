@@ -14,25 +14,6 @@ function init_session() {
 }
 
 /**
- * Returns the current page's basename.
- *
- * @return string
- */
-function get_current_page() {
-    return basename($_SERVER['PHP_SELF']);
-}
-
-/**
- * Returns the site name from settings.
- *
- * @return string
- */
-function get_site_name() {
-    global $settings;
-    return $settings['site_name'] ?? 'File Upload Site';
-}
-
-/**
  * Require user to be logged in. Redirect to login page if not.
  */
 function require_login() {

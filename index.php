@@ -16,48 +16,47 @@ $stmt->execute();
 $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
-<h2>Welcome to <?= sanitize_data($siteName) ?></h2>
-<p>This site allows registered users to upload files and manage them securely. Below are the most recent uploads:</p>
+<div class="page-section">
+    <h2 class="page-title">Welcome to <?= sanitize_data($siteName) ?></h2>
+    <p class="page-description">This site allows registered users to upload files and manage them securely. Below are the most recent uploads:</p>
 
-<?php if ($recentFiles): ?>
-    <table>
-        <thead>
-            <tr>
-                <th>Filename</th>
-                <th>User</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Uploaded</th>
-                <th>Preview</th>
-            </tr>
-        </thead>
-        <tbody>
+    <?php if ($recentFiles): ?>
+        <div class="file-list">
+            <div class="file-row file-header">
+                <div>Filename</div>
+                <div>User</div>
+                <div>Type</div>
+                <div>Size</div>
+                <div>Uploaded</div>
+                <div>Preview</div>
+            </div>
             <?php foreach ($recentFiles as $file): ?>
-                <tr>
-                    <td><?= sanitize_data($file['original_name']) ?></td>
-                    <td><?= sanitize_data($file['username']) ?></td>
-                    <td><?= sanitize_data($file['filetype']) ?></td>
-                    <td><?= format_filesize($file['filesize']) ?></td>
-                    <td><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></td>
-                    <td>
+                <div class="file-row">
+                    <div><?= sanitize_data($file['original_name']) ?></div>
+                    <div><?= sanitize_data($file['username']) ?></div>
+                    <div title="<?= sanitize_data($file['filetype']) ?>">
+                        <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
+                    </div>
+                    <div><?= format_filesize($file['filesize']) ?></div>
+                    <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
+                    <div>
                         <?php if (str_starts_with($file['filetype'], 'image/')): ?>
-                            <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumbnail" style="height: 40px;">
+                            <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumbnail" class="thumbnail-small">
                         <?php else: ?>
                             —
                         <?php endif; ?>
-                    </td>
-                </tr>
+                    </div>
+                </div>
             <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php else: ?>
-    <p>No files uploaded yet.</p>
-<?php endif; ?>
+        </div>
+    <?php else: ?>
+        <p>No files uploaded yet.</p>
+    <?php endif; ?>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const elements = document.querySelectorAll('.utc-datetime');
-    elements.forEach(el => {
+    document.querySelectorAll('.utc-datetime').forEach(el => {
         const utc = el.dataset.utc;
         if (utc) {
             const local = new Date(utc + ' UTC');

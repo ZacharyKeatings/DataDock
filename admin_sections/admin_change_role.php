@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/../includes/auth.php';
 init_session();
 require_admin();
-require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['role'])) {
     $userId = (int) $_POST['user_id'];
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['ro
     $stmt->execute([$newRole, $userId]);
 
     $_SESSION['flash_success'] = "User role updated successfully.";
-    header("Location: admin.php?section=users");
+    header("Location: ../admin.php?section=users");
     exit;
 }
 http_response_code(400);

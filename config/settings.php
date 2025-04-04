@@ -1,5 +1,24 @@
 <?php
 $settings = [
-    'site_name' => 'Your Site Name'
+    'site_name' => 'DataDock',
+    'registration_enabled' => true,
+    'max_file_size' => 5242880,
+    'brute_force' => [
+        'enabled' => true,
+        'max_attempts' => 5,
+        'lockout_minutes' => 15,
+        'lockout_window' => 10
+    ],
+    'guest_uploads' => [
+        'enabled' => false,
+        'max_files' => 0,
+        'max_storage' => 0
+    ],
+    'user_limits' => [
+        'max_files_enabled' => false,
+        'max_files' => 100,
+        'max_storage_enabled' => false,
+        'max_storage' => 104857600
+    ]
 ];
 ?>

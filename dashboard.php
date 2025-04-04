@@ -7,7 +7,6 @@ require_once __DIR__ . '/includes/functions.php';
 $pageTitle = "Your Files";
 require_once __DIR__ . '/includes/header.php';
 
-
 $userId = $_SESSION['user_id'];
 
 // Fetch user's files
@@ -19,62 +18,62 @@ $stmt->execute([$userId]);
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
-<h2>Your Uploaded Files</h2>
+<div class="page-section">
+    <h2 class="page-title">Your Uploaded Files</h2>
 
-<?php if (isset($_GET['deleted'])): ?>
-    <div class="success">✅ <code><?= sanitize_data($_GET['deleted']) ?></code> deleted successfully.</div>
-<?php elseif (isset($_GET['uploaded'])): ?>
-    <div class="success">✅ File uploaded successfully.</div>
-<?php endif; ?>
+    <?php if (isset($_GET['deleted'])): ?>
+        <div class="success">✅ <code><?= sanitize_data($_GET['deleted']) ?></code> deleted successfully.</div>
+    <?php elseif (isset($_GET['uploaded'])): ?>
+        <div class="success">✅ File uploaded successfully.</div>
+    <?php endif; ?>
 
-<?php if ($files): ?>
-    <table>
-        <thead>
-            <tr>
-                <th>Filename</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Uploaded</th>
-                <th>Expires</th>
-                <th>Thumbnail</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($files as $file): ?>
-            <tr>
-                <td><?= sanitize_data($file['original_name']) ?></td>
-                <td><?= sanitize_data($file['filetype']) ?></td>
-                <td><?= number_format($file['filesize'] / 1024, 2) ?> KB</td>
-                <td><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></td>
-                <td>
-                    <?= $file['expiry_date']
-                        ? '<span class="utc-datetime" data-utc="' . htmlspecialchars($file['expiry_date']) . '"></span>'
-                        : 'Never' ?>
-                </td>
-                <td>
-                    <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                        <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumb" style="height: 40px;">
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </td>
-                <td>
-                    <a href="download.php?id=<?= $file['id'] ?>">Download</a> |
-                    <a href="delete.php?id=<?= $file['id'] ?>" onclick="return confirm('Delete this file?')">Delete</a>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php else: ?>
-    <p>You haven't uploaded any files yet.</p>
-<?php endif; ?>
+    <?php if ($files): ?>
+        <div class="file-list">
+            <div class="file-row-dashboard file-header">
+                <div>Filename</div>
+                <div>Type</div>
+                <div>Size</div>
+                <div>Uploaded</div>
+                <div>Expires</div>
+                <div>Thumbnail</div>
+                <div>Actions</div>
+            </div>
+
+            <?php foreach ($files as $file): ?>
+                <div class="file-row-dashboard">
+                    <div><?= sanitize_data($file['original_name']) ?></div>
+                    <div title="<?= sanitize_data($file['filetype']) ?>">
+                        <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
+                    </div>
+                    <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
+                    <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
+                    <div>
+                        <?= $file['expiry_date']
+                            ? '<span class="utc-datetime" data-utc="' . htmlspecialchars($file['expiry_date']) . '"></span>'
+                            : 'Never' ?>
+                    </div>
+                    <div>
+                        <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
+                            <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumb" class="thumbnail-small">
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </div>
+                    <div class="file-actions">
+                        <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a>
+                        <a href="delete.php?id=<?= $file['id'] ?>" class="btn btn-small btn-danger" onclick="return confirm('Delete this file?')">Delete</a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php else: ?>
+        <p>You haven't uploaded any files yet.</p>
+    <?php endif; ?>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const elements = document.querySelectorAll('.utc-datetime');
-    elements.forEach(el => {
+    document.querySelectorAll('.utc-datetime').forEach(el => {
         const utc = el.dataset.utc;
         if (utc) {
             const local = new Date(utc + ' UTC');

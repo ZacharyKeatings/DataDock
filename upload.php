@@ -9,7 +9,10 @@ $guestAllowed = $settings['guest_uploads']['enabled'] ?? false;
 $guestMaxFiles = $settings['guest_uploads']['max_files'] ?? 0;
 $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 0;
 
-
+$userFileLimitEnabled = $settings['user_quota']['file_limit_enabled'] ?? false;
+$userStorageLimitEnabled = $settings['user_quota']['storage_limit_enabled'] ?? false;
+$userMaxFiles = $settings['user_quota']['max_files'] ?? 0;
+$userMaxStorage = $settings['user_quota']['max_storage'] ?? 0;
 
 $userId = $_SESSION['user_id'] ?? null;
 $isGuest = !$userId && $guestAllowed;
@@ -155,101 +158,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div id="uploadError" class="warning" style="display:none;"></div>
-<h2>Upload Files</h2>
+<div class="page-section">
+    <div id="uploadError" class="warning" style="display:none;"></div>
+    <h2 class="page-title">Upload Files</h2>
 
-<?php if (!empty($errors)): ?>
-    <div class="error">
-        <?php foreach ($errors as $e): ?>
-            <div>• <?= sanitize_data($e) ?></div>
-        <?php endforeach; ?>
-    </div>
-<?php endif; ?>
-
-<?php if ($formDisabled): ?>
-    <div class="error"><?= htmlspecialchars($guestError) ?></div>
-<?php else: ?>
-<form method="post" enctype="multipart/form-data" id="uploadForm">
-    <label for="upload">Select files</label>
-    <div id="dropZone" class="drop-zone">Drag & Drop files here or click to browse</div>
-    <input type="file" name="upload[]" id="upload" multiple hidden required>
-
-    <?php if ($maxSize > 0): ?>
-        <small id="maxSizeNote">Maximum allowed file size: <?= format_filesize($maxSize) ?></small>
-    <?php else: ?>
-        <small>No file size limit is currently set.</small>
+    <?php if (!empty($errors)): ?>
+        <div class="error">
+            <?php foreach ($errors as $e): ?>
+                <div>• <?= sanitize_data($e) ?></div>
+            <?php endforeach; ?>
+        </div>
     <?php endif; ?>
 
-    <div id="preview"></div>
+    <?php if ($formDisabled): ?>
+        <div class="error"><?= htmlspecialchars($guestError) ?></div>
+    <?php else: ?>
+    <form method="post" enctype="multipart/form-data" id="uploadForm">
+        <label for="upload">Select files</label>
+        <div id="dropZone" class="drop-zone">Drag & Drop files here or click to browse</div>
+        <input type="file" name="upload[]" id="upload" multiple hidden required>
 
-    <label for="duration">Auto-delete after</label>
-    <select name="duration" id="duration">
-        <?php foreach ($durations as $key => $val): ?>
-            <option value="<?= sanitize_data($key) ?>"><?= ucwords(str_replace('_', ' ', $key)) ?></option>
-        <?php endforeach; ?>
-    </select>
+        <?php if ($maxSize > 0): ?>
+            <small id="maxSizeNote">Maximum allowed file size: <?= format_filesize($maxSize) ?></small>
+        <?php else: ?>
+            <small>No file size limit is currently set.</small>
+        <?php endif; ?>
 
-    <button type="submit">Upload</button>
-</form>
-<?php endif; ?>
+        <div id="preview"></div>
 
-<script>
-const dropZone = document.getElementById("dropZone");
-const fileInput = document.getElementById("upload");
-const preview = document.getElementById("preview");
-const maxSize = <?= (int) $maxSize ?>;
+        <label for="duration">Auto-delete after</label>
+        <select name="duration" id="duration">
+            <?php foreach ($durations as $key => $val): ?>
+                <option value="<?= sanitize_data($key) ?>"><?= ucwords(str_replace('_', ' ', $key)) ?></option>
+            <?php endforeach; ?>
+        </select>
 
-dropZone.addEventListener("click", () => fileInput.click());
+        <button type="submit">Upload</button>
+    </form>
+    <?php endif; ?>
 
-dropZone.addEventListener("dragover", e => {
-    e.preventDefault();
-    dropZone.classList.add("dragover");
-});
+    <script>
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("upload");
+    const preview = document.getElementById("preview");
+    const maxSize = <?= (int) $maxSize ?>;
 
-dropZone.addEventListener("dragleave", () => {
-    dropZone.classList.remove("dragover");
-});
+    dropZone.addEventListener("click", () => fileInput.click());
 
-dropZone.addEventListener("drop", e => {
-    e.preventDefault();
-    dropZone.classList.remove("dragover");
-    fileInput.files = e.dataTransfer.files;
-    updatePreview();
-});
+    dropZone.addEventListener("dragover", e => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
 
-fileInput.addEventListener("change", updatePreview);
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
 
-function updatePreview() {
-    preview.innerHTML = "";
-    const files = fileInput.files;
-    let errorShown = false;
+    dropZone.addEventListener("drop", e => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        fileInput.files = e.dataTransfer.files;
+        updatePreview();
+    });
 
-    for (const file of files) {
-        if (file.size > maxSize && !errorShown) {
-            document.getElementById("uploadError").style.display = "block";
-            document.getElementById("uploadError").textContent = file.name + " is too large. Max allowed is " + (maxSize / 1048576).toFixed(2) + " MB.";
-            errorShown = true;
+    fileInput.addEventListener("change", updatePreview);
+
+    function updatePreview() {
+        preview.innerHTML = "";
+        const files = fileInput.files;
+        let errorShown = false;
+
+        for (const file of files) {
+            if (file.size > maxSize && !errorShown) {
+                document.getElementById("uploadError").style.display = "block";
+                document.getElementById("uploadError").textContent = file.name + " is too large. Max allowed is " + (maxSize / 1048576).toFixed(2) + " MB.";
+                errorShown = true;
+            }
+
+            const div = document.createElement("div");
+            div.style.marginTop = "10px";
+            div.textContent = file.name;
+
+            if (file.type.startsWith("image/")) {
+                const img = document.createElement("img");
+                img.src = URL.createObjectURL(file);
+                img.style.height = "200px";
+                img.style.marginRight = "10px";
+                div.prepend(img);
+            }
+
+            preview.appendChild(div);
         }
 
-        const div = document.createElement("div");
-        div.style.marginTop = "10px";
-        div.textContent = file.name;
-
-        if (file.type.startsWith("image/")) {
-            const img = document.createElement("img");
-            img.src = URL.createObjectURL(file);
-            img.style.height = "200px";
-            img.style.marginRight = "10px";
-            div.prepend(img);
+        if (!errorShown) {
+            document.getElementById("uploadError").style.display = "none";
         }
-
-        preview.appendChild(div);
     }
-
-    if (!errorShown) {
-        document.getElementById("uploadError").style.display = "none";
-    }
-}
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

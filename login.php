@@ -20,12 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $now = new DateTime('now', new DateTimeZone('UTC'));
     $windowStart = $now->modify("-$lockoutWindow minutes")->format('Y-m-d H:i:s');
-    $now = new DateTime('now', new DateTimeZone('UTC')); // reset $now
+    $now = new DateTime('now', new DateTimeZone('UTC')); // reset
 
     if (empty($input) || empty($password)) {
         $errors[] = "Both fields are required.";
     } else {
-        // Check if user exists
         $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
         $stmt->execute([$input, $input]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -34,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $userId = $user['id'];
 
             if ($bruteEnabled) {
-                // Check for lockout
                 $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE user_id = ? AND success = 0 AND attempted_at > ?");
                 $stmt->execute([$userId, $windowStart]);
                 $failedAttempts = $stmt->fetchColumn();
@@ -47,18 +45,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($now < $lockoutUntil) {
                         $remaining = $lockoutUntil->getTimestamp() - $now->getTimestamp();
-                        $errors[] = "Too many failed login attempts. Please try again in " . ceil($remaining / 60) . " minutes.";
+                        $errors[] = "Too many failed login attempts. Try again in " . ceil($remaining / 60) . " minutes.";
                     } else {
-                        // Lockout expired, clear old attempts
                         $pdo->prepare("DELETE FROM login_attempts WHERE user_id = ?")->execute([$userId]);
                     }
                 }
             }
 
-            // Proceed only if no errors yet
             if (empty($errors)) {
                 if (password_verify($password, $user['password_hash'])) {
-                    // Success – delete old attempts
                     if ($bruteEnabled) {
                         $pdo->prepare("DELETE FROM login_attempts WHERE user_id = ?")->execute([$userId]);
                     }
@@ -69,7 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header("Location: dashboard.php");
                     exit;
                 } else {
-                    // Log failed attempt
                     if ($bruteEnabled) {
                         $stmt = $pdo->prepare("INSERT INTO login_attempts (user_id, success, attempted_at) VALUES (?, 0, UTC_TIMESTAMP())");
                         $stmt->execute([$userId]);
@@ -79,8 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             $errors[] = "Invalid credentials.";
-
-            // Anonymous attempt tracking (if brute force enabled)
             if ($bruteEnabled) {
                 $anonId = hash('sha256', $input);
                 $stmt = $pdo->prepare("INSERT INTO login_attempts (anon_id, success, attempted_at) VALUES (?, 0, UTC_TIMESTAMP())");
@@ -94,24 +86,30 @@ $pageTitle = "Login";
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<h2>Login</h2>
+<div class="page-section auth-form">
+    <h2 class="page-title">Login</h2>
 
-<?php if (!empty($errors)): ?>
-    <div class="error">
-        <?php foreach ($errors as $e): ?>
-            <div>• <?= htmlspecialchars($e) ?></div>
-        <?php endforeach; ?>
-    </div>
-<?php endif; ?>
+    <?php if (!empty($errors)): ?>
+        <div class="error">
+            <?php foreach ($errors as $e): ?>
+                <div>• <?= htmlspecialchars($e) ?></div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 
-<form method="post">
-    <label for="input">Username or Email</label>
-    <input type="text" name="input" id="input" value="<?= htmlspecialchars($input) ?>" required>
+    <form method="post" class="form">
+        <div class="form-group">
+            <label for="input">Username or Email</label>
+            <input type="text" name="input" id="input" value="<?= htmlspecialchars($input) ?>" required>
+        </div>
 
-    <label for="password">Password</label>
-    <input type="password" name="password" id="password" required>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" name="password" id="password" required>
+        </div>
 
-    <button type="submit">Login</button>
-</form>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+</div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

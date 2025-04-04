@@ -1,8 +1,8 @@
-<h2>File Management</h2>
+<h2 class="page-title">File Management</h2>
 
-<form method="post" style="margin-bottom: 20px;">
+<form method="post" class="form" style="margin-bottom: 2rem;">
     <input type="hidden" name="purge" value="1">
-    <button type="submit">Purge Expired Files</button>
+    <button type="submit" class="btn btn-primary">Purge Expired Files</button>
 </form>
 
 <?php
@@ -62,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['purge'])) {
     }
 }
 
-// List all uploaded files
 $stmt = $pdo->query("
     SELECT f.*, u.username 
     FROM files f
@@ -72,49 +71,63 @@ $stmt = $pdo->query("
 $allFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
-<h3>All Uploaded Files</h3>
+<h3 class="page-subtitle">All Uploaded Files</h3>
+
 <?php if ($allFiles): ?>
-    <table>
-        <thead>
-            <tr>
-                <th>User</th>
-                <th>Filename</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Uploaded</th>
-                <th>Expires</th>
-                <th>Thumbnail</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
+    <div class="file-list">
+        <div class="file-row-file-management file-header">
+            <div>User</div>
+            <div>Filename</div>
+            <div>Type</div>
+            <div>Size</div>
+            <div>Uploaded</div>
+            <div>Expires</div>
+            <div>Preview</div>
+            <div>Actions</div>
+        </div>
+
         <?php foreach ($allFiles as $file): ?>
-            <tr>
-                <td><?= sanitize_data($file['username']) ?></td>
-                <td><?= sanitize_data($file['original_name']) ?></td>
-                <td><?= sanitize_data($file['filetype']) ?></td>
-                <td><?= format_filesize($file['filesize']) ?></td>
-                <td><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></td>
-                <td>
+            <div class="file-row-file-management">
+                <div><?= sanitize_data($file['username']) ?></div>
+                <div><?= sanitize_data($file['original_name']) ?></div>
+                <div title="<?= sanitize_data($file['filetype']) ?>">
+                    <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
+                </div>
+                <div><?= format_filesize($file['filesize']) ?></div>
+                <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
+                <div>
                     <?= $file['expiry_date']
                         ? '<span class="utc-datetime" data-utc="' . htmlspecialchars($file['expiry_date']) . '"></span>'
                         : 'Never' ?>
-                </td>
-                <td>
+                </div>
+                <div>
                     <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                        <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumb" style="height: 40px;">
+                        <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumb" class="thumbnail-small">
                     <?php else: ?>
                         —
                     <?php endif; ?>
-                </td>
-                <td>
-                    <a href="download.php?id=<?= $file['id'] ?>">Download</a> |
-                    <a href="delete.php?id=<?= $file['id'] ?>" onclick="return confirm('Delete this file?')">Delete</a>
-                </td>
-            </tr>
+                </div>
+                <div class="file-actions">
+                    <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a> |
+                    <a href="delete.php?id=<?= $file['id'] ?>" class="btn btn-small btn-danger" onclick="return confirm('Delete this file?')">Delete</a>
+                </div>
+            </div>
         <?php endforeach; ?>
-        </tbody>
-    </table>
+    </div>
 <?php else: ?>
     <p>No uploaded files found.</p>
 <?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.utc-datetime').forEach(el => {
+        const utc = el.dataset.utc;
+        if (utc) {
+            const local = new Date(utc + ' UTC');
+            el.textContent = local.toLocaleString();
+        } else {
+            el.textContent = '—';
+        }
+    });
+});
+</script>

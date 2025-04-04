@@ -87,118 +87,90 @@ $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
 ?>
 
 
-<h3>Site Settings</h3>
-<form method="post">
-    <label for="site_name">Site Name</label>
-    <input type="text" name="site_name" id="site_name" value="<?= sanitize_data($siteName) ?>" required>
+<section class="">
+    <h3 class="page-title">Site Settings</h3>
 
-    <h4>User Permissions</h4>
+    <form method="post" class="form form-grid">
+        <!-- Site Name -->
+        <label for="site_name">Site Name</label>
+        <input type="text" name="site_name" id="site_name" value="<?= sanitize_data($siteName) ?>" required>
 
-    <label>
-        <input type="checkbox" name="registration_enabled" <?= $registrationEnabled ? 'checked' : '' ?>>
-        Enable User Registration
-    </label>
+        <!-- User Permissions -->
+        <h4>User Permissions</h4>
+        <label>
+            <input type="checkbox" name="registration_enabled" <?= $registrationEnabled ? 'checked' : '' ?>>
+            Enable User Registration
+        </label>
 
-    <label for="max_file_size">Max File Size (in bytes)</label>
-    <input type="number" name="max_file_size" id="max_file_size" value="<?= sanitize_data($maxFileSize) ?>" required>
+        <label for="max_file_size">Max File Size (in bytes)</label>
+        <input type="number" name="max_file_size" id="max_file_size" value="<?= sanitize_data($maxFileSize) ?>" required>
 
-    <h4>User Upload Limits</h4>
+        <!-- User Upload Limits -->
+        <h4>User Upload Limits</h4>
 
-    <label>
-        <input type="checkbox" id="user_max_files_enabled" name="user_max_files_enabled" <?= $userMaxFilesEnabled ? 'checked' : '' ?>>
-        Enforce Max Files Per User
-    </label>
-    <input type="number" name="user_max_files" id="user_max_files" value="<?= sanitize_data($userMaxFiles) ?>" min="0" <?= !$userMaxFilesEnabled ? 'disabled' : '' ?>>
+        <label>
+            <input type="checkbox" id="user_max_files_enabled" name="user_max_files_enabled" <?= $userMaxFilesEnabled ? 'checked' : '' ?>>
+            Enforce Max Files Per User
+        </label>
+        <input type="number" name="user_max_files" id="user_max_files" value="<?= sanitize_data($userMaxFiles) ?>" min="0" <?= !$userMaxFilesEnabled ? 'disabled' : '' ?>>
 
-    <label>
-        <input type="checkbox" id="user_max_storage_enabled" name="user_max_storage_enabled" <?= $userMaxStorageEnabled ? 'checked' : '' ?>>
-        Enforce Max Storage Per User (in bytes)
-    </label>
-    <input type="number" name="user_max_storage" id="user_max_storage" value="<?= sanitize_data($userMaxStorage) ?>" min="0" <?= !$userMaxStorageEnabled ? 'disabled' : '' ?>>
+        <label>
+            <input type="checkbox" id="user_max_storage_enabled" name="user_max_storage_enabled" <?= $userMaxStorageEnabled ? 'checked' : '' ?>>
+            Enforce Max Storage Per User (in bytes)
+        </label>
+        <input type="number" name="user_max_storage" id="user_max_storage" value="<?= sanitize_data($userMaxStorage) ?>" min="0" <?= !$userMaxStorageEnabled ? 'disabled' : '' ?>>
 
+        <!-- Guest Uploads -->
+        <h4>Guest Uploads</h4>
 
-    <h4>Guest Permission</h4>
+        <label>
+            <input type="checkbox" id="guest_uploads_enabled" name="guest_uploads_enabled" <?= $guestUploadsEnabled ? 'checked' : '' ?>>
+            Allow Guest Uploads
+        </label>
 
-    <label>
-        <input type="checkbox" id="guest_uploads_enabled" name="guest_uploads_enabled" <?= $guestUploadsEnabled ? 'checked' : '' ?>>
-        Allow Guest Uploads
-    </label>
+        <label for="guest_max_files">Guest Max Files</label>
+        <input type="number" name="guest_max_files" id="guest_max_files" value="<?= sanitize_data($guestMaxFiles) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
 
-    <label for="guest_max_files">Guest Max Files</label>
-    <input type="number" name="guest_max_files" id="guest_max_files" value="<?= sanitize_data($guestMaxFiles) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
+        <label for="guest_max_storage">Guest Max Storage (in bytes)</label>
+        <input type="number" name="guest_max_storage" id="guest_max_storage" value="<?= sanitize_data($guestMaxStorage) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
 
-    <label for="guest_max_storage">Guest Max Storage (in bytes)</label>
-    <input type="number" name="guest_max_storage" id="guest_max_storage" value="<?= sanitize_data($guestMaxStorage) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
+        <!-- Brute Force Protection -->
+        <h4>Brute Force Protection</h4>
 
-    <h4>Brute Force Protection</h4>
+        <label>
+            <input type="checkbox" id="brute_force_enabled" name="brute_force_enabled" <?= $bruteForceEnabled ? 'checked' : '' ?>>
+            Enable Brute Force Protection
+        </label>
 
-    <label>
-        <input type="checkbox" id="brute_force_enabled" name="brute_force_enabled" <?= $bruteForceEnabled ? 'checked' : '' ?>>
-        Enable Brute Force Protection
-    </label>
+        <label for="max_attempts">Max Login Attempts</label>
+        <input type="number" name="max_attempts" id="max_attempts" value="<?= sanitize_data($maxAttempts) ?>" min="1" required>
 
-    <label for="max_attempts">Max Login Attempts</label>
-    <input type="number" name="max_attempts" id="max_attempts" value="<?= sanitize_data($maxAttempts) ?>" min="1" required>
+        <label for="lockout_minutes">Lockout Duration (minutes)</label>
+        <input type="number" name="lockout_minutes" id="lockout_minutes" value="<?= sanitize_data($lockoutMinutes) ?>" min="1" required>
 
-    <label for="lockout_minutes">Lockout Duration (minutes)</label>
-    <input type="number" name="lockout_minutes" id="lockout_minutes" value="<?= sanitize_data($lockoutMinutes) ?>" min="1" required>
+        <label for="lockout_window">Attempt Window (minutes)</label>
+        <input type="number" name="lockout_window" id="lockout_window" value="<?= sanitize_data($lockoutWindow) ?>" min="1" required>
 
-    <label for="lockout_window">Attempt Window (minutes)</label>
-    <input type="number" name="lockout_window" id="lockout_window" value="<?= sanitize_data($lockoutWindow) ?>" min="1" required>
+        <button type="submit" class="btn btn-primary">Update Settings</button>
+    </form>
+</section>
 
-    <button type="submit">Update</button>
-</form>
-
+<!-- JS Toggles -->
 <script>
-    const brute_force_toggle = document.getElementById('brute_force_enabled');
-    const brute_force_fields = [
-        document.getElementById('max_attempts'),
-        document.getElementById('lockout_minutes'),
-        document.getElementById('lockout_window')
-    ];
+    const toggleInputs = (checkboxId, inputIds) => {
+        const checkbox = document.getElementById(checkboxId);
+        const inputs = inputIds.map(id => document.getElementById(id));
 
-    function updateBruteForceInputs() {
-        const disabled = !brute_force_toggle.checked;
-        brute_force_fields.forEach(input => input.disabled = disabled);
-    }
+        function toggle() {
+            inputs.forEach(input => input.disabled = !checkbox.checked);
+        }
 
-    brute_force_toggle.addEventListener('change', updateBruteForceInputs);
-    updateBruteForceInputs(); // Initial load
-</script>
-
-<script>
-    const userLimitsToggles = {
-        files: document.getElementById('user_max_files_enabled'),
-        storage: document.getElementById('user_max_storage_enabled')
+        checkbox.addEventListener('change', toggle);
+        toggle();
     };
 
-    const userLimitsFields = {
-        files: document.getElementById('user_max_files'),
-        storage: document.getElementById('user_max_storage')
-    };
-
-    function updateUserLimitsInputs() {
-        userLimitsFields.files.disabled = !userLimitsToggles.files.checked;
-        userLimitsFields.storage.disabled = !userLimitsToggles.storage.checked;
-    }
-
-    userLimitsToggles.files.addEventListener('change', updateUserLimitsInputs);
-    userLimitsToggles.storage.addEventListener('change', updateUserLimitsInputs);
-    updateUserLimitsInputs(); // Initial load
-</script>
-
-<script>
-    const guest_upload_toggle = document.getElementById('guest_uploads_enabled');
-    const guest_upload_fields = [
-        document.getElementById('guest_max_files'),
-        document.getElementById('guest_max_storage'),
-    ];
-
-    function updateGuestUploadInputs() {
-        const disabled = !guest_upload_toggle.checked;
-        guest_upload_fields.forEach(input => input.disabled = disabled);
-    }
-
-    guest_upload_toggle.addEventListener('change', updateGuestUploadInputs);
-    updateGuestUploadInputs(); // Initial load
+    toggleInputs('user_max_files_enabled', ['user_max_files']);
+    toggleInputs('user_max_storage_enabled', ['user_max_storage']);
+    toggleInputs('guest_uploads_enabled', ['guest_max_files', 'guest_max_storage']);
+    toggleInputs('brute_force_enabled', ['max_attempts', 'lockout_minutes', 'lockout_window']);
 </script>

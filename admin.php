@@ -14,63 +14,67 @@ $siteName = get_site_name();
 $success = '';
 $errors = [];
 
-// Handle tab selection
 $section = $_GET['section'] ?? 'site';
-
-
 ?>
 
-<h2>Admin Panel</h2>
-<?php if (!empty($_SESSION['flash_success'])): ?>
-    <div class="success"><?= sanitize_data($_SESSION['flash_success']) ?></div>
-    <?php unset($_SESSION['flash_success']); ?>
-<?php endif; ?>
-<div style="display: flex; gap: 20px;">
-    <aside style="min-width: 200px;">
-        <nav class="sidebar">
-            <ul style="list-style: none; padding: 0;">
-                <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
-                <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
-                <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
-                <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
-            </ul>
-        </nav>
-    </aside>
+<div class="page-section admin-panel">
+    <h2 class="page-title">Admin Panel</h2>
 
-    <main style="flex-grow: 1;">
-        <?php if ($success): ?>
-            <div class="success"><?= sanitize_data($success) ?></div>
-        <?php endif; ?>
+    <?php if (!empty($_SESSION['flash_success'])): ?>
+        <div class="success"><?= sanitize_data($_SESSION['flash_success']) ?></div>
+        <?php unset($_SESSION['flash_success']); ?>
+    <?php endif; ?>
 
-        <?php if ($errors): ?>
-            <div class="error">
-                <?php foreach ($errors as $error): ?>
-                    <div>• <?= sanitize_data($error) ?></div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
+                    <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
+                    <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
+                    <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
+                </ul>
+            </nav>
+        </aside>
 
-        <?php 
-            if ($section === 'site') {
-                include __DIR__ . '/admin_sections/site_settings.php';
-            } elseif ($section === 'users') {
-                include __DIR__ . '/admin_sections/user_management.php';
-            } elseif ($section === 'files') {
-                include __DIR__ . '/admin_sections/file_management.php';
-            } elseif ($section === 'reset') {
-                include __DIR__ . '/admin_sections/reset_site.php';
-            } else {
-                echo "<p>Unknown section.</p>";
-            }
-        ?>
+        <main class="admin-content">
+            <?php if ($success): ?>
+                <div class="success"><?= sanitize_data($success) ?></div>
+            <?php endif; ?>
 
-    </main>
+            <?php if ($errors): ?>
+                <div class="error">
+                    <?php foreach ($errors as $error): ?>
+                        <div>• <?= sanitize_data($error) ?></div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <?php 
+                switch ($section) {
+                    case 'site':
+                        include __DIR__ . '/admin_sections/site_settings.php';
+                        break;
+                    case 'users':
+                        include __DIR__ . '/admin_sections/user_management.php';
+                        break;
+                    case 'files':
+                        include __DIR__ . '/admin_sections/file_management.php';
+                        break;
+                    case 'reset':
+                        include __DIR__ . '/admin_sections/reset_site.php';
+                        break;
+                    default:
+                        echo "<p>Unknown section.</p>";
+                }
+            ?>
+        </main>
+    </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const elements = document.querySelectorAll('.utc-datetime');
-    elements.forEach(el => {
+    document.querySelectorAll('.utc-datetime').forEach(el => {
         const utc = el.dataset.utc;
         if (utc) {
             const local = new Date(utc + ' UTC');
