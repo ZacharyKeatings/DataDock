@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
-require_login();  // Offloads session check and login enforcement
+require_login();
 
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/functions.php'; // Needed for sanitize_data()
 
 // Validate file ID parameter
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -19,8 +20,9 @@ $stmt->execute([$fileId, $userId]);
 $file = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$file) {
-    http_response_code(404);
-    exit('File not found or permission denied.');
+    $_SESSION['flash_error'][] = "❌ File not found or permission denied.";
+    header("Location: dashboard.php");
+    exit;
 }
 
 // Delete physical file
@@ -41,6 +43,9 @@ if (!empty($file['thumbnail_path'])) {
 $stmt = $pdo->prepare("DELETE FROM files WHERE id = ? AND user_id = ?");
 $stmt->execute([$fileId, $userId]);
 
-$originalName = urlencode($file['original_name']);
-header("Location: dashboard.php?deleted=" . $originalName);
+$_SESSION['flash_success'][] = [
+    'html' => true,
+    'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> deleted successfully."
+];
+header("Location: dashboard.php");
 exit;

@@ -6,11 +6,19 @@
     --color-secondary: #e0e0e0;
     --color-accent: #ffbc42;
     --color-border: #cccccc;
-    --color-error: #c62828;
-    --color-success: #2e7d32;
+
+    --color-success-text: #ffffff;
+    --color-success-background: #1dbc25;
+    --color-success-border: #227217;
+
     --color-warning-text: #663c00;
     --color-warning-background: #fff4e5;
     --color-warning-border: #ffbc42;
+
+    --color-error-text: #ffffff;
+    --color-error-background: #ac4444;
+    --color-error-border: #9a0000;
+
   }
 
 html, body {
@@ -57,7 +65,23 @@ body {
     padding: 0.8rem 2rem;
 }
 
-.warning {
+.flash {
+    transition: opacity 0.5s ease, margin 0.5s ease, height 0.5s ease, padding 0.5s ease;
+    height: auto;
+    overflow: hidden;
+}
+
+.flash.success {
+    background-color: var(--color-success-background);
+    color: var(--color-success-text);
+    border-left: 5px solid var(--color-success-border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 0 5rem 1rem 5rem;
+    position: relative;
+}
+
+.flash.warning {
     background-color: var(--color-warning-background);
     color: var(--color-warning-text);
     border-left: 5px solid var(--color-warning-border);
@@ -67,11 +91,17 @@ body {
     position: relative;
 }
 
-.error-box {
-    text-align: center;
+.flash.error {
+    background-color: var(--color-error-background);
+    color: var(--color-error-text);
+    border-left: 5px solid var(--color-error-border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 0 5rem 1rem 5rem;
+    position: relative;
 }
 
-.warning .close-btn {
+.flash .close-btn {
     position: absolute;
     right: 10px;
     top: 10px;
@@ -79,7 +109,11 @@ body {
     border: none;
     font-size: 16px;
     cursor: pointer;
-    color: var(--color-warning-text);
+    color: inherit;
+}
+
+.error-box {
+    text-align: center;
 }
 
 .site-title a {
@@ -257,7 +291,7 @@ body {
 
 .form-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem 2rem;
     align-items: center;
 }

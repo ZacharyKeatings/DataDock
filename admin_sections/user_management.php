@@ -1,31 +1,5 @@
 <h2 class="page-title">User Management</h2>
 
-<?php
-// Handle delete request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user_id'])) {
-    $deleteUserId = (int) $_POST['delete_user_id'];
-
-    if ($deleteUserId === $_SESSION['user_id']) {
-        echo "<div class='error'>❌ You cannot delete your own admin account.</div>";
-    } else {
-        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-        $stmt->execute([$deleteUserId]);
-        echo "<div class='success'>✅ User ID $deleteUserId deleted successfully.</div>";
-    }
-}
-
-$stmt = $pdo->query("
-    SELECT u.id, u.username, u.email, u.role, u.created_at, 
-           COUNT(f.id) AS file_count, 
-           COALESCE(SUM(f.filesize), 0) AS total_size
-    FROM users u
-    LEFT JOIN files f ON u.id = f.user_id
-    GROUP BY u.id
-    ORDER BY u.created_at DESC
-");
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-?>
-
 <?php if ($users): ?>
     <div class="file-list">
         <div class="file-row-user-management file-header">

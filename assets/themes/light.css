@@ -42,16 +42,16 @@
     background-color: var(--color-accent);
   }
   
-  .error {
+  /* .error {
     background-color: var(--color-error);
     color: white;
     padding: 10px;
     border-radius: 5px;
-  }
+  } */
   
-  .success {
+  /* .success {
     background-color: var(--color-success);
     color: white;
     padding: 10px;
     border-radius: 5px;
-  }  
+  }   */

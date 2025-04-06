@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'])) {
 
     // Prevent deleting yourself
     if ($userId === $_SESSION['user_id']) {
-        $_SESSION['flash_error'] = "You cannot delete your own admin account.";
+        $_SESSION['flash_error'][] = "You cannot delete your own admin account.";
     } else {
         // Get username before deletion
         $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
@@ -23,9 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'])) {
             $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
             $stmt->execute([$userId]);
 
-            $_SESSION['flash_success'] = "User '$username' deleted successfully.";
+            $_SESSION['flash_success'][] = "User '$username' deleted successfully.";
         } else {
-            $_SESSION['flash_error'] = "User not found.";
+            $_SESSION['flash_error'][] = "User not found.";
         }
     }
 }

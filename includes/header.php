@@ -2,7 +2,6 @@
 $settingsPath = __DIR__ . '/../config/settings.php';
 $dbPath = __DIR__ . '/../config/db.php';
 
-// If not already on install.php, redirect if config files are missing
 $currentScript = basename($_SERVER['SCRIPT_NAME']);
 if ($currentScript !== 'install.php' && (!file_exists($settingsPath) || !file_exists($dbPath))) {
     header("Location: install.php");
@@ -10,10 +9,7 @@ if ($currentScript !== 'install.php' && (!file_exists($settingsPath) || !file_ex
 }
 
 require_once __DIR__ . '/../includes/functions.php';
-
-if (file_exists($settingsPath)) {
-    require_once $settingsPath;
-}
+if (file_exists($settingsPath)) require_once $settingsPath;
 
 $siteName = get_site_name();
 $pageTitle = $pageTitle ?? $siteName;
@@ -28,9 +24,9 @@ $themeMap = [
     'hacker' => 'themes/hacker.css',
     'custom' => 'themes/custom.css',
 ];
-
 $themePath = $themeMap[$theme] ?? 'themes/light.css';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,24 +42,19 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                 <div class="site-title">
                     <a href="index.php"><?= sanitize_data($siteName) ?></a>
                 </div>
-
                 <nav class="main-nav">
                     <a href="index.php"<?= $currentPage === 'index.php' ? ' class="active"' : '' ?>>Home</a>
-
                     <?php if (!empty($_SESSION['user_id'])): ?>
                         <a href="dashboard.php"<?= $currentPage === 'dashboard.php' ? ' class="active"' : '' ?>>Your Files</a>
                         <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
-
-                        <?php if (!empty($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                        <?php if ($_SESSION['role'] === 'admin'): ?>
                             <a href="admin.php"<?= $currentPage === 'admin.php' ? ' class="active"' : '' ?>>Admin Panel</a>
                         <?php endif; ?>
-
                         <a href="logout.php">Logout (<?= sanitize_data($_SESSION['username']) ?>)</a>
                     <?php else: ?>
                         <?php if ($guestUploadsEnabled): ?>
                             <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
                         <?php endif; ?>
-
                         <a href="login.php"<?= $currentPage === 'login.php' ? ' class="active"' : '' ?>>Login</a>
                         <a href="register.php"<?= $currentPage === 'register.php' ? ' class="active"' : '' ?>>Register</a>
                     <?php endif; ?>
@@ -72,16 +63,27 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
         </header>
 
         <main class="container">
+
             <?php
-            $installPath = __DIR__ . '/../install.php';
-            if (!empty($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'admin' && file_exists($installPath)) {
+            if (!empty($_SESSION['user_id']) && $_SESSION['role'] === 'admin' && file_exists(__DIR__ . '/../install.php')) {
                 echo '
-                <div class="warning">
+                <div class="flash warning persistent">
                     <button class="close-btn" onclick="this.parentElement.style.display=\'none\'">✖</button>
                     <div>
                         ⚠️ <strong>Security Warning:</strong> <code>install.php</code> still exists on your server.<br>
-                        For security, please <strong>delete or rename this file immediately</strong> to prevent unauthorized access.
+                        For security, please <strong>delete or rename this file immediately</strong>.
                     </div>
                 </div>';
             }
             ?>
+
+            <?php foreach (['success', 'error', 'warning'] as $type): ?>
+                <?php if (!empty($_SESSION["flash_$type"])): ?>
+                    <?php foreach ((array)$_SESSION["flash_$type"] as $msg): ?>
+                        <div class="flash <?= $type ?>">
+                            <button class="close-btn" onclick="this.parentElement.remove()">✖</button>
+                            <?= is_array($msg) && !empty($msg['html']) ? $msg['msg'] : sanitize_data($msg) ?>
+                        </div>
+                    <?php endforeach; unset($_SESSION["flash_$type"]); ?>
+                <?php endif; ?>
+            <?php endforeach; ?>

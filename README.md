@@ -35,7 +35,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Max number of files per user
 - [x]  Max total storage per user (quota)
 - [x]  File management view for all users (admin panel)
-- [ ]  Allowed file types (restrict extensions/MIME types)
+- [x]  Allowed file types (restrict extensions/MIME types)
 - [ ]  Enable/disable thumbnail generation
 - [ ]  Custom storage path support
 - [ ]  File upload progress bar

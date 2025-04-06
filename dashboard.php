@@ -2,8 +2,10 @@
 require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_login();
+
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
+
 $pageTitle = "Your Files";
 require_once __DIR__ . '/includes/header.php';
 
@@ -20,12 +22,6 @@ $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="page-section">
     <h2 class="page-title">Your Uploaded Files</h2>
-
-    <?php if (isset($_GET['deleted'])): ?>
-        <div class="success">✅ <code><?= sanitize_data($_GET['deleted']) ?></code> deleted successfully.</div>
-    <?php elseif (isset($_GET['uploaded'])): ?>
-        <div class="success">✅ File uploaded successfully.</div>
-    <?php endif; ?>
 
     <?php if ($files): ?>
         <div class="file-list">

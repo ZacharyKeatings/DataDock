@@ -17,7 +17,6 @@ $userMaxStorage = $settings['user_quota']['max_storage'] ?? 0;
 $userId = $_SESSION['user_id'] ?? null;
 $isGuest = !$userId && $guestAllowed;
 
-// Assign guest ID if needed
 if ($isGuest) {
     if (empty($_COOKIE['guest_id'])) {
         $guestId = bin2hex(random_bytes(16));
@@ -29,7 +28,13 @@ if ($isGuest) {
 
 $pageTitle = "Upload File";
 $maxSize = (int) ($settings['max_file_size'] ?? 0);
-$errors = [];
+$_SESSION['flash_error'] = [];
+
+$forbiddenExtensions = [
+    'php', 'php3', 'php4', 'php5', 'phtml', 'phar',
+    'exe', 'sh', 'bat', 'cmd', 'js', 'pl', 'py', 'cgi',
+    'asp', 'aspx', 'jsp', 'vbs', 'wsf', 'dll'
+];
 
 $durations = [
     '1_minute'   => '+1 minute',
@@ -58,10 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($guestMaxFiles > 0 && $stats['file_count'] >= $guestMaxFiles) {
-            $errors[] = "You have reached the guest upload limit of $guestMaxFiles files.";
+            $_SESSION['flash_error'][] = "You have reached the guest upload limit of $guestMaxFiles files.";
         }
         if ($guestMaxStorage > 0 && $stats['total_size'] >= $guestMaxStorage) {
-            $errors[] = "You have reached the guest storage limit of " . format_filesize($guestMaxStorage) . ".";
+            $_SESSION['flash_error'][] = "You have reached the guest storage limit of " . format_filesize($guestMaxStorage) . ".";
         }
     }
 
@@ -71,10 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
         $userStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($userFileLimitEnabled && $userStats['file_count'] >= $userMaxFiles) {
-            $errors[] = "You have reached your file upload limit of $userMaxFiles files.";
+            $_SESSION['flash_error'][] = "You have reached your file upload limit of $userMaxFiles files.";
         }
         if ($userStorageLimitEnabled && $userStats['total_size'] >= $userMaxStorage) {
-            $errors[] = "You have reached your total storage limit of " . format_filesize($userMaxStorage) . ".";
+            $_SESSION['flash_error'][] = "You have reached your total storage limit of " . format_filesize($userMaxStorage) . ".";
         }
     }
 
@@ -91,18 +96,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
             $durationKey = $_POST['duration'] ?? 'never';
 
             if ($file['error'] === UPLOAD_ERR_OK && is_uploaded_file($file['tmp_name'])) {
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+                if (in_array($ext, $forbiddenExtensions)) {
+                    $_SESSION['flash_error'][] = "{$file['name']} has a forbidden file type.";
+                    continue;
+                }
+
                 if ($file['size'] > $maxSize) {
-                    $errors[] = "{$file['name']} is too large. Max size is " . format_filesize($maxSize);
+                    $_SESSION['flash_error'][] = "{$file['name']} is too large. Max size is " . format_filesize($maxSize);
                     continue;
                 }
 
                 $originalName = $file['name'];
                 $filetype = mime_content_type($file['tmp_name']);
                 $filesize = $file['size'];
-                $ext = pathinfo($originalName, PATHINFO_EXTENSION);
                 $filename = uniqid() . '.' . $ext;
-
                 $destination = __DIR__ . '/uploads/' . $filename;
+
                 move_uploaded_file($file['tmp_name'], $destination);
 
                 $thumbnail = null;
@@ -144,13 +155,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
                     $expiryDate
                 ]);
             } else {
-                $errors[] = "Failed to upload {$file['name']}.";
+                $_SESSION['flash_error'][] = "Failed to upload {$file['name']}.";
             }
         }
     }
 
-    if (empty($errors)) {
-        header("Location: dashboard.php?uploaded=1");
+    if (empty($_SESSION['flash_error'])) {
+        $_SESSION['flash_success'][] = "✅ File(s) uploaded successfully.";
+        header("Location: upload.php");
         exit;
     }
 }
@@ -158,8 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
 require_once __DIR__ . '/includes/header.php';
 ?>
 
+<div id="uploadError" class="warning" style="display:none;"></div>
 <div class="page-section">
-    <div id="uploadError" class="warning" style="display:none;"></div>
     <h2 class="page-title">Upload Files</h2>
 
     <?php if (!empty($errors)): ?>
@@ -184,6 +196,8 @@ require_once __DIR__ . '/includes/header.php';
             <small>No file size limit is currently set.</small>
         <?php endif; ?>
 
+        <br /><small><strong>Forbidden file types:</strong> <?= implode(', ', $forbiddenExtensions) ?></small>
+
         <div id="preview"></div>
 
         <label for="duration">Auto-delete after</label>
@@ -202,6 +216,7 @@ require_once __DIR__ . '/includes/header.php';
     const fileInput = document.getElementById("upload");
     const preview = document.getElementById("preview");
     const maxSize = <?= (int) $maxSize ?>;
+    const forbiddenExtensions = <?= json_encode($forbiddenExtensions) ?>;
 
     dropZone.addEventListener("click", () => fileInput.click());
 
@@ -223,16 +238,25 @@ require_once __DIR__ . '/includes/header.php';
 
     fileInput.addEventListener("change", updatePreview);
 
+    function getExtension(filename) {
+        return filename.split('.').pop().toLowerCase();
+    }
+
     function updatePreview() {
         preview.innerHTML = "";
         const files = fileInput.files;
-        let errorShown = false;
+        let errorMessages = [];
 
         for (const file of files) {
-            if (file.size > maxSize && !errorShown) {
-                document.getElementById("uploadError").style.display = "block";
-                document.getElementById("uploadError").textContent = file.name + " is too large. Max allowed is " + (maxSize / 1048576).toFixed(2) + " MB.";
-                errorShown = true;
+            const ext = getExtension(file.name);
+            if (forbiddenExtensions.includes(ext)) {
+                errorMessages.push(`${file.name} has a forbidden extension.`);
+                continue;
+            }
+
+            if (file.size > maxSize) {
+                errorMessages.push(`${file.name} is too large. Max allowed is ${(maxSize / 1048576).toFixed(2)} MB.`);
+                continue;
             }
 
             const div = document.createElement("div");
@@ -250,8 +274,13 @@ require_once __DIR__ . '/includes/header.php';
             preview.appendChild(div);
         }
 
-        if (!errorShown) {
-            document.getElementById("uploadError").style.display = "none";
+        const errorBox = document.getElementById("uploadError");
+        if (errorMessages.length > 0) {
+            errorBox.classList.add("error");
+            errorBox.style.display = "block";
+            errorBox.innerHTML = errorMessages.map(msg => `<div>• ${msg}</div>`).join('');
+        } else {
+            errorBox.style.display = "none";
         }
     }
 </script>

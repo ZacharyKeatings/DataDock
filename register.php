@@ -5,7 +5,6 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
 
-$errors = [];
 $username = '';
 $email = '';
 
@@ -17,33 +16,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm = $_POST['confirm'] ?? '';
 
     if (strlen($username) < 3) {
-        $errors[] = "Username must be at least 3 characters.";
+        $_SESSION['flash_error'][] = "Username must be at least 3 characters.";
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Invalid email address.";
+        $_SESSION['flash_error'][] = "Invalid email address.";
     }
     if (strlen($password) < 6) {
-        $errors[] = "Password must be at least 6 characters.";
+        $_SESSION['flash_error'][] = "Password must be at least 6 characters.";
     }
     if ($password !== $confirm) {
-        $errors[] = "Passwords do not match.";
+        $_SESSION['flash_error'][] = "Passwords do not match.";
     }
 
-    if (empty($errors)) {
+    if (empty($_SESSION['flash_error'])) {
         $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
         $stmt->execute([$username, $email]);
         if ($stmt->fetch()) {
-            $errors[] = "Username or email already exists.";
+            $_SESSION['flash_error'][] = "Username or email already exists.";
         }
     }
 
-    if (empty($errors)) {
+    if (empty($_SESSION['flash_error'])) {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
         $stmt->execute([$username, $email, $passwordHash]);
 
         $_SESSION['user_id'] = $pdo->lastInsertId();
         $_SESSION['username'] = $username;
+        $_SESSION['role'] = 'user';
+
+        $_SESSION['flash_success'][] = "🎉 Registration successful. Welcome, $username!";
+
         header("Location: dashboard.php");
         exit;
     }
@@ -61,15 +64,6 @@ require_once __DIR__ . '/includes/header.php';
             🚫 Registration is currently disabled by the site administrator.
         </div>
     <?php else: ?>
-
-        <?php if (!empty($errors)): ?>
-            <div class="error-box">
-                <?php foreach ($errors as $e): ?>
-                    <div>🚫 <?= sanitize_data($e) ?></div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-
         <form method="post" class="form" onsubmit="return validateForm()">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -105,7 +99,6 @@ require_once __DIR__ . '/includes/header.php';
             return true;
         }
         </script>
-
     <?php endif; ?>
 </div>
 
