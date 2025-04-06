@@ -37,20 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userMaxStorage = (int) ($_POST['user_max_storage'] ?? 0);
 
         if ($userMaxFilesEnabled && $userMaxFiles < 1) {
-            $_SESSION['flash_error'][] = "Max files per user must be a positive number.";
+            $_SESSION['flash_error'][] = "❌ Max files per user must be a positive number.";
         }
         if ($userMaxStorageEnabled && $userMaxStorage < 1) {
-            $_SESSION['flash_error'][] = "Max storage per user must be a positive number.";
+            $_SESSION['flash_error'][] = "❌ Max storage per user must be a positive number.";
         }
 
         if ($newName === '') {
-            $_SESSION['flash_error'][] = "Site name cannot be empty.";
+            $_SESSION['flash_error'][] = "❌ Site name cannot be empty.";
         } elseif ($maxFileSize <= 0) {
-            $_SESSION['flash_error'][] = "Max file size must be a positive number.";
+            $_SESSION['flash_error'][] = "❌ Max file size must be a positive number.";
         } elseif ($bruteForceEnabled && ($maxAttempts < 1 || $lockoutMinutes < 1 || $lockoutWindow < 1)) {
-            $_SESSION['flash_error'][] = "Brute force settings must be positive integers.";
+            $_SESSION['flash_error'][] = "❌ Brute force settings must be positive integers.";
         } elseif ($guestUploadsEnabled && ($guestMaxFiles < 1 || $guestMaxStorage < 1)) {
-            $_SESSION['flash_error'][] = "Guest upload settings must be positive integers.";
+            $_SESSION['flash_error'][] = "❌ Guest upload settings must be positive integers.";
         }
 
         if (empty($_SESSION['flash_error'])) {
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (file_put_contents($settingsFile, $updatedSettings)) {
                 $_SESSION['flash_success'][] = "✅ Site settings updated successfully.";
             } else {
-                $_SESSION['flash_error'][] = "Failed to update site settings.";
+                $_SESSION['flash_error'][] = "❌ Failed to update site settings.";
             }
         }
 
@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['flash_success'][] = rtrim($summary, ',');
             }
         } else {
-            $_SESSION['flash_warning'][] = "No expired files found.";
+            $_SESSION['flash_warning'][] = "⚠️ No expired files found.";
         }
 
         header("Location: admin.php?section=files");
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             write_default_settings_file();
             $_SESSION['flash_success'][] = "✅ Site has been reset to post-install state.";
         } catch (Exception $e) {
-            $_SESSION['flash_error'][] = "Reset failed: " . $e->getMessage();
+            $_SESSION['flash_error'][] = "❌ Reset failed: " . $e->getMessage();
         }
 
         header("Location: admin.php?section=reset");

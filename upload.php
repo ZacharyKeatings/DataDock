@@ -28,7 +28,6 @@ if ($isGuest) {
 
 $pageTitle = "Upload File";
 $maxSize = (int) ($settings['max_file_size'] ?? 0);
-$_SESSION['flash_error'] = [];
 
 $forbiddenExtensions = [
     'php', 'php3', 'php4', 'php5', 'phtml', 'phar',
@@ -63,10 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($guestMaxFiles > 0 && $stats['file_count'] >= $guestMaxFiles) {
-            $_SESSION['flash_error'][] = "You have reached the guest upload limit of $guestMaxFiles files.";
+            $_SESSION['flash_error'][] = "❌ You have reached the guest upload limit of $guestMaxFiles files.";
         }
         if ($guestMaxStorage > 0 && $stats['total_size'] >= $guestMaxStorage) {
-            $_SESSION['flash_error'][] = "You have reached the guest storage limit of " . format_filesize($guestMaxStorage) . ".";
+            $_SESSION['flash_error'][] = "❌ You have reached the guest storage limit of " . format_filesize($guestMaxStorage) . ".";
         }
     }
 
@@ -76,10 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
         $userStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($userFileLimitEnabled && $userStats['file_count'] >= $userMaxFiles) {
-            $_SESSION['flash_error'][] = "You have reached your file upload limit of $userMaxFiles files.";
+            $_SESSION['flash_error'][] = "❌ You have reached your file upload limit of $userMaxFiles files.";
         }
         if ($userStorageLimitEnabled && $userStats['total_size'] >= $userMaxStorage) {
-            $_SESSION['flash_error'][] = "You have reached your total storage limit of " . format_filesize($userMaxStorage) . ".";
+            $_SESSION['flash_error'][] = "❌ You have reached your total storage limit of " . format_filesize($userMaxStorage) . ".";
         }
     }
 
@@ -99,12 +98,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
                 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
                 if (in_array($ext, $forbiddenExtensions)) {
-                    $_SESSION['flash_error'][] = "{$file['name']} has a forbidden file type.";
+                    $_SESSION['flash_error'][] = "❌ {$file['name']} has a forbidden file type.";
                     continue;
                 }
 
                 if ($file['size'] > $maxSize) {
-                    $_SESSION['flash_error'][] = "{$file['name']} is too large. Max size is " . format_filesize($maxSize);
+                    $_SESSION['flash_error'][] = "❌ {$file['name']} is too large. Max size is " . format_filesize($maxSize);
                     continue;
                 }
 
@@ -155,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
                     $expiryDate
                 ]);
             } else {
-                $_SESSION['flash_error'][] = "Failed to upload {$file['name']}.";
+                $_SESSION['flash_error'][] = "❌ Failed to upload {$file['name']}.";
             }
         }
     }

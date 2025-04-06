@@ -9,13 +9,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['ro
     $newRole = $_POST['role'];
 
     if (!in_array($newRole, ['user', 'admin'])) {
-        $_SESSION['flash_error'][] = 'Invalid role specified.';
+        $_SESSION['flash_error'][] = '❌ Invalid role specified.';
         header("Location: ../admin.php?section=users");
         exit;
     }
 
     if ($userId === $_SESSION['user_id']) {
-        $_SESSION['flash_error'][] = 'You cannot change your own role.';
+        $_SESSION['flash_error'][] = '❌ You cannot change your own role.';
         header("Location: ../admin.php?section=users");
         exit;
     }
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['ro
     $stmt = $pdo->prepare("UPDATE users SET role = ? WHERE id = ?");
     $stmt->execute([$newRole, $userId]);
 
-    $_SESSION['flash_success'][] = 'User role updated successfully.';
+    $_SESSION['flash_success'][] = '✅ User role updated successfully.';
     header("Location: ../admin.php?section=users");
     exit;
 }

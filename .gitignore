@@ -8,3 +8,4 @@
 .DS_Store
 *.zip
 *.tar.gz
+/releases/

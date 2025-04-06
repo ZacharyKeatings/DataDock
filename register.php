@@ -16,23 +16,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm = $_POST['confirm'] ?? '';
 
     if (strlen($username) < 3) {
-        $_SESSION['flash_error'][] = "Username must be at least 3 characters.";
+        $_SESSION['flash_error'][] = "❌ Username must be at least 3 characters.";
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $_SESSION['flash_error'][] = "Invalid email address.";
+        $_SESSION['flash_error'][] = "❌ Invalid email address.";
     }
     if (strlen($password) < 6) {
-        $_SESSION['flash_error'][] = "Password must be at least 6 characters.";
+        $_SESSION['flash_error'][] = "❌ Password must be at least 6 characters.";
     }
     if ($password !== $confirm) {
-        $_SESSION['flash_error'][] = "Passwords do not match.";
+        $_SESSION['flash_error'][] = "❌ Passwords do not match.";
     }
 
     if (empty($_SESSION['flash_error'])) {
         $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
         $stmt->execute([$username, $email]);
         if ($stmt->fetch()) {
-            $_SESSION['flash_error'][] = "Username or email already exists.";
+            $_SESSION['flash_error'][] = "❌ Username or email already exists.";
         }
     }
 
