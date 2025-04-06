@@ -1,0 +1,31 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),  
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.0] - 2025-04-06
+### Added
+- Global flash messaging system supporting multiple `success`, `error`, and `warning` messages across all pages.
+- Visual breakdown and display of purged files in File Management (with filetype summary).
+- Inline flash message system for Admin Panel (site settings, user management, file management, reset).
+- JavaScript-based UTC → local time conversion across dashboard, admin, and homepage.
+- Flash success message on file upload (redirects to dashboard).
+- Flash success message on logout via `logout_success` flag (preserved via query param).
+- `CHANGELOG.md` and version tracking.
+
+### Changed
+- Merged all Admin Panel sections (Site Settings, User Management, File Management, Reset Site) into a single `admin.php` controller with sectioned includes.
+- Switched from URL-based success indicators (`?uploaded=1`, `?deleted=file`) to flash message system.
+- Improved security by preventing direct access to admin section includes.
+- Site Settings form now uses `section` hidden input to route POST submissions.
+- Refactored session handling order for consistent messaging display.
+
+### Fixed
+- `logout.php` no longer loses flash messages due to `session_destroy()` timing.
+- Fixed `<code>` tag in flash message appearing as literal text instead of rendering as HTML.
+- Fixed missing variable initialization warnings in `site_settings.php`.
+
+---
+
