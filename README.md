@@ -25,6 +25,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [ ]  Public file browsing (anonymous access to uploads)
 - [ ]  Default file expiry duration setting
 - [ ]  Enforce unique email toggle
+- [ ]  Invite-only registration – Only allow signups from a link/token created by the admin.
+- [ ]  User-to-user file sharing – Share a file only with specific usernames.
 
 ### 🗂️ File Upload & Storage Settings
 - [x]  File upload with optional expiry
@@ -39,6 +41,12 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [ ]  Enable/disable thumbnail generation
 - [ ]  Custom storage path support
 - [ ]  File upload progress bar
+- [ ]  Zip multiple files for download – Let users select files and download them as a single .zip.
+- [ ]  Download as QR code – Generate and display QR code to link directly to file.
+- [ ]  One-time download links (auto-expire after single use)
+- [ ]  File checksum display – Show MD5/SHA1/SHA256 so users can verify integrity.
+- [ ]  Terms of Service / Acceptable Use – User must agree before uploading.
+- [ ]  Download counter per file
 
 ### 👑 Admin Panel
 - [x]  Admin panel with user and file management
@@ -52,6 +60,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [ ]  Maintenance mode toggle (admin-only access)
 - [ ]  Debug mode toggle (verbose errors)
 - [ ]  Log file path and verbosity setting
+- [ ]  Site stats overview (uploads, storage used, user count, etc.)
 
 ### 💬 Interface & Branding Settings
 - [x]  Install.php warning if not deleted post-setup
@@ -62,6 +71,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [ ]  Mobile responsiveness improvements
 - [ ]  Localization/multilanguage support
 - [ ]  Accessibility (WCAG) improvements
+- [ ]  Custom file icons – Icon preview per file type (PDF, MP3, PNG, etc.)
 
 ### 📧 Email / Notification Settings
 - [ ]  Admin contact email field

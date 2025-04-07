@@ -12,7 +12,6 @@ $settingsFile = __DIR__ . '/config/settings.php';
 $siteName = get_site_name();
 
 $section = $_GET['section'] ?? 'site';
-$settings = require $settingsFile;
 
 // Handle POST actions first
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -160,6 +159,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 }
+clearstatcache(true, $settingsFile);
+$settings = require $settingsFile;
 
 require_once __DIR__ . '/includes/header.php';
 ?>
