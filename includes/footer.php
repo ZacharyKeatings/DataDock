@@ -8,12 +8,20 @@ if (!function_exists('sanitize_data')) {
 }
 
 $siteName = get_site_name();
+$version = @file_get_contents(__DIR__ . '/../VERSION');
 ?>
         </main> <!-- End .container -->
     </div> <!-- End .page-wrapper -->
 
     <footer>
-        <p>&copy; <?= date('Y') ?> <?= sanitize_data($siteName) ?>. All rights reserved.</p>
+        <p>
+            &copy; <?= date('Y') ?> 
+            <?= sanitize_data($siteName) ?>. All rights reserved. 
+            <?php if ($version): ?>
+                v<?= sanitize_data($version) ?> DataDock
+            <?php endif; ?>
+        </p>
+
     </footer>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -26,7 +34,7 @@ $siteName = get_site_name();
                 msg.style.height = "0";
                 msg.style.overflow = "hidden";
 
-                setTimeout(() => msg.remove(), 1100); // Allow time for the animation
+                setTimeout(() => msg.remove(), 1100);
             }, 5000);
         });
     });

@@ -416,6 +416,22 @@ body {
     min-width: 0;
 }
 
+.changelog-box,
+.release-notes-box {
+    background-color: #222;
+    color: #eee;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    font-family: monospace;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
 
 /* FOOTER */
 footer {

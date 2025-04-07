@@ -101,6 +101,8 @@ function write_default_settings_file($siteName = 'DataDock') {
     file_put_contents(__DIR__ . '/../config/settings.php', $settings);
 }
 
+
+
 function get_friendly_filetype($mime) {
     $map = [
         'application/pdf' => 'PDF Document',
@@ -137,4 +139,81 @@ function get_friendly_filetype($mime) {
     ];
 
     return $map[$mime] ?? 'Unknown File Type';
+}
+
+
+
+/**
+ * Converts a subset of Markdown syntax to basic HTML for safe rendering.
+ *
+ * Supported Markdown features:
+ * - Headings:     # H1, ## H2, ### H3
+ * - Bold:         **text**
+ * - Italic:       *text*
+ * - Inline code:  `code`
+ * - Code blocks:  ```multiline code```
+ * - Links:        [text](https://example.com)
+ * - Lists:
+ *     - Unordered: - item or * item
+ *     - Ordered:   1. item
+ * - Paragraphs:   Two newlines separate blocks
+ *
+ * HTML output is sanitized to prevent XSS. Intended for displaying Markdown 
+ * from trusted sources such as GitHub release notes or changelogs.
+ *
+ * @param string $text  Raw Markdown content
+ * @return string       Safe HTML output
+ */
+function basic_markdown($text) {
+    $text = trim($text);
+
+    // Escape HTML
+    $text = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    // Normalize line endings
+    $text = preg_replace("/\r\n|\r/", "\n", $text);
+
+    // Handle code blocks (```)
+    $text = preg_replace_callback('/```(.*?)```/s', function ($matches) {
+        return '<pre><code>' . nl2br($matches[1]) . '</code></pre>';
+    }, $text);
+
+    // Inline code (`code`)
+    $text = preg_replace('/`([^`\n]+)`/', '<code>$1</code>', $text);
+
+    // Bold (**text**)
+    $text = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $text);
+
+    // Italic (*text*)
+    $text = preg_replace('/\*(.*?)\*/s', '<em>$1</em>', $text);
+
+    // Horizontal rules
+    $text = preg_replace('/^\s*(---|\*\*\*|___)\s*$/m', '<hr>', $text);
+
+    // Headings (###, ##, #)
+    $text = preg_replace('/^### (.*?)$/m', '<h3>$1</h3>', $text);
+    $text = preg_replace('/^## (.*?)$/m', '<h2>$1</h2>', $text);
+    $text = preg_replace('/^# (.*?)$/m', '<h1>$1</h1>', $text);
+
+    // Links: [text](url)
+    $text = preg_replace('/\[(.*?)\]\((https?:\/\/[^\s]+)\)/', '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>', $text);
+
+    // Unordered lists
+    $text = preg_replace('/^(\s*)[-*] (.+)$/m', '$1<li>$2</li>', $text);
+    $text = preg_replace('/(<li>.*<\/li>)/s', '<ul>$1</ul>', $text);
+
+    // Ordered lists
+    $text = preg_replace('/^(\s*)\d+\.\s+(.+)$/m', '$1<ol><li>$2</li></ol>', $text);
+    $text = preg_replace('/<\/ol>\s*<ol>/', '', $text); // Remove nested <ol><ol>
+    $text = preg_replace('/<\/ul>\s*<ul>/', '', $text); // Remove nested <ul><ul>
+
+    // Paragraphs (convert remaining lines into <p>)
+    $lines = preg_split('/\n{2,}/', $text);
+    foreach ($lines as &$line) {
+        if (!preg_match('/^<(h[1-3]|ul|ol|li|pre|p|blockquote)/', $line)) {
+            $line = '<p>' . nl2br(trim($line)) . '</p>';
+        }
+    }
+
+    return implode("\n", $lines);
 }

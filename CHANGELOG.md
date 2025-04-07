@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),  
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+---
+
+## [v1.2.0] - 2025-04-07
+### ✨ New Features
+- Added **one-click GitHub updater** for automated project updates via Admin Panel.
+- Implemented **dry-run mode** for safe testing of update behavior before applying changes.
+- Added **release notes viewer** using GitHub's latest release API.
+- Integrated **full changelog viewer**, rendering Markdown beautifully inside the admin panel.
+- Created custom **basic Markdown parser** to safely render GitHub-style release notes (supports bold, italic, links, lists, horizontal rules, code blocks).
+- Display current version in the admin panel for transparency.
+
+### 💄 UI / UX Improvements
+- Changelog box now wraps long lines to prevent overflow.
+- Markdown viewer formatting improved to support lists, links, and code blocks with styling.
+
+### 🛠 Enhancements
+- Version comparison now strips `v` prefix for accurate matching (e.g., `v1.2.0` == `1.2.0`).
+- Admin panel sidebar updated to include new updater link.
+- All version/update-related features are modular and maintainable.
+
+---
+
 ## [1.1.0] - 2025-04-06
 ### Added
 - Global flash messaging system supporting multiple `success`, `error`, and `warning` messages across all pages.

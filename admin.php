@@ -174,6 +174,7 @@ require_once __DIR__ . '/includes/header.php';
                     <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
                     <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
                     <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
+                    <li><a href="?section=updater"<?= $section === 'updater' ? ' class="active"' : '' ?>>Updater & Changelog</a></li>
                     <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
                 </ul>
             </nav>
@@ -229,6 +230,10 @@ require_once __DIR__ . '/includes/header.php';
                 $allFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 include __DIR__ . '/admin_sections/file_management.php';
+                break;
+
+            case 'updater':
+                include __DIR__ . '/admin_sections/update_status.php';
                 break;
 
             case 'reset':
