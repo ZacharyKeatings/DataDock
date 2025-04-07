@@ -79,9 +79,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [ ]  Session timeout duration setting
 
 ### 🔁 Versioning & Updates
-- [ ]  Version display in admin panel
-- [ ]  One-click update system (GitHub release fetcher)
-- [ ]  Changelog and release notes viewer
+- [x]  Version display in admin panel / footer
+- [x]  One-click update system (GitHub release fetcher)
+- [x]  Changelog and release notes viewer
 
 ### ⚠️ Reporting & Abuse
 - [ ]  Users can report files for malicious/adult content
