@@ -56,6 +56,9 @@ if (!$userId && !$guestAllowed) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formDisabled) {
+    $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+       && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
     if ($isGuest) {
         $stmt = $pdo->prepare("SELECT COUNT(*) AS file_count, COALESCE(SUM(filesize), 0) AS total_size FROM files WHERE guest_id = ?");
         $stmt->execute([$guestId]);
@@ -161,7 +164,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload']) && !$formD
 
     if (empty($_SESSION['flash_error'])) {
         $_SESSION['flash_success'][] = "✅ File(s) uploaded successfully.";
+    }
+
+    if (! $isAjax) {
         header("Location: upload.php");
+        exit;
+    } else {
+        // on AJAX we just return a 200 and let JS reload the page
+        http_response_code(200);
         exit;
     }
 }
@@ -206,11 +216,17 @@ require_once __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
         </select>
 
+        <!-- progress bar -->
+        <div id="progressContainer" style="display:none; margin:10px 0;">
+            <progress id="uploadProgress" max="100" value="0" style="width:100%;"></progress>
+            <span id="progressText">0%</span>
+        </div>
+
         <button type="submit">Upload</button>
     </form>
     <?php endif; ?>
 
-    <script>
+<script>
     const dropZone = document.getElementById("dropZone");
     const fileInput = document.getElementById("upload");
     const preview = document.getElementById("preview");
@@ -282,6 +298,44 @@ require_once __DIR__ . '/includes/header.php';
             errorBox.style.display = "none";
         }
     }
+
+    const uploadForm = document.getElementById("uploadForm");
+    const progressContainer = document.getElementById("progressContainer");
+    const progressBar       = document.getElementById("uploadProgress");
+    const progressText      = document.getElementById("progressText");
+    const uploadButton      = uploadForm.querySelector('button[type="submit"]');
+
+    uploadForm.addEventListener("submit", function(event) {
+        event.preventDefault();              // stop normal navigation
+
+        uploadButton.disabled    = true;
+        uploadButton.textContent = "Uploading…";
+
+        const formData = new FormData(this); // grab all inputs
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", this.action, true);
+        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+
+        // show progress container
+        progressContainer.style.display = "block";
+
+        // update bar on upload progress
+        xhr.upload.addEventListener("progress", function(evt) {
+        if (!evt.lengthComputable) return;
+        const percent = Math.round((evt.loaded / evt.total) * 100);
+        progressBar.value = percent;
+        progressText.textContent = percent + "%";
+        });
+
+        // when done, reload page so session‐flash messages render
+        xhr.addEventListener("load", function() {
+        window.location = "upload.php";
+        });
+
+        // send it
+        xhr.send(formData);
+    });
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
