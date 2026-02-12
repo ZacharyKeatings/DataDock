@@ -48,6 +48,20 @@ function get_current_page() {
 
 
 
+function return_bytes(string $val): int {
+    $val = trim($val);
+    $last = strtolower($val[strlen($val) - 1]);
+    $num  = (int) $val;
+    switch ($last) {
+        case 'g': $num *= 1024;
+        case 'm': $num *= 1024;
+        case 'k': $num *= 1024;
+    }
+    return $num;
+}
+
+
+
 /**
  * Format file size in human-readable format.
  *

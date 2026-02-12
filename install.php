@@ -54,17 +54,6 @@ function install_database($host, $user, $pass, $dbname) {
             );
         ");
 
-        // Create the login_ip_attempts table
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS login_ip_attempts (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                success TINYINT(1) NOT NULL DEFAULT 0,
-                attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ");
-
         return true;
     } catch (PDOException $e) {
         return $e->getMessage();

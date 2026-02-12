@@ -18,11 +18,8 @@ $guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
 $theme = $settings['theme'] ?? 'default';
 
 $themeMap = [
-    'dark' => 'themes/dark.css',
+    'default' => 'themes/light.css',
     'light' => 'themes/light.css',
-    'solarized' => 'themes/solarized.css',
-    'hacker' => 'themes/hacker.css',
-    'custom' => 'themes/custom.css',
 ];
 $themePath = $themeMap[$theme] ?? 'themes/light.css';
 ?>

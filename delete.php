@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+init_session();
 require_login();
 
 require_once __DIR__ . '/config/db.php';
@@ -13,10 +14,16 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $fileId = (int) $_GET['id'];
 $userId = $_SESSION['user_id'];
+$isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 
-// Fetch file and verify ownership
-$stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ?");
-$stmt->execute([$fileId, $userId]);
+// Fetch file and verify ownership (admins can access any file)
+if ($isAdmin) {
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ?");
+    $stmt->execute([$fileId]);
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ?");
+    $stmt->execute([$fileId, $userId]);
+}
 $file = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$file) {
@@ -40,12 +47,18 @@ if (!empty($file['thumbnail_path'])) {
 }
 
 // Delete DB record
-$stmt = $pdo->prepare("DELETE FROM files WHERE id = ? AND user_id = ?");
-$stmt->execute([$fileId, $userId]);
+if ($isAdmin) {
+    $stmt = $pdo->prepare("DELETE FROM files WHERE id = ?");
+    $stmt->execute([$fileId]);
+} else {
+    $stmt = $pdo->prepare("DELETE FROM files WHERE id = ? AND user_id = ?");
+    $stmt->execute([$fileId, $userId]);
+}
 
 $_SESSION['flash_success'][] = [
     'html' => true,
     'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> deleted successfully."
 ];
-header("Location: dashboard.php");
+$redirect = (isset($_GET['from']) && $_GET['from'] === 'admin') ? 'admin.php?section=files' : 'dashboard.php';
+header("Location: $redirect");
 exit;

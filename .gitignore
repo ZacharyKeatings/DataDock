@@ -1,5 +1,6 @@
 # .gitignore
 /config/db.php
+/info.php
 /config/settings.php
 /uploads/
 /thumbnails/

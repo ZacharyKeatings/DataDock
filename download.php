@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+init_session();
 require_login();
 
 require_once __DIR__ . '/config/db.php';
@@ -12,9 +13,15 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $fileId = (int) $_GET['id'];
 $userId = $_SESSION['user_id'];
+$isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 
-$stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ?");
-$stmt->execute([$fileId, $userId]);
+if ($isAdmin) {
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ?");
+    $stmt->execute([$fileId]);
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ?");
+    $stmt->execute([$fileId, $userId]);
+}
 $file = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$file) {

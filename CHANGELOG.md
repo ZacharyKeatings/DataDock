@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.3.0] - 2025-02-11
+### Fixed
+- 🛠️ Added `init_session()` to `download.php` and `delete.php` so logged-in users can successfully download and delete files.
+- 🛠️ Corrected settings key mismatch: `upload.php` now reads `user_limits` (with `max_files_enabled`, `max_storage_enabled`) so per-user quotas apply when configured in Site Settings.
+- 🛠️ Admin can now download and delete any file from the File Management panel (ownership check bypassed for admin role).
+- 🛠️ Admin file list and homepage now include guest uploads via `LEFT JOIN`; guest files display "Guest" as the user.
+- 🛠️ Theme map in `header.php` now only references existing theme files (`default`, `light`).
+- 🛠️ Removed unused `login_ip_attempts` table from installer.
+
+### Security
+- 🔒 Removed `info.php` (exposed `phpinfo()`); added `/info.php` to `.gitignore` to prevent accidental re-add.
+
+### Improved
+- 🧠 AJAX upload now parses JSON response and displays errors inline instead of blindly redirecting; users see which files failed and why, with redirect delayed on success.
+- 🧠 Admin delete from File Management now redirects back to `admin.php?section=files` instead of dashboard.
+
+---
+
 ## [v1.2.1] - 2025-04-07
 ### Fixed
 - 🛠️ Extraction bug causing `admin_sections/` to spill into the root folder.
