@@ -17,9 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ Theme map in `header.php` now only references existing theme files (`default`, `light`).
 - 🛠️ Removed unused `login_ip_attempts` table from installer.
 
-### Security
-- 🔒 Removed `info.php` (exposed `phpinfo()`); added `/info.php` to `.gitignore` to prevent accidental re-add.
-
 ### Improved
 - 🧠 AJAX upload now parses JSON response and displays errors inline instead of blindly redirecting; users see which files failed and why, with redirect delayed on success.
 - 🧠 Admin delete from File Management now redirects back to `admin.php?section=files` instead of dashboard.

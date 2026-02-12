@@ -2,6 +2,16 @@
 
 A lightweight, self-hosted PHP web application that allows registered users to upload, manage, and share files securely. Includes an admin dashboard for site management, user control, and file purging functionality.
 
+<div align="center">
+<a href="https://github.com/ZacharyKeatings/DataDock/releases">
+   <img alt="DataDock Release" src="https://img.shields.io/github/v/release/ZacharyKeatings/DataDock">
+</a>
+<a href="https://github.com/ZacharyKeatings/DataDock/blob/main/LICENSE">
+   <img alt="DataDock License" src="https://img.shields.io/github/license/ZacharyKeatings/DataDock">
+</a>
+
+</div>
+
 > ⭐ **If you found this project useful, please consider [starring the repository](https://github.com/ZacharyKeatings/DataDock)** — it helps others discover the project and keeps development going!
 
 ---
