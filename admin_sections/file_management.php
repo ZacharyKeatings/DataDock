@@ -22,7 +22,7 @@
 
         <?php foreach ($allFiles as $file): ?>
             <div class="file-row-file-management">
-                <div><?= sanitize_data($file['username']) ?></div>
+                <div><?= sanitize_data($file['username'] ?? 'Guest') ?></div>
                 <div><?= sanitize_data($file['original_name']) ?></div>
                 <div title="<?= sanitize_data($file['filetype']) ?>">
                     <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
@@ -43,7 +43,7 @@
                 </div>
                 <div class="file-actions">
                     <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a> |
-                    <a href="delete.php?id=<?= $file['id'] ?>" class="btn btn-small btn-danger" onclick="return confirm('Delete this file?')">Delete</a>
+                    <a href="delete.php?id=<?= $file['id'] ?>&from=admin" class="btn btn-small btn-danger" onclick="return confirm('Delete this file?')">Delete</a>
                 </div>
             </div>
         <?php endforeach; ?>

@@ -221,11 +221,11 @@ require_once __DIR__ . '/includes/header.php';
                 break;
 
             case 'files':
-                // Fetch all file records
+                // Fetch all file records (includes guest uploads via LEFT JOIN)
                 $stmt = $pdo->query("
                     SELECT f.*, u.username 
                     FROM files f
-                    JOIN users u ON f.user_id = u.id
+                    LEFT JOIN users u ON f.user_id = u.id
                     ORDER BY f.upload_date DESC
                 ");
                 $allFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -6,9 +6,9 @@ require_once __DIR__ . '/includes/functions.php';
 $pageTitle = "Home";
 require_once 'includes/header.php';
 
-// Get latest 5 uploaded files
+// Get latest 5 uploaded files (includes guest uploads via LEFT JOIN)
 $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
-    JOIN users ON files.user_id = users.id 
+    LEFT JOIN users ON files.user_id = users.id 
     WHERE (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
     ORDER BY upload_date DESC 
     LIMIT 5");
@@ -33,7 +33,7 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php foreach ($recentFiles as $file): ?>
                 <div class="file-row">
                     <div><?= sanitize_data($file['original_name']) ?></div>
-                    <div><?= sanitize_data($file['username']) ?></div>
+                    <div><?= sanitize_data($file['username'] ?? 'Guest') ?></div>
                     <div title="<?= sanitize_data($file['filetype']) ?>">
                         <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
                     </div>
