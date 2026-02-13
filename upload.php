@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 init_session();
-require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
 
@@ -52,6 +52,9 @@ $defaultFileExpiry = $settings['default_file_expiry'] ?? 'never';
 if (!isset($autoDeleteDurations[$defaultFileExpiry])) $defaultFileExpiry = 'never';
 $thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
 
+$tosEnabled = !empty($settings['tos_enabled']);
+$tosText    = trim($settings['tos_text'] ?? '');
+
 // disable form if guest uploads off and no user
 $formDisabled = false;
 if (!$currentUserId && !$guestUploadsEnabled) {
@@ -91,7 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // check PHP’s post_max_size / upload_max_filesize
+    if ($tosEnabled && !isset($_POST['tos_accepted'])) {
+        $_SESSION['flash_error'][] = "❌ You must accept the Terms of Service to upload files.";
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['errors' => $_SESSION['flash_error'] ?? [], 'success' => []]);
+            exit;
+        }
+        header("Location: upload.php");
+        exit;
+    }
+
+    // check PHP's post_max_size / upload_max_filesize
     $postMaxBytes = return_bytes(ini_get('post_max_size'));
     if (
         ( ! isset($_FILES['upload']) || empty($_FILES['upload']['name'][0]) )
@@ -192,6 +206,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destPath      = __DIR__ . '/uploads/' . $uniqueName;
         move_uploaded_file($tmpPath, $destPath);
 
+        $checksumMd5   = hash_file('md5', $destPath);
+        $checksumSha   = hash_file('sha256', $destPath);
+
         // generate thumbnail if image (when enabled)
         $thumbnailName = null;
         if ($thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
@@ -223,8 +240,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INSERT INTO files
               (user_id, guest_id, filename, original_name,
                filetype, filesize, thumbnail_path,
-               upload_date, expiry_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               upload_date, expiry_date, checksum_md5, checksum_sha256)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $ins->execute([
             $currentUserId,
@@ -236,6 +253,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $thumbnailName,
             $uploadTs,
             $expiryTs,
+            $checksumMd5,
+            $checksumSha,
         ]);
     }
 
@@ -267,6 +286,15 @@ require_once __DIR__ . '/includes/header.php';
 
   <?php if (! $formDisabled): ?>
     <form method="post" enctype="multipart/form-data" id="uploadForm">
+      <?php if ($tosEnabled && !empty($tosText)): ?>
+      <div class="tos-block">
+        <div class="tos-text"><?= nl2br(sanitize_data($tosText)) ?></div>
+        <label class="tos-checkbox">
+          <input type="checkbox" name="tos_accepted" id="tos_accepted" required>
+          I agree to the Terms of Service / Acceptable Use
+        </label>
+      </div>
+      <?php endif; ?>
       <!-- application‐level max -->
       <input type="hidden" name="MAX_FILE_SIZE" value="<?= $appMaxFileSize ?>">
       <label for="upload">Select files</label>

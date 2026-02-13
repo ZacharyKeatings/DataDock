@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 init_session();
 require_admin();
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['role'])) {
     $userId = (int) $_POST['user_id'];

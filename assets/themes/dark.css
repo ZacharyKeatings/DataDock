@@ -1,0 +1,113 @@
+/* Dark theme: same structure as light, green accent kept, white → dark */
+:root {
+    --color-header-background: #038C96;
+    --color-background: #2d3436;
+    --color-text: #dfe6e9;
+    --color-primary: #0077cc;
+    --color-secondary: #3d4a4d;
+    --color-accent: #ffbc42;
+    --color-border: #4a5d60;
+    --color-box-background: #37474f;
+
+    --color-success-text: #ffffff;
+    --color-success-background: #1dbc25;
+    --color-success-border: #227217;
+
+    --color-warning-text: #ffecb3;
+    --color-warning-background: #5d4037;
+    --color-warning-border: #ffbc42;
+
+    --color-error-text: #ffffff;
+    --color-error-background: #ac4444;
+    --color-error-border: #9a0000;
+}
+
+body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+}
+
+a {
+    color: #74b9ff;
+}
+
+a:hover {
+    color: var(--color-accent);
+}
+
+.container {
+    background: var(--color-background);
+    color: var(--color-text);
+}
+
+.site-header {
+    background-color: var(--color-header-background);
+}
+
+.main-nav a {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.main-nav a:hover,
+.main-nav a.active {
+    color: white;
+}
+
+.main-nav a.active::after {
+    background-color: var(--color-accent);
+}
+
+.page-section {
+    background: var(--color-box-background);
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.form-group input {
+    background: var(--color-secondary);
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
+.form-grid input::placeholder,
+.form-grid textarea::placeholder {
+    color: rgba(223, 230, 233, 0.6);
+}
+
+.stat-card,
+.file-header {
+    background: var(--color-secondary);
+    border-color: var(--color-border);
+}
+
+.stat-value {
+    color: #00b894;
+}
+
+.sidebar-nav a {
+    color: var(--color-text);
+}
+
+.sidebar-nav a.active,
+.sidebar-nav a:hover {
+    background-color: var(--color-secondary);
+}
+
+.changelog-box,
+.release-notes-box {
+    background-color: #1e272e;
+    color: #dfe6e9;
+}
+
+.file-row,
+.file-row-dashboard,
+.file-row-user-management,
+.file-row-file-management {
+    border-bottom-color: var(--color-border);
+}
+
+.welcome-banner {
+    background: var(--color-secondary);
+    border-left-color: #00b894;
+}

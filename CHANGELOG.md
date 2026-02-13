@@ -8,6 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.4.0] - 2025-02-12
+### ✨ New Features
+- **Site stats overview** — Admin panel Overview section: total uploads, storage used, user count, file type breakdown, and files expiring soon.
+- **Maintenance mode** — Block non-admins when enabled; admins can still access the site and log in via login.php.
+- **Debug mode toggle** — Control PHP error reporting and display in Site Settings (disable in production).
+- **Log file path and verbosity** — File-based logging with configurable path and level (debug, info, warning, error).
+- **Custom logo and favicon URLs** — Branding settings for logo image and favicon; templates updated.
+- **Welcome banner or message** — Editable message on homepage.
+- **Dark mode / light mode toggle** — Theme switcher (☀️/🌙) in header; preference saved via cookie; dark theme added.
+- **Custom file icons** — Per-type icon mapping for file lists; defaults for PDF, images, audio, video, etc.; JSON override in settings.
+
+### Improved
+- Admin panel defaults to Overview section; sidebar includes new Overview link.
+- File lists (homepage, dashboard, admin) show type-specific icons next to filenames.
+
+---
+
+## [v1.4.1] - 2025-02-12
+### ✨ New Features (File & UX)
+- **Download counter per file** — Count and display downloads in dashboard, admin file management, and homepage.
+- **File checksum display** — MD5 and SHA256 computed on upload; shown with copy buttons in dashboard.
+- **Zip multiple files for download** — Multi-select files on dashboard and download as a single .zip.
+- **One-time download links** — Generate shareable links that expire after one use; token stored in `download_tokens` table.
+- **Download as QR code** — One-time link page includes a QR code for easy mobile sharing (via api.qrserver.com).
+- **Terms of Service / Acceptable Use** — Configurable ToS text and checkbox in Site Settings; users must accept before uploading.
+
+### Improved
+- Database migrations run automatically via `includes/db.php`; new installs and upgrades add `download_count`, `checksum_md5`, `checksum_sha256` columns and `download_tokens` table.
+- Dashboard reorganized with select-all checkbox, zip download, and one-time link actions.
+
+---
+
 ## [v1.3.1] - 2025-02-12
 ### ✨ New Features
 - **Default file expiry duration** — Site setting for upload form; admins can set 1 min, 30 min, 1 hr, 6 hr, 1 day, 1 week, 1 month, 1 year, or never.

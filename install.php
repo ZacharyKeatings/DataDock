@@ -36,7 +36,21 @@ function install_database($host, $user, $pass, $dbname) {
                 thumbnail_path VARCHAR(255),
                 upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expiry_date DATETIME,
+                download_count INT NOT NULL DEFAULT 0,
+                checksum_md5 VARCHAR(32) DEFAULT NULL,
+                checksum_sha256 VARCHAR(64) DEFAULT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS download_tokens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                file_id INT NOT NULL,
+                token VARCHAR(64) NOT NULL UNIQUE,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+                INDEX idx_token (token)
             )
         ");
 

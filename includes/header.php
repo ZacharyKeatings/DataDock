@@ -9,26 +9,33 @@ if ($currentScript !== 'install.php' && (!file_exists($settingsPath) || !file_ex
 }
 
 require_once __DIR__ . '/../includes/functions.php';
-if (file_exists($settingsPath)) require_once $settingsPath;
+if (file_exists($settingsPath)) require $settingsPath;
+$settings = $settings ?? [];
 
 $siteName = get_site_name();
 $pageTitle = $pageTitle ?? $siteName;
 $currentPage = get_current_page();
 $guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
-$theme = $settings['theme'] ?? 'default';
+$defaultTheme = $settings['theme'] ?? 'light';
+$logoUrl = trim($settings['logo_url'] ?? '');
+$faviconUrl = trim($settings['favicon_url'] ?? '');
 
-$themeMap = [
-    'default' => 'themes/light.css',
-    'light' => 'themes/light.css',
-];
+// User cookie overrides default theme
+$theme = $_COOKIE['datadock_theme'] ?? $defaultTheme;
+if (!in_array($theme, ['light', 'dark'], true)) {
+    $theme = $defaultTheme;
+}
+$themeMap = ['light' => 'themes/light.css', 'dark' => 'themes/dark.css'];
 $themePath = $themeMap[$theme] ?? 'themes/light.css';
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="<?= sanitize_data($theme) ?>">
 <head>
     <meta charset="UTF-8">
     <title><?= sanitize_data($pageTitle) ?> | <?= sanitize_data($siteName) ?></title>
+    <?php if (!empty($faviconUrl)): ?>
+    <link rel="icon" href="<?= sanitize_data($faviconUrl) ?>" type="image/x-icon">
+    <?php endif; ?>
     <link rel="stylesheet" href="assets/style.css">
     <link rel="stylesheet" href="assets/<?= sanitize_data($themePath) ?>">
 </head>
@@ -37,9 +44,19 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
         <header class="site-header">
             <div class="header-inner">
                 <div class="site-title">
-                    <a href="index.php"><?= sanitize_data($siteName) ?></a>
+                    <a href="index.php">
+                        <?php if (!empty($logoUrl)): ?>
+                        <img src="<?= sanitize_data($logoUrl) ?>" alt="<?= sanitize_data($siteName) ?>" class="site-logo">
+                        <?php else: ?>
+                        <?= sanitize_data($siteName) ?>
+                        <?php endif; ?>
+                    </a>
                 </div>
                 <nav class="main-nav">
+                    <span class="theme-toggle">
+                        <a href="set_theme.php?theme=light" class="theme-btn<?= $theme === 'light' ? ' active' : '' ?>" title="Light mode">☀️</a>
+                        <a href="set_theme.php?theme=dark" class="theme-btn<?= $theme === 'dark' ? ' active' : '' ?>" title="Dark mode">🌙</a>
+                    </span>
                     <a href="index.php"<?= $currentPage === 'index.php' ? ' class="active"' : '' ?>>Home</a>
                     <?php if (!empty($_SESSION['user_id'])): ?>
                         <a href="dashboard.php"<?= $currentPage === 'dashboard.php' ? ' class="active"' : '' ?>>Your Files</a>

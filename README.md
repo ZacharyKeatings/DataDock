@@ -52,12 +52,12 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Enable/disable thumbnail generation
 - [ ]  Custom storage path support
 - [ ]  File upload progress bar
-- [ ]  Zip multiple files for download – Let users select files and download them as a single .zip.
-- [ ]  Download as QR code – Generate and display QR code to link directly to file.
-- [ ]  One-time download links (auto-expire after single use)
-- [ ]  File checksum display – Show MD5/SHA1/SHA256 so users can verify integrity.
-- [ ]  Terms of Service / Acceptable Use – User must agree before uploading.
-- [ ]  Download counter per file
+- [x]  Zip multiple files for download – Let users select files and download them as a single .zip.
+- [x]  Download as QR code – Generate and display QR code to link directly to file.
+- [x]  One-time download links (auto-expire after single use)
+- [x]  File checksum display – Show MD5/SHA256 so users can verify integrity.
+- [x]  Terms of Service / Acceptable Use – User must agree before uploading.
+- [x]  Download counter per file
 
 ### 👑 Admin Panel
 - [x]  Admin panel with user and file management
@@ -68,21 +68,21 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  View all uploaded files (with admin delete/download options)
 - [x]  Reset site to post-install state (remove all users, files, and settings except admin)
 - [x]  Sidebar-based admin panel UI improvements
-- [ ]  Maintenance mode toggle (admin-only access)
-- [ ]  Debug mode toggle (verbose errors)
-- [ ]  Log file path and verbosity setting
-- [ ]  Site stats overview (uploads, storage used, user count, etc.)
+- [x]  Maintenance mode toggle (admin-only access)
+- [x]  Debug mode toggle (verbose errors)
+- [x]  Log file path and verbosity setting
+- [x]  Site stats overview (uploads, storage used, user count, etc.)
 
 ### 💬 Interface & Branding Settings
 - [x]  Install.php warning if not deleted post-setup (toggleable in settings)
-- [ ]  Custom logo and favicon URLs
-- [ ]  Welcome banner or message field
+- [x]  Custom logo and favicon URLs
+- [x]  Welcome banner or message field
 - [x]  Install.php warning toggle
-- [ ]  Dark mode / light mode UI toggle
+- [x]  Dark mode / light mode UI toggle
 - [ ]  Mobile responsiveness improvements
 - [ ]  Localization/multilanguage support
 - [ ]  Accessibility (WCAG) improvements
-- [ ]  Custom file icons – Icon preview per file type (PDF, MP3, PNG, etc.)
+- [x]  Custom file icons – Icon preview per file type (PDF, MP3, PNG, etc.)
 
 ### 📧 Email / Notification Settings
 - [x]  Admin contact email field

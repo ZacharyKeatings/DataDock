@@ -10,6 +10,20 @@ $settings = [
     'session_timeout_minutes' => 60,       // Session lifetime in minutes; 0 = until browser close
     'install_warning_enabled' => true,     // Show admin warning when install.php exists
 
+    'maintenance_mode' => false,           // Block non-admins when enabled
+    'debug_mode' => false,                 // Show PHP errors; disable in production
+    'log_path' => '',                      // e.g. logs/app.log; empty = no file logging
+    'log_level' => 'warning',              // debug, info, warning, error
+
+    'logo_url' => '',                      // Custom logo; empty = use site name text
+    'favicon_url' => '',                   // Custom favicon URL
+    'welcome_message' => '',               // Editable message on homepage
+    'theme' => 'light',                    // light or dark; users can toggle
+    'file_icons' => [],                   // Override icons: {'pdf'=>'📄','doc'=>'📝'}
+
+    'tos_enabled' => false,                // Require ToS acceptance before upload
+    'tos_text' => '',                     // ToS / Acceptable Use policy text
+
     'brute_force' => [
         'enabled' => true,
         'max_attempts' => 5,

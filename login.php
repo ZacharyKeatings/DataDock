@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 init_session();
 
-require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
 
@@ -52,20 +52,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (empty($_SESSION['flash_error'])) {
                 if (password_verify($password, $user['password_hash'])) {
-                    if ($bruteEnabled) {
-                        $pdo->prepare("DELETE FROM login_attempts WHERE user_id = ?")->execute([$userId]);
+                    $maintenanceMode = $settings['maintenance_mode'] ?? false;
+                    if ($maintenanceMode && ($user['role'] ?? 'user') !== 'admin') {
+                        $_SESSION['flash_error'][] = "❌ Site is under maintenance. Only admins can log in at this time.";
+                    } else {
+                        if ($bruteEnabled) {
+                            $pdo->prepare("DELETE FROM login_attempts WHERE user_id = ?")->execute([$userId]);
+                        }
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['role'] = $user['role'];
+                        $_SESSION['flash_success'][] = "🎉 Login successful. Welcome, " . $user['username'] . "!";
+                        header("Location: dashboard.php");
+                        exit;
                     }
-
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['role'] = $user['role'];
-
-                    $username = $_SESSION['username'];
-
-                    $_SESSION['flash_success'][] = "🎉 Login successful. Welcome, $username!";
-
-                    header("Location: dashboard.php");
-                    exit;
                 } else {
                     if ($bruteEnabled) {
                         $stmt = $pdo->prepare("INSERT INTO login_attempts (user_id, success, attempted_at) VALUES (?, 0, UTC_TIMESTAMP())");

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 init_session();
-require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 $pageTitle = "Home";
 require_once 'includes/header.php';
@@ -18,6 +18,12 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="page-section">
     <h2 class="page-title">Welcome to <?= sanitize_data($siteName) ?></h2>
+    <?php
+    $welcomeMessage = trim($settings['welcome_message'] ?? '');
+    if (!empty($welcomeMessage)):
+    ?>
+    <div class="welcome-banner"><?= nl2br(sanitize_data($welcomeMessage)) ?></div>
+    <?php endif; ?>
     <p class="page-description">This site allows registered users to upload files and manage them securely. Below are the most recent uploads:</p>
 
     <?php if ($recentFiles): ?>
@@ -27,17 +33,20 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div>User</div>
                 <div>Type</div>
                 <div>Size</div>
+                <div>Downloads</div>
                 <div>Uploaded</div>
                 <div>Preview</div>
             </div>
             <?php foreach ($recentFiles as $file): ?>
+                <?php $fileIcon = get_file_icon($file['filetype'], $file['original_name'] ?? ''); ?>
                 <div class="file-row">
-                    <div><?= sanitize_data($file['original_name']) ?></div>
+                    <div><span class="file-icon"><?= (str_starts_with($fileIcon, 'http') ? '<img src="' . sanitize_data($fileIcon) . '" alt="" class="file-icon-img">' : $fileIcon) ?></span> <?= sanitize_data($file['original_name']) ?></div>
                     <div><?= sanitize_data($file['username'] ?? 'Guest') ?></div>
                     <div title="<?= sanitize_data($file['filetype']) ?>">
                         <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
                     </div>
                     <div><?= format_filesize($file['filesize']) ?></div>
+                    <div><?= (int) ($file['download_count'] ?? 0) ?></div>
                     <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
                     <div>
                         <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>

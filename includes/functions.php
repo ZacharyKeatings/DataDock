@@ -99,6 +99,17 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'thumbnails_enabled' => true,\n" .
         "    'session_timeout_minutes' => 60,\n" .
         "    'install_warning_enabled' => true,\n" .
+        "    'maintenance_mode' => false,\n" .
+        "    'debug_mode' => false,\n" .
+        "    'log_path' => '',\n" .
+        "    'log_level' => 'warning',\n" .
+        "    'logo_url' => '',\n" .
+        "    'favicon_url' => '',\n" .
+        "    'welcome_message' => '',\n" .
+        "    'theme' => 'light',\n" .
+        "    'file_icons' => [],\n" .
+        "    'tos_enabled' => false,\n" .
+        "    'tos_text' => '',\n" .
         "    'brute_force' => [\n" .
         "        'enabled' => true,\n" .
         "        'max_attempts' => 5,\n" .
@@ -122,6 +133,37 @@ function write_default_settings_file($siteName = 'DataDock') {
 }
 
 
+
+/**
+ * Write a message to the log file if logging is configured.
+ *
+ * @param string $level   Log level: debug, info, warning, error
+ * @param string $message Message to log
+ * @return bool True if logged, false otherwise
+ */
+function log_message($level, $message) {
+    static $settings = null;
+    if ($settings === null) {
+        $path = __DIR__ . '/../config/settings.php';
+        $settings = file_exists($path) ? require $path : [];
+    }
+    $logPath = trim($settings['log_path'] ?? '');
+    $logLevel = strtolower($settings['log_level'] ?? 'warning');
+    $levels = ['debug' => 0, 'info' => 1, 'warning' => 2, 'error' => 3];
+    $minLevel = $levels[$logLevel] ?? 2;
+    $msgLevel = $levels[$level] ?? 2;
+    if (empty($logPath) || $msgLevel < $minLevel) {
+        return false;
+    }
+    $absPath = strpos($logPath, '/') === 0 ? $logPath : (__DIR__ . '/../' . ltrim($logPath, '/'));
+    $dir = dirname($absPath);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $timestamp = date('Y-m-d H:i:s');
+    $line = "[$timestamp] [$level] $message\n";
+    return @file_put_contents($absPath, $line, FILE_APPEND | LOCK_EX) !== false;
+}
 
 function get_friendly_filetype($mime) {
     $map = [
@@ -159,6 +201,50 @@ function get_friendly_filetype($mime) {
     ];
 
     return $map[$mime] ?? 'Unknown File Type';
+}
+
+/**
+ * Get icon URL or class for a file based on extension or MIME type.
+ * Uses custom file_icons from settings if set, otherwise default mapping.
+ *
+ * @param string|null $filetype MIME type (e.g. application/pdf)
+ * @param string|null $filename Optional original filename for extension fallback
+ * @return string Icon URL, emoji, or empty string
+ */
+function get_file_icon($filetype, $filename = null) {
+    static $customIcons = null;
+    if ($customIcons === null) {
+        $path = __DIR__ . '/../config/settings.php';
+        $settings = file_exists($path) ? require $path : [];
+        $customIcons = $settings['file_icons'] ?? [];
+    }
+    $ext = $filename ? strtolower(pathinfo($filename, PATHINFO_EXTENSION)) : '';
+    $key = $ext ?: ($filetype ?: '');
+    if (!empty($customIcons[$key])) {
+        return $customIcons[$key];
+    }
+    if ($ext && !empty($customIcons[$ext])) {
+        return $customIcons[$ext];
+    }
+    if ($ext) {
+        $extMap = [
+            'pdf' => '📄', 'doc' => '📝', 'docx' => '📝',
+            'xls' => '📊', 'xlsx' => '📊', 'ppt' => '📽️', 'pptx' => '📽️',
+            'txt' => '📃', 'json' => '📃', 'xml' => '📃',
+            'zip' => '📦', 'rar' => '📦',
+            'mp3' => '🎵', 'wav' => '🎵', 'ogg' => '🎵',
+            'mp4' => '🎬', 'webm' => '🎬', 'avi' => '🎬',
+            'jpg' => '🖼️', 'jpeg' => '🖼️', 'png' => '🖼️', 'gif' => '🖼️', 'webp' => '🖼️', 'svg' => '🖼️',
+        ];
+        if (isset($extMap[$ext])) return $extMap[$ext];
+    }
+    if ($filetype) {
+        if (str_starts_with($filetype, 'image/')) return '🖼️';
+        if (str_starts_with($filetype, 'video/')) return '🎬';
+        if (str_starts_with($filetype, 'audio/')) return '🎵';
+        if ($filetype === 'application/pdf') return '📄';
+    }
+    return '📎';
 }
 
 

@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_admin();
 
-require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
 $pageTitle = "Admin Panel";
@@ -11,7 +11,7 @@ $pageTitle = "Admin Panel";
 $settingsFile = __DIR__ . '/config/settings.php';
 $siteName = get_site_name();
 
-$section = $_GET['section'] ?? 'site';
+$section = $_GET['section'] ?? 'overview';
 
 // Handle POST actions first
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,6 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $thumbnailsEnabled = isset($_POST['thumbnails_enabled']);
         $sessionTimeoutMinutes = (int) ($_POST['session_timeout_minutes'] ?? 60);
         $installWarningEnabled = isset($_POST['install_warning_enabled']);
+        $maintenanceMode = isset($_POST['maintenance_mode']);
+        $debugMode = isset($_POST['debug_mode']);
+        $logPath = trim($_POST['log_path'] ?? '');
+        $logLevel = trim($_POST['log_level'] ?? 'warning');
+        $logoUrl = trim($_POST['logo_url'] ?? '');
+        $faviconUrl = trim($_POST['favicon_url'] ?? '');
+        $welcomeMessage = trim($_POST['welcome_message'] ?? '');
+        $theme = trim($_POST['theme'] ?? 'light');
+        $fileIconsJson = trim($_POST['file_icons'] ?? '');
+        $tosEnabled = isset($_POST['tos_enabled']);
+        $tosText = trim($_POST['tos_text'] ?? '');
 
         $bruteForceEnabled = isset($_POST['brute_force_enabled']);
         $maxAttempts = (int) ($_POST['max_attempts'] ?? 5);
@@ -66,6 +77,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($defaultFileExpiry, $validExpiryValues, true)) {
             $defaultFileExpiry = 'never';
         }
+        $validLogLevels = ['debug', 'info', 'warning', 'error'];
+        if (!in_array($logLevel, $validLogLevels, true)) {
+            $logLevel = 'warning';
+        }
+        $validThemes = ['light', 'dark'];
+        if (!in_array($theme, $validThemes, true)) {
+            $theme = 'light';
+        }
+        $fileIcons = [];
+        if (!empty($fileIconsJson)) {
+            $decoded = json_decode($fileIconsJson, true);
+            if (is_array($decoded)) {
+                $fileIcons = $decoded;
+            }
+        }
 
         if (empty($_SESSION['flash_error'])) {
             // When switching to relaxed email mode, drop UNIQUE on email if it exists (existing installs)
@@ -87,6 +113,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'thumbnails_enabled' => " . ($thumbnailsEnabled ? 'true' : 'false') . ",\n" .
                 "    'session_timeout_minutes' => $sessionTimeoutMinutes,\n" .
                 "    'install_warning_enabled' => " . ($installWarningEnabled ? 'true' : 'false') . ",\n" .
+                "    'maintenance_mode' => " . ($maintenanceMode ? 'true' : 'false') . ",\n" .
+                "    'debug_mode' => " . ($debugMode ? 'true' : 'false') . ",\n" .
+                "    'log_path' => " . var_export($logPath, true) . ",\n" .
+                "    'log_level' => " . var_export($logLevel, true) . ",\n" .
+                "    'logo_url' => " . var_export($logoUrl, true) . ",\n" .
+                "    'favicon_url' => " . var_export($faviconUrl, true) . ",\n" .
+                "    'welcome_message' => " . var_export($welcomeMessage, true) . ",\n" .
+                "    'theme' => " . var_export($theme, true) . ",\n" .
+                "    'file_icons' => " . var_export($fileIcons, true) . ",\n" .
+                "    'tos_enabled' => " . ($tosEnabled ? 'true' : 'false') . ",\n" .
+                "    'tos_text' => " . var_export($tosText, true) . ",\n" .
                 "    'brute_force' => [\n" .
                 "        'enabled' => " . ($bruteForceEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_attempts' => $maxAttempts,\n" .
@@ -190,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 clearstatcache(true, $settingsFile);
-$settings = require $settingsFile;
+require $settingsFile;
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -202,6 +239,7 @@ require_once __DIR__ . '/includes/header.php';
         <aside class="admin-sidebar">
             <nav class="sidebar-nav">
                 <ul>
+                    <li><a href="?section=overview"<?= $section === 'overview' ? ' class="active"' : '' ?>>Overview</a></li>
                     <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
                     <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
                     <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
@@ -220,6 +258,10 @@ require_once __DIR__ . '/includes/header.php';
         <main class="admin-content">
         <?php
         switch ($section) {
+            case 'overview':
+                include __DIR__ . '/admin_sections/stats_overview.php';
+                break;
+
             case 'site':
                 // Initialize site settings variables
                 $adminContactEmail = trim($settings['admin_contact_email'] ?? '');
@@ -242,6 +284,18 @@ require_once __DIR__ . '/includes/header.php';
                 $guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
                 $guestMaxFiles = $settings['guest_uploads']['max_files'] ?? 10;
                 $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
+                $maintenanceMode = $settings['maintenance_mode'] ?? false;
+                $debugMode = $settings['debug_mode'] ?? false;
+                $logPath = trim($settings['log_path'] ?? '');
+                $logLevel = $settings['log_level'] ?? 'warning';
+                $logoUrl = trim($settings['logo_url'] ?? '');
+                $faviconUrl = trim($settings['favicon_url'] ?? '');
+                $welcomeMessage = trim($settings['welcome_message'] ?? '');
+                $theme = $settings['theme'] ?? 'light';
+                $fileIcons = $settings['file_icons'] ?? [];
+                $fileIconsJson = !empty($fileIcons) ? json_encode($fileIcons, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '';
+                $tosEnabled = $settings['tos_enabled'] ?? false;
+                $tosText = trim($settings['tos_text'] ?? '');
 
                 include __DIR__ . '/admin_sections/site_settings.php';
                 break;

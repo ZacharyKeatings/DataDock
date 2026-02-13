@@ -108,6 +108,70 @@
         </label>
         <div></div>
 
+        <!-- Maintenance & Debug -->
+        <h4>Maintenance & Debug</h4>
+
+        <label>
+            <input type="checkbox" name="maintenance_mode" <?= ($maintenanceMode ?? false) ? 'checked' : '' ?>>
+            Maintenance Mode (block non-admins until disabled)
+        </label>
+        <div></div>
+
+        <label>
+            <input type="checkbox" name="debug_mode" <?= ($debugMode ?? false) ? 'checked' : '' ?>>
+            Debug Mode (show PHP errors; disable in production)
+        </label>
+        <div></div>
+
+        <label for="log_path">Log File Path</label>
+        <input type="text" name="log_path" id="log_path" value="<?= sanitize_data($logPath ?? '') ?>" placeholder="e.g. logs/app.log">
+        <small>Relative to project root; leave empty to disable file logging.</small>
+
+        <label for="log_level">Log Level</label>
+        <select name="log_level" id="log_level">
+            <option value="debug" <?= ($logLevel ?? '') === 'debug' ? 'selected' : '' ?>>Debug</option>
+            <option value="info" <?= ($logLevel ?? '') === 'info' ? 'selected' : '' ?>>Info</option>
+            <option value="warning" <?= ($logLevel ?? 'warning') === 'warning' ? 'selected' : '' ?>>Warning</option>
+            <option value="error" <?= ($logLevel ?? '') === 'error' ? 'selected' : '' ?>>Error</option>
+        </select>
+
+        <!-- Branding -->
+        <h4>Branding & Appearance</h4>
+
+        <label for="logo_url">Custom Logo URL</label>
+        <input type="url" name="logo_url" id="logo_url" value="<?= sanitize_data($logoUrl ?? '') ?>" placeholder="https://example.com/logo.png">
+        <small>Leave empty to use site name as text.</small>
+
+        <label for="favicon_url">Custom Favicon URL</label>
+        <input type="url" name="favicon_url" id="favicon_url" value="<?= sanitize_data($faviconUrl ?? '') ?>" placeholder="https://example.com/favicon.ico">
+
+        <label for="welcome_message">Welcome Banner / Message</label>
+        <textarea name="welcome_message" id="welcome_message" rows="3" placeholder="Optional message shown on homepage"><?= sanitize_data($welcomeMessage ?? '') ?></textarea>
+
+        <label for="theme">Default Theme</label>
+        <select name="theme" id="theme">
+            <option value="light" <?= ($theme ?? 'light') === 'light' ? 'selected' : '' ?>>Light</option>
+            <option value="dark" <?= ($theme ?? '') === 'dark' ? 'selected' : '' ?>>Dark</option>
+        </select>
+        <small>Users can toggle theme via the switcher in the header.</small>
+
+        <label for="file_icons">Custom File Icons (JSON)</label>
+        <textarea name="file_icons" id="file_icons" rows="4" placeholder='{"pdf":"📄","doc":"📝"}'><?= sanitize_data($fileIconsJson ?? '') ?></textarea>
+        <small>Override default icons: extension or MIME → emoji/URL. Leave empty for defaults.</small>
+
+        <!-- Terms of Service -->
+        <h4>Terms of Service / Acceptable Use</h4>
+
+        <label>
+            <input type="checkbox" name="tos_enabled" id="tos_enabled" <?= ($tosEnabled ?? false) ? 'checked' : '' ?>>
+            Require ToS acceptance before upload
+        </label>
+        <div></div>
+
+        <label for="tos_text">ToS / Acceptable Use text</label>
+        <textarea name="tos_text" id="tos_text" rows="4" placeholder="Enter your Terms of Service or Acceptable Use policy..."><?= sanitize_data($tosText ?? '') ?></textarea>
+        <small>Shown on upload page; users must check a box to confirm before uploading.</small>
+
         <button type="submit" class="btn btn-primary">Update Settings</button>
     </form>
 </section>

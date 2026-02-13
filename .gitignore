@@ -4,6 +4,7 @@
 /config/settings.php
 /uploads/
 /thumbnails/
+/logs/
 *.log
 *.bak
 .DS_Store
