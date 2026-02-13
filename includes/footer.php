@@ -9,6 +9,7 @@ if (!function_exists('sanitize_data')) {
 
 $siteName = get_site_name();
 $version = @file_get_contents(__DIR__ . '/../VERSION');
+$adminContactEmail = trim($settings['admin_contact_email'] ?? '');
 ?>
         </main> <!-- End .container -->
     </div> <!-- End .page-wrapper -->
@@ -19,6 +20,9 @@ $version = @file_get_contents(__DIR__ . '/../VERSION');
             <?= sanitize_data($siteName) ?>. All rights reserved. 
             <?php if ($version): ?>
                 v<?= sanitize_data($version) ?> DataDock
+            <?php endif; ?>
+            <?php if (!empty($adminContactEmail)): ?>
+                · <a href="mailto:<?= sanitize_data($adminContactEmail) ?>">Contact Admin</a>
             <?php endif; ?>
         </p>
 

@@ -29,10 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($_SESSION['flash_error'])) {
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-        $stmt->execute([$username, $email]);
+        $enforceUniqueEmail = $settings['enforce_unique_email'] ?? true;
+        if ($enforceUniqueEmail) {
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+            $stmt->execute([$username, $email]);
+        } else {
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt->execute([$username]);
+        }
         if ($stmt->fetch()) {
-            $_SESSION['flash_error'][] = "❌ Username or email already exists.";
+            $_SESSION['flash_error'][] = $enforceUniqueEmail ? "❌ Username or email already exists." : "❌ Username already exists.";
         }
     }
 

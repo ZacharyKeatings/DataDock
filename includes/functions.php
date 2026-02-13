@@ -91,8 +91,14 @@ function format_filesize($size) {
 function write_default_settings_file($siteName = 'DataDock') {
     $settings = "<?php\n\$settings = [\n" .
         "    'site_name' => " . var_export($siteName, true) . ",\n" .
+        "    'admin_contact_email' => '',\n" .
         "    'registration_enabled' => true,\n" .
+        "    'enforce_unique_email' => true,\n" .
         "    'max_file_size' => 5242880,\n" .
+        "    'default_file_expiry' => 'never',\n" .
+        "    'thumbnails_enabled' => true,\n" .
+        "    'session_timeout_minutes' => 60,\n" .
+        "    'install_warning_enabled' => true,\n" .
         "    'brute_force' => [\n" .
         "        'enabled' => true,\n" .
         "        'max_attempts' => 5,\n" .

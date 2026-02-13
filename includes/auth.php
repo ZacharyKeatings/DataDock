@@ -5,10 +5,27 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 /**
- * Initializes the session. This function can also include additional auth checks.
+ * Initializes the session and applies configurable timeout.
+ * Loads settings to get session_timeout_minutes; 0 = until browser close.
  */
 function init_session() {
     if (session_status() === PHP_SESSION_NONE) {
+        $settingsPath = __DIR__ . '/../config/settings.php';
+        if (file_exists($settingsPath)) {
+            $settings = require $settingsPath;
+            $timeoutMinutes = (int) ($settings['session_timeout_minutes'] ?? 60);
+            if ($timeoutMinutes > 0) {
+                $lifetime = $timeoutMinutes * 60;
+                ini_set('session.gc_maxlifetime', (string) $lifetime);
+                session_set_cookie_params([
+                    'lifetime' => $lifetime,
+                    'path' => '/',
+                    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+            }
+        }
         session_start();
     }
 }

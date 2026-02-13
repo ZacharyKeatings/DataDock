@@ -1,8 +1,14 @@
 <?php
 $settings = [
     'site_name' => 'DataDock',
+    'admin_contact_email' => '',           // Shown in footer; leave empty to hide
     'registration_enabled' => true,
-    'max_file_size' => 5242880, // 5 MB
+    'enforce_unique_email' => true,        // If false, allow duplicate emails (relaxed)
+    'max_file_size' => 5242880,             // 5 MB
+    'default_file_expiry' => 'never',      // Default for upload form: 1_minute, 30_minutes, 1_hour, 6_hours, 1_day, 1_week, 1_month, 1_year, never
+    'thumbnails_enabled' => true,          // Generate thumbnails for image uploads
+    'session_timeout_minutes' => 60,       // Session lifetime in minutes; 0 = until browser close
+    'install_warning_enabled' => true,     // Show admin warning when install.php exists
 
     'brute_force' => [
         'enabled' => true,

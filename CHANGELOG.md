@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.3.1] - 2025-02-12
+### ✨ New Features
+- **Default file expiry duration** — Site setting for upload form; admins can set 1 min, 30 min, 1 hr, 6 hr, 1 day, 1 week, 1 month, 1 year, or never.
+- **Thumbnail generation toggle** — Enable/disable thumbnail creation for image uploads in Site Settings; when off, thumbnails are skipped.
+- **Configurable session timeout** — Site setting for session lifetime in minutes; 0 = until browser close.
+- **Install.php warning toggle** — Option in Site Settings to disable the security warning when `install.php` still exists.
+- **Admin contact email** — Optional field in Site Settings; shown in footer as “Contact Admin” and in Admin Panel sidebar when set.
+- **Enforce unique email toggle** — Toggle strict (disallow duplicate emails) vs relaxed (only username must be unique) in registration. When relaxed, the email UNIQUE constraint is dropped for existing installs; new installs use a non-unique email column.
+
+### Improved
+- Index page now checks for `thumbnail_path` before displaying thumbnail, so images without thumbnails (when disabled) render correctly.
+
+---
+
 ## [v1.3.0] - 2025-02-11
 ### Fixed
 - 🛠️ Added `init_session()` to `download.php` and `delete.php` so logged-in users can successfully download and delete files.

@@ -18,8 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['section']) && $_POST['section'] === 'site') {
         // --- SITE SETTINGS FORM SUBMIT ---
         $newName = trim($_POST['site_name'] ?? '');
+        $adminContactEmail = trim($_POST['admin_contact_email'] ?? '');
         $registrationEnabled = isset($_POST['registration_enabled']);
+        $enforceUniqueEmail = isset($_POST['enforce_unique_email']);
         $maxFileSize = (int) ($_POST['max_file_size'] ?? 0);
+        $defaultFileExpiry = trim($_POST['default_file_expiry'] ?? 'never');
+        $thumbnailsEnabled = isset($_POST['thumbnails_enabled']);
+        $sessionTimeoutMinutes = (int) ($_POST['session_timeout_minutes'] ?? 60);
+        $installWarningEnabled = isset($_POST['install_warning_enabled']);
 
         $bruteForceEnabled = isset($_POST['brute_force_enabled']);
         $maxAttempts = (int) ($_POST['max_attempts'] ?? 5);
@@ -50,13 +56,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_error'][] = "❌ Brute force settings must be positive integers.";
         } elseif ($guestUploadsEnabled && ($guestMaxFiles < 1 || $guestMaxStorage < 1)) {
             $_SESSION['flash_error'][] = "❌ Guest upload settings must be positive integers.";
+        } elseif (!empty($adminContactEmail) && !filter_var($adminContactEmail, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['flash_error'][] = "❌ Admin contact email must be a valid email address.";
+        } elseif ($sessionTimeoutMinutes < 0) {
+            $_SESSION['flash_error'][] = "❌ Session timeout cannot be negative.";
+        }
+
+        $validExpiryValues = ['1_minute', '30_minutes', '1_hour', '6_hours', '1_day', '1_week', '1_month', '1_year', 'never'];
+        if (!in_array($defaultFileExpiry, $validExpiryValues, true)) {
+            $defaultFileExpiry = 'never';
         }
 
         if (empty($_SESSION['flash_error'])) {
+            // When switching to relaxed email mode, drop UNIQUE on email if it exists (existing installs)
+            if (!$enforceUniqueEmail) {
+                try {
+                    $pdo->exec("ALTER TABLE users DROP INDEX email");
+                } catch (PDOException $e) {
+                    // Ignore - index may not exist (new installs or already dropped)
+                }
+            }
+
             $updatedSettings = "<?php\n\$settings = [\n" .
                 "    'site_name' => " . var_export($newName, true) . ",\n" .
+                "    'admin_contact_email' => " . var_export($adminContactEmail, true) . ",\n" .
                 "    'registration_enabled' => " . ($registrationEnabled ? 'true' : 'false') . ",\n" .
+                "    'enforce_unique_email' => " . ($enforceUniqueEmail ? 'true' : 'false') . ",\n" .
                 "    'max_file_size' => $maxFileSize,\n" .
+                "    'default_file_expiry' => " . var_export($defaultFileExpiry, true) . ",\n" .
+                "    'thumbnails_enabled' => " . ($thumbnailsEnabled ? 'true' : 'false') . ",\n" .
+                "    'session_timeout_minutes' => $sessionTimeoutMinutes,\n" .
+                "    'install_warning_enabled' => " . ($installWarningEnabled ? 'true' : 'false') . ",\n" .
                 "    'brute_force' => [\n" .
                 "        'enabled' => " . ($bruteForceEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_attempts' => $maxAttempts,\n" .
@@ -179,6 +209,12 @@ require_once __DIR__ . '/includes/header.php';
                     <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
                 </ul>
             </nav>
+            <?php $adminEmail = trim($settings['admin_contact_email'] ?? ''); if (!empty($adminEmail)): ?>
+            <div class="admin-contact" style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border-color, #ddd);font-size:0.875rem;">
+                <strong>Admin Contact:</strong><br>
+                <a href="mailto:<?= sanitize_data($adminEmail) ?>"><?= sanitize_data($adminEmail) ?></a>
+            </div>
+            <?php endif; ?>
         </aside>
 
         <main class="admin-content">
@@ -186,8 +222,14 @@ require_once __DIR__ . '/includes/header.php';
         switch ($section) {
             case 'site':
                 // Initialize site settings variables
+                $adminContactEmail = trim($settings['admin_contact_email'] ?? '');
                 $registrationEnabled = $settings['registration_enabled'] ?? true;
+                $enforceUniqueEmail = $settings['enforce_unique_email'] ?? true;
                 $maxFileSize = $settings['max_file_size'] ?? 5242880;
+                $defaultFileExpiry = $settings['default_file_expiry'] ?? 'never';
+                $thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
+                $sessionTimeoutMinutes = (int) ($settings['session_timeout_minutes'] ?? 60);
+                $installWarningEnabled = $settings['install_warning_enabled'] ?? true;
                 $userLimits = $settings['user_limits'] ?? [];
                 $userMaxFilesEnabled = $userLimits['max_files_enabled'] ?? false;
                 $userMaxFiles = $userLimits['max_files'] ?? 100;

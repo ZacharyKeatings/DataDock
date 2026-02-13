@@ -7,11 +7,21 @@
         <label for="site_name">Site Name</label>
         <input type="text" name="site_name" id="site_name" value="<?= sanitize_data($siteName) ?>" required>
 
+        <label for="admin_contact_email">Admin Contact Email</label>
+        <input type="email" name="admin_contact_email" id="admin_contact_email" value="<?= sanitize_data($adminContactEmail) ?>" placeholder="Optional">
+        <small>Shown in footer; leave empty to hide.</small>
+
         <!-- User Permissions -->
         <h4>User Permissions</h4>
         <label>
             <input type="checkbox" name="registration_enabled" <?= $registrationEnabled ? 'checked' : '' ?>>
             Enable User Registration
+        </label>
+        <div></div>
+
+        <label>
+            <input type="checkbox" name="enforce_unique_email" <?= $enforceUniqueEmail ? 'checked' : '' ?>>
+            Enforce Unique Email (strict: disallow duplicate emails; uncheck for relaxed mode)
         </label>
         <div></div>
 
@@ -65,6 +75,38 @@
 
         <label for="lockout_window">Attempt Window (minutes)</label>
         <input type="number" name="lockout_window" id="lockout_window" value="<?= sanitize_data($lockoutWindow) ?>" min="1" required>
+
+        <!-- Upload & Session -->
+        <h4>Upload & Session</h4>
+
+        <label for="default_file_expiry">Default File Expiry (upload form)</label>
+        <select name="default_file_expiry" id="default_file_expiry">
+            <option value="1_minute" <?= $defaultFileExpiry === '1_minute' ? 'selected' : '' ?>>1 Minute</option>
+            <option value="30_minutes" <?= $defaultFileExpiry === '30_minutes' ? 'selected' : '' ?>>30 Minutes</option>
+            <option value="1_hour" <?= $defaultFileExpiry === '1_hour' ? 'selected' : '' ?>>1 Hour</option>
+            <option value="6_hours" <?= $defaultFileExpiry === '6_hours' ? 'selected' : '' ?>>6 Hours</option>
+            <option value="1_day" <?= $defaultFileExpiry === '1_day' ? 'selected' : '' ?>>1 Day</option>
+            <option value="1_week" <?= $defaultFileExpiry === '1_week' ? 'selected' : '' ?>>1 Week</option>
+            <option value="1_month" <?= $defaultFileExpiry === '1_month' ? 'selected' : '' ?>>1 Month</option>
+            <option value="1_year" <?= $defaultFileExpiry === '1_year' ? 'selected' : '' ?>>1 Year</option>
+            <option value="never" <?= $defaultFileExpiry === 'never' ? 'selected' : '' ?>>Never</option>
+        </select>
+
+        <label>
+            <input type="checkbox" name="thumbnails_enabled" <?= $thumbnailsEnabled ? 'checked' : '' ?>>
+            Enable Thumbnail Generation (for image uploads)
+        </label>
+        <div></div>
+
+        <label for="session_timeout_minutes">Session Timeout (minutes)</label>
+        <input type="number" name="session_timeout_minutes" id="session_timeout_minutes" value="<?= sanitize_data($sessionTimeoutMinutes) ?>" min="0">
+        <small>0 = until browser close.</small>
+
+        <label>
+            <input type="checkbox" name="install_warning_enabled" <?= $installWarningEnabled ? 'checked' : '' ?>>
+            Show install.php Security Warning (when install.php still exists)
+        </label>
+        <div></div>
 
         <button type="submit" class="btn btn-primary">Update Settings</button>
     </form>

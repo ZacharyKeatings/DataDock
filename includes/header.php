@@ -62,7 +62,8 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
         <main class="container">
 
             <?php
-            if (!empty($_SESSION['user_id']) && $_SESSION['role'] === 'admin' && file_exists(__DIR__ . '/../install.php')) {
+            $installWarningEnabled = $settings['install_warning_enabled'] ?? true;
+            if ($installWarningEnabled && !empty($_SESSION['user_id']) && $_SESSION['role'] === 'admin' && file_exists(__DIR__ . '/../install.php')) {
                 echo '
                 <div class="flash warning persistent">
                     <button class="close-btn" onclick="this.parentElement.style.display=\'none\'">✖</button>

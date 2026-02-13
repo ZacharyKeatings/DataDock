@@ -48,6 +48,9 @@ $autoDeleteDurations  = [
     '1_year'     => '+1 year',
     'never'      => null,
 ];
+$defaultFileExpiry = $settings['default_file_expiry'] ?? 'never';
+if (!isset($autoDeleteDurations[$defaultFileExpiry])) $defaultFileExpiry = 'never';
+$thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
 
 // disable form if guest uploads off and no user
 $formDisabled = false;
@@ -189,9 +192,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destPath      = __DIR__ . '/uploads/' . $uniqueName;
         move_uploaded_file($tmpPath, $destPath);
 
-        // generate thumbnail if image
+        // generate thumbnail if image (when enabled)
         $thumbnailName = null;
-        if (str_starts_with($mimeType, 'image/')) {
+        if ($thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
             $thumbnailName = 'thumb_' . $uniqueName . '.jpg';
             $thumbPath     = __DIR__ . '/thumbnails/' . $thumbnailName;
             if ($img = @imagecreatefromstring(file_get_contents($destPath))) {
@@ -292,7 +295,7 @@ require_once __DIR__ . '/includes/header.php';
       <label for="duration">Auto-delete after</label>
       <select name="duration" id="duration">
         <?php foreach ($autoDeleteDurations as $key => $offset): ?>
-          <option value="<?= sanitize_data($key) ?>">
+          <option value="<?= sanitize_data($key) ?>"<?= $key === $defaultFileExpiry ? ' selected' : '' ?>>
             <?= ucwords(str_replace('_', ' ', $key)) ?>
           </option>
         <?php endforeach; ?>

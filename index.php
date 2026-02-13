@@ -40,7 +40,7 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div><?= format_filesize($file['filesize']) ?></div>
                     <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
                     <div>
-                        <?php if (str_starts_with($file['filetype'], 'image/')): ?>
+                        <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
                             <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumbnail" class="thumbnail-small">
                         <?php else: ?>
                             —

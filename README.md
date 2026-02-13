@@ -6,6 +6,7 @@ A lightweight, self-hosted PHP web application that allows registered users to u
 <a href="https://github.com/ZacharyKeatings/DataDock/releases">
    <img alt="DataDock Release" src="https://img.shields.io/github/v/release/ZacharyKeatings/DataDock">
 </a>
+
 <a href="https://github.com/ZacharyKeatings/DataDock/blob/main/LICENSE">
    <img alt="DataDock License" src="https://img.shields.io/github/license/ZacharyKeatings/DataDock">
 </a>
@@ -33,8 +34,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Enforce max storage and file limits per user
 - [ ]  User account & profile system
 - [ ]  Public file browsing (anonymous access to uploads)
-- [ ]  Default file expiry duration setting
-- [ ]  Enforce unique email toggle
+- [x]  Default file expiry duration setting
+- [x]  Enforce unique email toggle
 - [ ]  Invite-only registration – Only allow signups from a link/token created by the admin.
 - [ ]  User-to-user file sharing – Share a file only with specific usernames.
 
@@ -48,7 +49,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Max total storage per user (quota)
 - [x]  File management view for all users (admin panel)
 - [x]  Allowed file types (restrict extensions/MIME types)
-- [ ]  Enable/disable thumbnail generation
+- [x]  Enable/disable thumbnail generation
 - [ ]  Custom storage path support
 - [ ]  File upload progress bar
 - [ ]  Zip multiple files for download – Let users select files and download them as a single .zip.
@@ -73,10 +74,10 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [ ]  Site stats overview (uploads, storage used, user count, etc.)
 
 ### 💬 Interface & Branding Settings
-- [x]  Install.php warning if not deleted post-setup
+- [x]  Install.php warning if not deleted post-setup (toggleable in settings)
 - [ ]  Custom logo and favicon URLs
 - [ ]  Welcome banner or message field
-- [ ]  Install.php warning toggle
+- [x]  Install.php warning toggle
 - [ ]  Dark mode / light mode UI toggle
 - [ ]  Mobile responsiveness improvements
 - [ ]  Localization/multilanguage support
@@ -84,7 +85,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [ ]  Custom file icons – Icon preview per file type (PDF, MP3, PNG, etc.)
 
 ### 📧 Email / Notification Settings
-- [ ]  Admin contact email field
+- [x]  Admin contact email field
 - [ ]  Email notifications on upload, expiry, etc.
 - [ ]  SMTP configuration (host, port, user, pass, encryption)
 - [ ]  Email registration confirmation
@@ -96,7 +97,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  CSRF-safe architecture (form-only POST)
 - [x]  Brute-force login protection (with configurable limits and lockout window)
 - [ ]  CAPTCHA on login/register forms
-- [ ]  Session timeout duration setting
+- [x]  Session timeout duration setting
 
 ### 🔁 Versioning & Updates
 - [x]  Version display in admin panel / footer
@@ -153,7 +154,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - Uses `htmlspecialchars()` and custom `sanitize_data()`
 - File extensions are preserved, but MIME-type is validated via `mime_content_type`
 - Admin panel is locked behind session + role checks
-- `install.php` existence triggers a global warning until deleted
+- `install.php` existence triggers an admin warning until deleted (toggleable in Site Settings)
 
 ---
 
