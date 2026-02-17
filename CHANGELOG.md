@@ -14,10 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Public file browsing** — Optional anonymous access to uploads; when enabled, files marked "public" appear on the homepage and can be downloaded without logging in.
 - **User-to-user file sharing** — Share files with specific users by username; "Shared with You" section on dashboard; shared users can download and add shared files to ZIP downloads.
 
+### ✨ UI & Design
+- **Flat SVG icons** — Replaced emoji icons with flat SVG icons across the site (upload, folder, theme toggle, file types, copy, lock, etc.); icons use `assets/icons.svg` sprite.
+- **Redesigned upload page** — Hero section, improved drop zone with hover/dragover states, card-style options block, refined preview and progress display.
+- **Responsive sizing** — Page sections, titles, and descriptions use `clamp()` for better fit at various screen resolutions; file lists have appropriate min-widths and horizontal scroll on small screens.
+- **Admin Site Settings** — Card-based layout with grouped sections (General, User Permissions, Storage, Brute Force, etc.); live byte-size hints for storage inputs.
+- **Admin File Management** — Summary bar with file count and total size; cleaner toolbar and table layout.
+- **Updater & Changelog** — Displays only the most recent changelog section; proper semver comparison (shows "up to date" when current version ≥ latest release, e.g. development v1.6.0 vs. stable v1.4.1).
+
 ### Improved
 - Thumbnails now served via `thumbnail.php` for compatibility with custom storage paths.
 - Upload form shows "Make public" checkbox when public browsing is enabled.
 - Dashboard shows Public/Private toggle and Share button per file when applicable.
+- File table columns (Downloads, Uploaded) no longer wrap awkwardly; 8-column layout for public browsing with Download button.
 - Database migrations add `is_public` column to `files` and create `file_shares` table.
 
 ---

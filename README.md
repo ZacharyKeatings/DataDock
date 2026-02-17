@@ -43,7 +43,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  File upload with optional expiry
 - [x]  Auto-thumbnail generation for image files
 - [x]  Upload file size validation (frontend + backend)
-- [x]  Drag-and-drop + preview file upload support
+- [x]  Drag-and-drop + preview file upload support (redesigned upload page with hero and card-style options)
 - [x]  Date/time storage in UTC with frontend conversion
 - [x]  Max number of files per user
 - [x]  Max total storage per user (quota)
@@ -61,11 +61,11 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 
 ### 👑 Admin Panel
 - [x]  Admin panel with user and file management
-- [x]  Update site settings (e.g., site name, max upload size)
+- [x]  Update site settings with card-based layout (site name, storage path, limits, etc.)
 - [x]  Enable/disable brute force protection and configure thresholds
 - [x]  Configure guest upload limits (max files and storage)
 - [x]  Manual purging of expired files with stats
-- [x]  View all uploaded files (with admin delete/download options)
+- [x]  View all uploaded files with summary stats (delete/download options)
 - [x]  Reset site to post-install state (remove all users, files, and settings except admin)
 - [x]  Sidebar-based admin panel UI improvements
 - [x]  Maintenance mode toggle (admin-only access)
@@ -79,10 +79,10 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Welcome banner or message field
 - [x]  Install.php warning toggle
 - [x]  Dark mode / light mode UI toggle
-- [ ]  Mobile responsiveness improvements
+- [x]  Responsive layout (page sections, headings, file tables scale with viewport)
 - [ ]  Localization/multilanguage support
 - [ ]  Accessibility (WCAG) improvements
-- [x]  Custom file icons – Icon preview per file type (PDF, MP3, PNG, etc.)
+- [x]  Custom file icons – Flat SVG icons per file type; custom URLs configurable in settings
 
 ### 📧 Email / Notification Settings
 - [x]  Admin contact email field
@@ -101,8 +101,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 
 ### 🔁 Versioning & Updates
 - [x]  Version display in admin panel / footer
-- [x]  One-click update system (GitHub release fetcher)
-- [x]  Changelog and release notes viewer
+- [x]  One-click update system (GitHub release fetcher) with semantic version comparison
+- [x]  Changelog viewer (shows most recent section) and release notes
 
 ### ⚠️ Reporting & Abuse
 - [ ]  Users can report files for malicious/adult content
@@ -112,7 +112,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 ## ⚙️ Tech Stack
 
 - **Backend**: PHP 8+ (Vanilla, no frameworks)
-- **Frontend**: HTML5, CSS3 (Vanilla)
+- **Frontend**: HTML5, CSS3 (Vanilla), inline SVG icons
 - **Database**: MySQL (via PDO)
 - **Thumbnailing**: GD library
 - **Sessions**: Native PHP session handling
