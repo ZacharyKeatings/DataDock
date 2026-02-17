@@ -64,7 +64,8 @@ a:hover {
 .form-grid input,
 .form-grid select,
 .form-grid textarea,
-.form-group input {
+.form-group input,
+.upload-option select {
     background: var(--color-secondary);
     color: var(--color-text);
     border-color: var(--color-border);
@@ -78,6 +79,24 @@ a:hover {
 .stat-card,
 .file-header {
     background: var(--color-secondary);
+    border-color: var(--color-border);
+}
+
+.settings-card {
+    background: var(--color-secondary);
+    border-color: var(--color-border);
+}
+
+.settings-card-title {
+    background: rgba(0,0,0,0.2);
+    border-bottom-color: var(--color-border);
+}
+
+.settings-card-body .settings-row input,
+.settings-card-body .settings-row select,
+.settings-card-body .settings-row textarea {
+    background: var(--color-box-background);
+    color: var(--color-text);
     border-color: var(--color-border);
 }
 
@@ -110,4 +129,21 @@ a:hover {
 .welcome-banner {
     background: var(--color-secondary);
     border-left-color: #00b894;
+}
+
+/* Upload page dark mode */
+.upload-page .drop-zone {
+    background: linear-gradient(135deg, rgba(3, 140, 150, 0.08) 0%, rgba(3, 140, 150, 0.15) 100%);
+}
+
+.upload-page .drop-zone:hover {
+    background: linear-gradient(135deg, rgba(255, 188, 66, 0.1) 0%, rgba(255, 188, 66, 0.2) 100%);
+}
+
+.upload-page .drop-zone.dragover {
+    background: linear-gradient(135deg, rgba(3, 140, 150, 0.2) 0%, rgba(3, 140, 150, 0.28) 100%);
+}
+
+.upload-page .upload-progress {
+    background: rgba(3, 140, 150, 0.15);
 }

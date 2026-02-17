@@ -293,13 +293,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="page-section">
-  <h2 class="page-title">Upload Files</h2>
+<div class="page-section upload-page">
+  <div class="upload-hero">
+    <div class="upload-hero-icon"><?= icon_svg('upload') ?></div>
+    <h2 class="page-title">Upload Files</h2>
+    <p class="upload-subtitle">Drag files into the zone below or click to select</p>
+  </div>
 
   <?php if (! $formDisabled): ?>
-    <form method="post" enctype="multipart/form-data" id="uploadForm">
+    <form method="post" enctype="multipart/form-data" id="uploadForm" class="upload-form">
       <?php if ($tosEnabled && !empty($tosText)): ?>
-      <div class="tos-block">
+      <div class="tos-block upload-options-block">
         <div class="tos-text"><?= nl2br(sanitize_data($tosText)) ?></div>
         <label class="tos-checkbox">
           <input type="checkbox" name="tos_accepted" id="tos_accepted" required>
@@ -309,51 +313,62 @@ require_once __DIR__ . '/includes/header.php';
       <?php endif; ?>
       <!-- application‐level max -->
       <input type="hidden" name="MAX_FILE_SIZE" value="<?= $appMaxFileSize ?>">
-      <label for="upload">Select files</label>
-      <div id="dropZone" class="drop-zone">
-        Drag & Drop files here or click to browse
+
+      <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="Drop zone for file uploads">
+        <span class="drop-zone-icon"><?= icon_svg('folder') ?></span>
+        <span class="drop-zone-text">Drop files here or click to browse</span>
+        <span class="drop-zone-hint">
+          <?php if ($appMaxFileSize > 0): ?>
+            Max <?= format_filesize($appMaxFileSize) ?> per file
+          <?php else: ?>
+            No size limit
+          <?php endif; ?>
+        </span>
       </div>
       <input type="file" name="upload[]" id="upload" multiple hidden required>
 
-      <?php if ($appMaxFileSize > 0): ?>
-        <small id="maxSizeNote">
-          Maximum allowed file size: <?= format_filesize($appMaxFileSize) ?>
+      <div class="upload-meta">
+        <small>
+          <strong>Forbidden:</strong> <?= implode(', ', $forbiddenExtensions) ?>
         </small>
-      <?php else: ?>
-        <small>No file size limit is currently set.</small>
-      <?php endif; ?>
+      </div>
 
-      <br>
-      <small>
-        <strong>Forbidden file types:</strong>
-        <?= implode(', ', $forbiddenExtensions) ?>
-      </small>
+      <div id="preview" class="upload-preview"></div>
+      <div id="uploadResult" class="upload-result"></div>
 
-      <div id="preview"></div>
-      <div id="uploadResult" style="display:none; margin:1rem 0;"></div>
+      <div class="upload-options-block">
+        <h4 class="upload-options-title">Options</h4>
+        <div class="upload-options-grid">
+          <div class="upload-option">
+            <label for="duration">Auto-delete after</label>
+            <select name="duration" id="duration">
+              <?php foreach ($autoDeleteDurations as $key => $offset): ?>
+                <option value="<?= sanitize_data($key) ?>"<?= $key === $defaultFileExpiry ? ' selected' : '' ?>>
+                  <?= ucwords(str_replace('_', ' ', $key)) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <?php if ($publicBrowsingEnabled): ?>
+          <div class="upload-option upload-option-checkbox">
+            <label class="tos-checkbox">
+              <input type="checkbox" name="is_public" id="is_public">
+              Make public
+            </label>
+            <small>Anyone can browse and download</small>
+          </div>
+          <?php endif; ?>
+        </div>
+      </div>
 
-      <?php if ($publicBrowsingEnabled): ?>
-      <label class="tos-checkbox">
-        <input type="checkbox" name="is_public" id="is_public">
-        Make this file public (anyone can browse and download without logging in)
-      </label>
-      <?php endif; ?>
-
-      <label for="duration">Auto-delete after</label>
-      <select name="duration" id="duration">
-        <?php foreach ($autoDeleteDurations as $key => $offset): ?>
-          <option value="<?= sanitize_data($key) ?>"<?= $key === $defaultFileExpiry ? ' selected' : '' ?>>
-            <?= ucwords(str_replace('_', ' ', $key)) ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-
-      <div id="progressContainer" style="display:none; margin:10px 0;">
-        <progress id="uploadProgress" max="100" value="0" style="width:100%;"></progress>
+      <div id="progressContainer" class="upload-progress" style="display:none;">
+        <progress id="uploadProgress" max="100" value="0"></progress>
         <span id="progressText">0%</span>
       </div>
 
-      <button type="submit">Upload</button>
+      <div class="upload-submit-wrap">
+        <button type="submit" class="btn btn-primary btn-upload-submit">Upload</button>
+      </div>
     </form>
   <?php endif; ?>
 
@@ -369,7 +384,16 @@ require_once __DIR__ . '/includes/header.php';
     const maxSize           = <?= $appMaxFileSize ?>;
     const forbiddenExts     = <?= json_encode($forbiddenExtensions) ?>;
 
-    dropZone.addEventListener("click", () => fileInput.click());
+    function openFilePicker() {
+      fileInput.click();
+    }
+    dropZone.addEventListener("click", openFilePicker);
+    dropZone.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openFilePicker();
+      }
+    });
     dropZone.addEventListener("dragover", e => {
       e.preventDefault();
       dropZone.classList.add("dragover");
@@ -421,14 +445,18 @@ require_once __DIR__ . '/includes/header.php';
           continue;
         }
         const container = document.createElement("div");
-        container.style.marginTop = "10px";
-        container.textContent = file.name;
+        container.className = "preview-item";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        nameSpan.title = file.name;
         if (file.type.startsWith("image/")) {
           const img = document.createElement("img");
           img.src = URL.createObjectURL(file);
-          img.style.height = "200px";
-          img.style.marginRight = "10px";
-          container.prepend(img);
+          img.alt = file.name;
+          container.appendChild(img);
+          container.appendChild(nameSpan);
+        } else {
+          container.appendChild(nameSpan);
         }
         preview.appendChild(container);
       }

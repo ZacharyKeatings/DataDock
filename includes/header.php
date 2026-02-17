@@ -54,8 +54,8 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                 </div>
                 <nav class="main-nav">
                     <span class="theme-toggle">
-                        <a href="set_theme.php?theme=light" class="theme-btn<?= $theme === 'light' ? ' active' : '' ?>" title="Light mode">☀️</a>
-                        <a href="set_theme.php?theme=dark" class="theme-btn<?= $theme === 'dark' ? ' active' : '' ?>" title="Dark mode">🌙</a>
+                        <a href="set_theme.php?theme=light" class="theme-btn<?= $theme === 'light' ? ' active' : '' ?>" title="Light mode"><?= icon_svg('sun') ?></a>
+                        <a href="set_theme.php?theme=dark" class="theme-btn<?= $theme === 'dark' ? ' active' : '' ?>" title="Dark mode"><?= icon_svg('moon') ?></a>
                     </span>
                     <a href="index.php"<?= $currentPage === 'index.php' ? ' class="active"' : '' ?>>Home</a>
                     <?php if (!empty($_SESSION['user_id'])): ?>
@@ -83,9 +83,9 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
             if ($installWarningEnabled && !empty($_SESSION['user_id']) && $_SESSION['role'] === 'admin' && file_exists(__DIR__ . '/../install.php')) {
                 echo '
                 <div class="flash warning persistent">
-                    <button class="close-btn" onclick="this.parentElement.style.display=\'none\'">✖</button>
+                    <button class="close-btn" onclick="this.parentElement.style.display=\'none\'">' . icon_svg('close') . '</button>
                     <div>
-                        ⚠️ <strong>Security Warning:</strong> <code>install.php</code> still exists on your server.<br>
+                        ' . icon_svg('warning') . ' <strong>Security Warning:</strong> <code>install.php</code> still exists on your server.<br>
                         For security, please <strong>delete or rename this file immediately</strong>.
                     </div>
                 </div>';
@@ -96,7 +96,7 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                 <?php if (!empty($_SESSION["flash_$type"])): ?>
                     <?php foreach ((array)$_SESSION["flash_$type"] as $msg): ?>
                         <div class="flash <?= $type ?>">
-                            <button class="close-btn" onclick="this.parentElement.remove()">✖</button>
+                            <button class="close-btn" onclick="this.parentElement.remove()"><?= icon_svg('close') ?></button>
                             <?= is_array($msg) && !empty($msg['html']) ? $msg['msg'] : sanitize_data($msg) ?>
                         </div>
                     <?php endforeach; unset($_SESSION["flash_$type"]); ?>

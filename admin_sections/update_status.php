@@ -26,7 +26,11 @@ if ($response) {
     $normalizedTag = null;
 }
 
-$isLatest = $normalizedTag === $currentVersion;
+$currentVersion = trim($currentVersion ?: '0');
+$isLatest = $normalizedTag && (
+    $currentVersion === $normalizedTag ||
+    version_compare($currentVersion, $normalizedTag, '>=')
+);
 
 $ch = curl_init($changelogUrl);
 curl_setopt_array($ch, [
@@ -47,13 +51,20 @@ curl_close($ch);
         <button type="submit" class="btn btn-primary">Update to <?= $latestTag ?></button>
     </form>
 <?php else: ?>
-    <div class="success">✅ You are running the latest version.</div>
+    <div class="success"><?= icon_svg('check') ?> You are running the latest version.</div>
 <?php endif; ?>
 
 <h3>Latest Release Notes</h3>
 <div class="release-notes"><?= basic_markdown($releaseNotes) ?></div>
 
-<?php if ($changelog): ?>
-    <h3>Full Changelog</h3>
-    <pre class="changelog-box"><?= basic_markdown($changelog) ?></pre>
+<?php if ($changelog): 
+    // Extract only the most recent changelog section (first ## version block until next ## or ---)
+    if (preg_match('/##\s*\[[^\]]+\][^\n]*\n.*?(?=\n---|\n##\s*\[|$)/s', $changelog, $m)) {
+        $changelogSection = trim($m[0]);
+    } else {
+        $changelogSection = $changelog;
+    }
+?>
+    <h3>Recent Changelog</h3>
+    <div class="release-notes"><?= basic_markdown($changelogSection) ?></div>
 <?php endif; ?>

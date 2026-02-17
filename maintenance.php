@@ -20,7 +20,7 @@ if (file_exists($settingsPath)) {
 <body>
     <div class="page-wrapper">
         <div class="page-section" style="max-width: 500px; margin: 4rem auto; text-align: center;">
-            <h2 class="page-title">🔧 Site Under Maintenance</h2>
+            <h2 class="page-title"><?= icon_svg('wrench') ?> Site Under Maintenance</h2>
             <p>We're currently performing maintenance. Please try again later.</p>
             <p style="margin-top: 1.5rem;">
                 <a href="login.php" class="btn btn-primary">Admin Login</a>

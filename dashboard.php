@@ -57,10 +57,9 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
 
             <?php foreach ($files as $file): ?>
-                <?php $fileIcon = get_file_icon($file['filetype'], $file['original_name'] ?? ''); ?>
                 <div class="file-row-dashboard">
                     <div><input type="checkbox" form="zipForm" name="ids[]" value="<?= $file['id'] ?>" class="zip-checkbox"></div>
-                    <div><span class="file-icon"><?= (str_starts_with($fileIcon, 'http') ? '<img src="' . sanitize_data($fileIcon) . '" alt="" class="file-icon-img">' : $fileIcon) ?></span> <?= sanitize_data($file['original_name']) ?></div>
+                    <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
                     <div title="<?= sanitize_data($file['filetype']) ?>">
                         <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
                     </div>
@@ -83,11 +82,11 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <?php if (!empty($file['checksum_md5']) || !empty($file['checksum_sha256'])): ?>
                             <?php if (!empty($file['checksum_md5'])): ?>
                             <span title="MD5: <?= sanitize_data($file['checksum_md5']) ?>"><small>MD5</small></span>
-                            <button type="button" class="btn-copy" data-copy="<?= sanitize_data($file['checksum_md5']) ?>" title="Copy MD5">📋</button>
+                            <button type="button" class="btn-copy" data-copy="<?= sanitize_data($file['checksum_md5']) ?>" title="Copy MD5"><?= icon_svg('copy') ?></button>
                             <?php endif; ?>
                             <?php if (!empty($file['checksum_sha256'])): ?>
                             <span title="SHA256: <?= sanitize_data($file['checksum_sha256']) ?>"><small>SHA256</small></span>
-                            <button type="button" class="btn-copy" data-copy="<?= sanitize_data($file['checksum_sha256']) ?>" title="Copy SHA256">📋</button>
+                            <button type="button" class="btn-copy" data-copy="<?= sanitize_data($file['checksum_sha256']) ?>" title="Copy SHA256"><?= icon_svg('copy') ?></button>
                             <?php endif; ?>
                         <?php else: ?>
                             —
@@ -98,7 +97,7 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <form method="post" action="toggle_public.php" style="display:inline;">
                             <input type="hidden" name="id" value="<?= $file['id'] ?>">
                             <button type="submit" class="btn btn-small" title="<?= $file['is_public'] ? 'Make private' : 'Make public' ?>">
-                                <?= $file['is_public'] ? '🔓 Public' : '🔒 Private' ?>
+                                <span class="btn-icon"><?= icon_svg($file['is_public'] ? 'lock-open' : 'lock') ?></span> <?= $file['is_public'] ? 'Public' : 'Private' ?>
                             </button>
                         </form>
                         <?php endif; ?>
@@ -127,9 +126,8 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div>Actions</div>
         </div>
         <?php foreach ($sharedFiles as $file): ?>
-            <?php $fileIcon = get_file_icon($file['filetype'], $file['original_name'] ?? ''); ?>
             <div class="file-row-dashboard">
-                <div><span class="file-icon"><?= (str_starts_with($fileIcon, 'http') ? '<img src="' . sanitize_data($fileIcon) . '" alt="" class="file-icon-img">' : $fileIcon) ?></span> <?= sanitize_data($file['original_name']) ?></div>
+                <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
                 <div><?= sanitize_data($file['shared_by_username'] ?? '?') ?></div>
                 <div><?= sanitize_data(get_friendly_filetype($file['filetype'])) ?></div>
                 <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
@@ -168,12 +166,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
     document.querySelectorAll('.btn-copy').forEach(btn => {
+        const origHtml = btn.innerHTML;
         btn.addEventListener('click', () => {
             const val = btn.dataset.copy;
             if (val && navigator.clipboard) navigator.clipboard.writeText(val);
-            const orig = btn.textContent;
-            btn.textContent = '✓';
-            setTimeout(() => { btn.textContent = orig; }, 1500);
+            btn.innerHTML = '<svg class="icon" aria-hidden="true" width="24" height="24"><use href="assets/icons.svg#icon-check"/></svg>';
+            setTimeout(() => { btn.innerHTML = origHtml; }, 1500);
         });
     });
 });

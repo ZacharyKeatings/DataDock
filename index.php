@@ -43,7 +43,7 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <p class="page-description">This site allows registered users to upload files and manage them securely.<?= $publicBrowsingEnabled ? ' Below are publicly shared files:' : ' Below are the most recent uploads:' ?></p>
 
     <?php if ($recentFiles): ?>
-        <div class="file-list">
+        <div class="file-list file-list-index<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
             <div class="file-row file-header">
                 <div>Filename</div>
                 <div>User</div>
@@ -55,9 +55,8 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php if ($publicBrowsingEnabled): ?><div>Download</div><?php endif; ?>
             </div>
             <?php foreach ($recentFiles as $file): ?>
-                <?php $fileIcon = get_file_icon($file['filetype'], $file['original_name'] ?? ''); ?>
                 <div class="file-row">
-                    <div><span class="file-icon"><?= (str_starts_with($fileIcon, 'http') ? '<img src="' . sanitize_data($fileIcon) . '" alt="" class="file-icon-img">' : $fileIcon) ?></span> <?= sanitize_data($file['original_name']) ?></div>
+                    <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
                     <div><?= sanitize_data($file['username'] ?? 'Guest') ?></div>
                     <div title="<?= sanitize_data($file['filetype']) ?>">
                         <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>

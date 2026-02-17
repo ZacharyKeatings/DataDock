@@ -57,7 +57,7 @@ $expiringSoon = (int) $stmt->fetchColumn();
 
     <?php if ($expiringSoon > 0): ?>
     <div class="stats-alert">
-        ⚠️ <strong><?= $expiringSoon ?></strong> file(s) will expire in the next 7 days.
+        <?= icon_svg('warning') ?> <strong><?= $expiringSoon ?></strong> file(s) will expire in the next 7 days.
         <a href="?section=files">View files</a>
     </div>
     <?php endif; ?>

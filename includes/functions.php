@@ -10,6 +10,19 @@ function sanitize_data($data) {
 }
 
 /**
+ * Output inline SVG icon from sprite.
+ *
+ * @param string $name  Icon name (e.g. 'upload', 'folder', 'icon-sun')
+ * @param string $class Optional CSS class
+ * @return string HTML for the icon
+ */
+function icon_svg($name, $class = '') {
+    $id = strpos($name, 'icon-') === 0 ? $name : 'icon-' . $name;
+    $cls = trim('icon ' . $class);
+    return '<svg class="' . htmlspecialchars($cls) . '" aria-hidden="true" width="24" height="24"><use href="assets/icons.svg#' . htmlspecialchars($id) . '"/></svg>';
+}
+
+/**
  * Resolve storage base path (absolute). Empty = use project root.
  *
  * @return string Base directory path (no trailing slash for subdir appending)
@@ -268,23 +281,40 @@ function get_file_icon($filetype, $filename = null) {
     }
     if ($ext) {
         $extMap = [
-            'pdf' => '📄', 'doc' => '📝', 'docx' => '📝',
-            'xls' => '📊', 'xlsx' => '📊', 'ppt' => '📽️', 'pptx' => '📽️',
-            'txt' => '📃', 'json' => '📃', 'xml' => '📃',
-            'zip' => '📦', 'rar' => '📦',
-            'mp3' => '🎵', 'wav' => '🎵', 'ogg' => '🎵',
-            'mp4' => '🎬', 'webm' => '🎬', 'avi' => '🎬',
-            'jpg' => '🖼️', 'jpeg' => '🖼️', 'png' => '🖼️', 'gif' => '🖼️', 'webp' => '🖼️', 'svg' => '🖼️',
+            'pdf' => 'file-doc', 'doc' => 'file-doc', 'docx' => 'file-doc',
+            'xls' => 'file-sheet', 'xlsx' => 'file-sheet', 'ppt' => 'file-slide', 'pptx' => 'file-slide',
+            'txt' => 'file-doc', 'json' => 'file-doc', 'xml' => 'file-doc',
+            'zip' => 'file-archive', 'rar' => 'file-archive',
+            'mp3' => 'file-audio', 'wav' => 'file-audio', 'ogg' => 'file-audio',
+            'mp4' => 'file-video', 'webm' => 'file-video', 'avi' => 'file-video',
+            'jpg' => 'file-image', 'jpeg' => 'file-image', 'png' => 'file-image', 'gif' => 'file-image', 'webp' => 'file-image', 'svg' => 'file-image',
         ];
         if (isset($extMap[$ext])) return $extMap[$ext];
     }
     if ($filetype) {
-        if (str_starts_with($filetype, 'image/')) return '🖼️';
-        if (str_starts_with($filetype, 'video/')) return '🎬';
-        if (str_starts_with($filetype, 'audio/')) return '🎵';
-        if ($filetype === 'application/pdf') return '📄';
+        if (str_starts_with($filetype, 'image/')) return 'file-image';
+        if (str_starts_with($filetype, 'video/')) return 'file-video';
+        if (str_starts_with($filetype, 'audio/')) return 'file-audio';
+        if ($filetype === 'application/pdf') return 'file-doc';
     }
-    return '📎';
+    return 'file';
+}
+
+/**
+ * Render file icon HTML - either img (for custom URL) or SVG (for built-in icon name).
+ *
+ * @param string $icon Result from get_file_icon()
+ * @param string $class Optional CSS class for the wrapper
+ * @return string HTML
+ */
+function render_file_icon($icon, $class = 'file-icon') {
+    if (str_starts_with($icon, 'http')) {
+        return '<img src="' . htmlspecialchars($icon) . '" alt="" class="file-icon-img">';
+    }
+    if (preg_match('/^[a-z0-9-]+$/i', $icon)) {
+        return '<span class="' . htmlspecialchars($class) . '">' . icon_svg($icon, 'file-icon-svg') . '</span>';
+    }
+    return '<span class="' . htmlspecialchars($class) . '">' . sanitize_data($icon) . '</span>';
 }
 
 

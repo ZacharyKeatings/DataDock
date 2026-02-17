@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.4.0] - 2026-02-12
+## [v1.4.1] - 2026-02-12
 ### ✨ New Features
 - **Site stats overview** — Admin panel Overview section: total uploads, storage used, user count, file type breakdown, and files expiring soon.
 - **Maintenance mode** — Block non-admins when enabled; admins can still access the site and log in via login.php.
@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.4.1] - 2026-02-12
+## [v1.4.0] - 2026-02-12
 ### ✨ New Features (File & UX)
 - **Download counter per file** — Count and display downloads in dashboard, admin file management, and homepage.
 - **File checksum display** — MD5 and SHA256 computed on upload; shown with copy buttons in dashboard.
