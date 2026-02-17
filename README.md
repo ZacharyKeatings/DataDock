@@ -37,6 +37,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Default file expiry duration setting
 - [x]  Enforce unique email toggle
 - [ ]  Invite-only registration – Only allow signups from a link/token created by the admin.
+- [ ]  Password reset flow – Admin-initiated or token-based reset for forgotten passwords.
 - [x]  User-to-user file sharing – Share a file only with specific usernames.
 
 ### 🗂️ File Upload & Storage Settings
@@ -51,13 +52,18 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Allowed file types (restrict extensions/MIME types)
 - [x]  Enable/disable thumbnail generation
 - [x]  Custom storage path support
-- [ ]  File upload progress bar
+- [x]  File upload progress bar
 - [x]  Zip multiple files for download – Let users select files and download them as a single .zip.
 - [x]  Download as QR code – Generate and display QR code to link directly to file.
 - [x]  One-time download links (auto-expire after single use)
 - [x]  File checksum display – Show MD5/SHA256 so users can verify integrity.
 - [x]  Terms of Service / Acceptable Use – User must agree before uploading.
 - [x]  Download counter per file
+- [ ]  File search and filter – Search by filename, date, type; filter by visibility, expiry status.
+- [ ]  File metadata editing – Rename files, change expiry, add description without re-uploading.
+- [ ]  Soft delete / trash – Deleted files go to trash, restorable for a configurable period.
+- [ ]  Folders or tags – Organize files (folders or flat tags).
+- [ ]  Duplicate detection – Deduplicate by file hash to save storage.
 
 ### 👑 Admin Panel
 - [x]  Admin panel with user and file management
@@ -72,6 +78,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Debug mode toggle (verbose errors)
 - [x]  Log file path and verbosity setting
 - [x]  Site stats overview (uploads, storage used, user count, etc.)
+- [ ]  Activity / audit log – View who uploaded, downloaded, shared, or deleted what and when.
+- [ ]  Storage / quota alerts – Admin notification when storage or quotas approach limits.
+- [ ]  Backup / export – Export database and optionally file metadata for disaster recovery.
 
 ### 💬 Interface & Branding Settings
 - [x]  Install.php warning if not deleted post-setup (toggleable in settings)
@@ -97,6 +106,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  CSRF-safe architecture (form-only POST)
 - [x]  Brute-force login protection (with configurable limits and lockout window)
 - [ ]  CAPTCHA on login/register forms
+- [ ]  Rate limiting on uploads – Throttle upload frequency per user or IP to prevent abuse.
 - [x]  Session timeout duration setting
 
 ### 🔁 Versioning & Updates
