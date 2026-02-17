@@ -33,14 +33,14 @@ if (!$file) {
 }
 
 // Delete physical file
-$uploadPath = __DIR__ . '/uploads/' . $file['filename'];
+$uploadPath = get_upload_path() . $file['filename'];
 if (file_exists($uploadPath)) {
     unlink($uploadPath);
 }
 
 // Delete thumbnail if exists
 if (!empty($file['thumbnail_path'])) {
-    $thumbPath = __DIR__ . '/thumbnails/' . $file['thumbnail_path'];
+    $thumbPath = get_thumbnails_path() . $file['thumbnail_path'];
     if (file_exists($thumbPath)) {
         unlink($thumbPath);
     }

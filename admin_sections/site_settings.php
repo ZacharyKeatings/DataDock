@@ -58,6 +58,13 @@
         <label for="guest_max_storage">Guest Max Storage (in bytes)</label>
         <input type="number" name="guest_max_storage" id="guest_max_storage" value="<?= sanitize_data($guestMaxStorage) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
 
+        <!-- Storage -->
+        <h4>Storage</h4>
+
+        <label for="storage_base_path">Custom Storage Base Path</label>
+        <input type="text" name="storage_base_path" id="storage_base_path" value="<?= sanitize_data($storageBasePath ?? '') ?>" placeholder="e.g. /var/data/datadock or storage">
+        <small>Absolute path (e.g. /var/data/datadock) or relative to project root. Creates uploads/ and thumbnails/ subdirs. Leave empty for default.</small>
+
         <!-- Brute Force Protection -->
         <h4>Brute Force Protection</h4>
 
@@ -107,6 +114,13 @@
             Show install.php Security Warning (when install.php still exists)
         </label>
         <div></div>
+
+        <label>
+            <input type="checkbox" name="public_browsing_enabled" <?= ($publicBrowsingEnabled ?? false) ? 'checked' : '' ?>>
+            Public File Browsing (allow anonymous access to public files)
+        </label>
+        <div></div>
+        <small>When enabled, files marked "public" can be browsed and downloaded by anyone without logging in.</small>
 
         <!-- Maintenance & Debug -->
         <h4>Maintenance & Debug</h4>

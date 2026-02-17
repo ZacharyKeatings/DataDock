@@ -33,11 +33,11 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  Optional guest uploads with quota enforcement (file count + size)
 - [x]  Enforce max storage and file limits per user
 - [ ]  User account & profile system
-- [ ]  Public file browsing (anonymous access to uploads)
+- [x]  Public file browsing (anonymous access to uploads)
 - [x]  Default file expiry duration setting
 - [x]  Enforce unique email toggle
 - [ ]  Invite-only registration – Only allow signups from a link/token created by the admin.
-- [ ]  User-to-user file sharing – Share a file only with specific usernames.
+- [x]  User-to-user file sharing – Share a file only with specific usernames.
 
 ### 🗂️ File Upload & Storage Settings
 - [x]  File upload with optional expiry
@@ -50,7 +50,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [x]  File management view for all users (admin panel)
 - [x]  Allowed file types (restrict extensions/MIME types)
 - [x]  Enable/disable thumbnail generation
-- [ ]  Custom storage path support
+- [x]  Custom storage path support
 - [ ]  File upload progress bar
 - [x]  Zip multiple files for download – Let users select files and download them as a single .zip.
 - [x]  Download as QR code – Generate and display QR code to link directly to file.

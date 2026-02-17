@@ -31,6 +31,10 @@ $settings = [
         'lockout_window' => 10
     ],
 
+    'storage_base_path' => '',  // Custom base for uploads/thumbnails (empty = project root)
+
+    'public_browsing_enabled' => false,  // Allow anonymous browsing of public files
+
     'guest_uploads' => [
         'enabled' => false,
         'max_files' => 0,

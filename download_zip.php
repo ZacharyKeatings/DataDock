@@ -24,8 +24,14 @@ if ($isAdmin) {
     $stmt = $pdo->prepare("SELECT * FROM files WHERE id IN ($placeholders) AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
     $stmt->execute($ids);
 } else {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id IN ($placeholders) AND user_id = ? AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
-    $stmt->execute(array_merge($ids, [$userId]));
+    // Owner OR shared with user
+    $stmt = $pdo->prepare("
+        SELECT f.* FROM files f
+        LEFT JOIN file_shares fs ON f.id = fs.file_id AND fs.shared_with_user_id = ?
+        WHERE f.id IN ($placeholders) AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
+        AND (f.user_id = ? OR fs.id IS NOT NULL)
+    ");
+    $stmt->execute(array_merge([$userId], $ids, [$userId]));
 }
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -44,7 +50,7 @@ if (!$zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
 }
 
 foreach ($files as $file) {
-    $fullPath = __DIR__ . '/uploads/' . $file['filename'];
+    $fullPath = get_upload_path() . $file['filename'];
     if (file_exists($fullPath)) {
         $zip->addFile($fullPath, $file['original_name'] ?: $file['filename']);
     }

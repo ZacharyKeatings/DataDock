@@ -9,6 +9,44 @@ function sanitize_data($data) {
     return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * Resolve storage base path (absolute). Empty = use project root.
+ *
+ * @return string Base directory path (no trailing slash for subdir appending)
+ */
+function _resolve_storage_base(): string {
+    static $base = null;
+    if ($base === null) {
+        $settingsPath = __DIR__ . '/../config/settings.php';
+        $settings = file_exists($settingsPath) ? require $settingsPath : [];
+        $cfg = trim($settings['storage_base_path'] ?? '');
+        if (empty($cfg)) {
+            $base = rtrim(str_replace('\\', '/', __DIR__ . '/..'), '/');
+        } else {
+            $base = (strpos($cfg, '/') === 0) ? rtrim($cfg, '/') : rtrim(str_replace('\\', '/', __DIR__ . '/../' . ltrim($cfg, '/')), '/');
+        }
+    }
+    return $base;
+}
+
+/**
+ * Get the base path for file uploads (absolute path, trailing slash).
+ *
+ * @return string
+ */
+function get_upload_path(): string {
+    return _resolve_storage_base() . '/uploads/';
+}
+
+/**
+ * Get the base path for thumbnails (absolute path, trailing slash).
+ *
+ * @return string
+ */
+function get_thumbnails_path(): string {
+    return _resolve_storage_base() . '/thumbnails/';
+}
+
 
 
 /**
@@ -116,6 +154,8 @@ function write_default_settings_file($siteName = 'DataDock') {
         "        'lockout_minutes' => 15,\n" .
         "        'lockout_window' => 10\n" .
         "    ],\n" .
+        "    'storage_base_path' => '',\n" .
+        "    'public_browsing_enabled' => false,\n" .
         "    'guest_uploads' => [\n" .
         "        'enabled' => false,\n" .
         "        'max_files' => 0,\n" .

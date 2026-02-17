@@ -30,7 +30,7 @@ if (!$file) {
     exit;
 }
 
-$path = __DIR__ . '/uploads/' . $file['filename'];
+$path = get_upload_path() . $file['filename'];
 if (!file_exists($path)) {
     $_SESSION['flash_error'][] = "❌ File is missing from server.";
     header("Location: dashboard.php");

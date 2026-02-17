@@ -42,4 +42,32 @@ function run_migrations(PDO $pdo): void {
     } catch (PDOException $e) {
         // Ignore if exists
     }
+
+    // v1.6.0: is_public on files
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'is_public'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE files ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 0 AFTER guest_id");
+        }
+    } catch (PDOException $e) {}
+
+    // v1.6.0: file_shares for user-to-user sharing
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS file_shares (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                file_id INT NOT NULL,
+                shared_with_user_id INT NOT NULL,
+                shared_by_user_id INT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+                FOREIGN KEY (shared_with_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (shared_by_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_share (file_id, shared_with_user_id),
+                INDEX idx_shared_with (shared_with_user_id)
+            )
+        ");
+    } catch (PDOException $e) {
+        // Ignore if exists
+    }
 }

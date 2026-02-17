@@ -39,7 +39,7 @@
                 </div>
                 <div>
                     <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                        <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumb" class="thumbnail-small">
+                        <img src="thumbnail.php?id=<?= (int)$file['id'] ?>" alt="Thumb" class="thumbnail-small">
                     <?php else: ?>
                         —
                     <?php endif; ?>

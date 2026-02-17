@@ -5,11 +5,13 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/config/settings.php';
 
 $pageTitle = "Your Files";
 require_once __DIR__ . '/includes/header.php';
 
 $userId = $_SESSION['user_id'];
+$publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 
 // Fetch user's files
 $stmt = $pdo->prepare("SELECT * FROM files 
@@ -18,6 +20,19 @@ $stmt = $pdo->prepare("SELECT * FROM files
     ORDER BY upload_date DESC");
 $stmt->execute([$userId]);
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch files shared with user
+$stmt = $pdo->prepare("
+    SELECT f.*, u.username as shared_by_username
+    FROM files f
+    JOIN file_shares fs ON f.id = fs.file_id
+    JOIN users u ON fs.shared_by_user_id = u.id
+    WHERE fs.shared_with_user_id = ?
+    AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
+    ORDER BY f.upload_date DESC
+");
+$stmt->execute([$userId]);
+$sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="page-section">
@@ -59,7 +74,7 @@ $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div>
                         <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                            <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumb" class="thumbnail-small">
+                            <img src="thumbnail.php?id=<?= (int)$file['id'] ?>" alt="Thumb" class="thumbnail-small">
                         <?php else: ?>
                             —
                         <?php endif; ?>
@@ -79,6 +94,15 @@ $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <?php endif; ?>
                     </div>
                     <div class="file-actions">
+                        <?php if ($publicBrowsingEnabled): ?>
+                        <form method="post" action="toggle_public.php" style="display:inline;">
+                            <input type="hidden" name="id" value="<?= $file['id'] ?>">
+                            <button type="submit" class="btn btn-small" title="<?= $file['is_public'] ? 'Make private' : 'Make public' ?>">
+                                <?= $file['is_public'] ? '🔓 Public' : '🔒 Private' ?>
+                            </button>
+                        </form>
+                        <?php endif; ?>
+                        <a href="share.php?id=<?= $file['id'] ?>" class="btn btn-small">Share</a>
                         <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a>
                         <a href="create_onetime.php?id=<?= $file['id'] ?>" class="btn btn-small">One-time link</a>
                         <a href="delete.php?id=<?= $file['id'] ?>" class="btn btn-small btn-danger" onclick="return confirm('Delete this file?')">Delete</a>
@@ -90,6 +114,33 @@ $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <p>You haven't uploaded any files yet.</p>
     <?php endif; ?>
 </div>
+
+<?php if (!empty($sharedFiles)): ?>
+<div class="page-section" style="margin-top:2rem;">
+    <h2 class="page-title">Shared with You</h2>
+    <div class="file-list">
+        <div class="file-row-dashboard file-header">
+            <div>Filename</div>
+            <div>Shared by</div>
+            <div>Type</div>
+            <div>Size</div>
+            <div>Actions</div>
+        </div>
+        <?php foreach ($sharedFiles as $file): ?>
+            <?php $fileIcon = get_file_icon($file['filetype'], $file['original_name'] ?? ''); ?>
+            <div class="file-row-dashboard">
+                <div><span class="file-icon"><?= (str_starts_with($fileIcon, 'http') ? '<img src="' . sanitize_data($fileIcon) . '" alt="" class="file-icon-img">' : $fileIcon) ?></span> <?= sanitize_data($file['original_name']) ?></div>
+                <div><?= sanitize_data($file['shared_by_username'] ?? '?') ?></div>
+                <div><?= sanitize_data(get_friendly_filetype($file['filetype'])) ?></div>
+                <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
+                <div class="file-actions">
+                    <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

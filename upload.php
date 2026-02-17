@@ -54,6 +54,7 @@ $thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
 
 $tosEnabled = !empty($settings['tos_enabled']);
 $tosText    = trim($settings['tos_text'] ?? '');
+$publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 
 // disable form if guest uploads off and no user
 $formDisabled = false;
@@ -203,7 +204,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // move file
         $mimeType      = mime_content_type($tmpPath);
         $uniqueName    = uniqid('', true) . ".$extension";
-        $destPath      = __DIR__ . '/uploads/' . $uniqueName;
+        $uploadDir     = get_upload_path();
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $destPath      = $uploadDir . $uniqueName;
         move_uploaded_file($tmpPath, $destPath);
 
         $checksumMd5   = hash_file('md5', $destPath);
@@ -213,7 +218,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $thumbnailName = null;
         if ($thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
             $thumbnailName = 'thumb_' . $uniqueName . '.jpg';
-            $thumbPath     = __DIR__ . '/thumbnails/' . $thumbnailName;
+            $thumbDir      = get_thumbnails_path();
+            if (!is_dir($thumbDir)) {
+                @mkdir($thumbDir, 0755, true);
+            }
+            $thumbPath     = $thumbDir . $thumbnailName;
             if ($img = @imagecreatefromstring(file_get_contents($destPath))) {
                 $thumb = imagescale($img, 100);
                 imagejpeg($thumb, $thumbPath);
@@ -235,17 +244,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ->format('Y-m-d H:i:s');
         }
 
+        $isPublic = isset($_POST['is_public']) ? 1 : 0;
+
         // insert DB record
         $ins = $pdo->prepare("
             INSERT INTO files
-              (user_id, guest_id, filename, original_name,
+              (user_id, guest_id, is_public, filename, original_name,
                filetype, filesize, thumbnail_path,
                upload_date, expiry_date, checksum_md5, checksum_sha256)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $ins->execute([
             $currentUserId,
             $isGuest ? $guestId : null,
+            $isPublic,
             $uniqueName,
             $originalName,
             $mimeType,
@@ -319,6 +331,13 @@ require_once __DIR__ . '/includes/header.php';
 
       <div id="preview"></div>
       <div id="uploadResult" style="display:none; margin:1rem 0;"></div>
+
+      <?php if ($publicBrowsingEnabled): ?>
+      <label class="tos-checkbox">
+        <input type="checkbox" name="is_public" id="is_public">
+        Make this file public (anyone can browse and download without logging in)
+      </label>
+      <?php endif; ?>
 
       <label for="duration">Auto-delete after</label>
       <select name="duration" id="duration">

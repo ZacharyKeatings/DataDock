@@ -8,7 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.4.0] - 2025-02-12
+## [v1.6.0] - 2026-02-16
+### ✨ New Features (Security & Storage)
+- **Custom storage path support** — Configurable `storage_base_path` in Site Settings; uploads and thumbnails can be stored outside the project root (e.g. `/var/data/datadock`).
+- **Public file browsing** — Optional anonymous access to uploads; when enabled, files marked "public" appear on the homepage and can be downloaded without logging in.
+- **User-to-user file sharing** — Share files with specific users by username; "Shared with You" section on dashboard; shared users can download and add shared files to ZIP downloads.
+
+### Improved
+- Thumbnails now served via `thumbnail.php` for compatibility with custom storage paths.
+- Upload form shows "Make public" checkbox when public browsing is enabled.
+- Dashboard shows Public/Private toggle and Share button per file when applicable.
+- Database migrations add `is_public` column to `files` and create `file_shares` table.
+
+---
+
+## [v1.4.0] - 2026-02-12
 ### ✨ New Features
 - **Site stats overview** — Admin panel Overview section: total uploads, storage used, user count, file type breakdown, and files expiring soon.
 - **Maintenance mode** — Block non-admins when enabled; admins can still access the site and log in via login.php.
@@ -25,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.4.1] - 2025-02-12
+## [v1.4.1] - 2026-02-12
 ### ✨ New Features (File & UX)
 - **Download counter per file** — Count and display downloads in dashboard, admin file management, and homepage.
 - **File checksum display** — MD5 and SHA256 computed on upload; shown with copy buttons in dashboard.
@@ -40,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.3.1] - 2025-02-12
+## [v1.3.1] - 2026-02-12
 ### ✨ New Features
 - **Default file expiry duration** — Site setting for upload form; admins can set 1 min, 30 min, 1 hr, 6 hr, 1 day, 1 week, 1 month, 1 year, or never.
 - **Thumbnail generation toggle** — Enable/disable thumbnail creation for image uploads in Site Settings; when off, thumbnails are skipped.
@@ -54,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.3.0] - 2025-02-11
+## [v1.3.0] - 2026-02-11
 ### Fixed
 - 🛠️ Added `init_session()` to `download.php` and `delete.php` so logged-in users can successfully download and delete files.
 - 🛠️ Corrected settings key mismatch: `upload.php` now reads `user_limits` (with `max_files_enabled`, `max_storage_enabled`) so per-user quotas apply when configured in Site Settings.

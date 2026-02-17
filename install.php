@@ -29,6 +29,7 @@ function install_database($host, $user, $pass, $dbname) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT DEFAULT NULL,
                 guest_id VARCHAR(64) DEFAULT NULL,
+                is_public TINYINT(1) NOT NULL DEFAULT 0,
                 filename VARCHAR(255) NOT NULL,
                 original_name VARCHAR(255),
                 filetype VARCHAR(100),
@@ -55,6 +56,21 @@ function install_database($host, $user, $pass, $dbname) {
         ");
 
         $pdo->exec("CREATE INDEX idx_guest_id ON files(guest_id)");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS file_shares (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                file_id INT NOT NULL,
+                shared_with_user_id INT NOT NULL,
+                shared_by_user_id INT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+                FOREIGN KEY (shared_with_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (shared_by_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_share (file_id, shared_with_user_id),
+                INDEX idx_shared_with (shared_with_user_id)
+            )
+        ");
 
         // Create the login_attempts table
         $pdo->exec("

@@ -17,6 +17,8 @@ $section = $_GET['section'] ?? 'overview';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['section']) && $_POST['section'] === 'site') {
         // --- SITE SETTINGS FORM SUBMIT ---
+        if (file_exists($settingsFile)) require $settingsFile;
+        $settings = $settings ?? [];
         $newName = trim($_POST['site_name'] ?? '');
         $adminContactEmail = trim($_POST['admin_contact_email'] ?? '');
         $registrationEnabled = isset($_POST['registration_enabled']);
@@ -37,6 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fileIconsJson = trim($_POST['file_icons'] ?? '');
         $tosEnabled = isset($_POST['tos_enabled']);
         $tosText = trim($_POST['tos_text'] ?? '');
+
+        $storageBasePath = trim($_POST['storage_base_path'] ?? '');
+        $publicBrowsingEnabled = isset($_POST['public_browsing_enabled']);
 
         $bruteForceEnabled = isset($_POST['brute_force_enabled']);
         $maxAttempts = (int) ($_POST['max_attempts'] ?? 5);
@@ -124,6 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'file_icons' => " . var_export($fileIcons, true) . ",\n" .
                 "    'tos_enabled' => " . ($tosEnabled ? 'true' : 'false') . ",\n" .
                 "    'tos_text' => " . var_export($tosText, true) . ",\n" .
+                "    'storage_base_path' => " . var_export($storageBasePath, true) . ",\n" .
+                "    'public_browsing_enabled' => " . ($publicBrowsingEnabled ? 'true' : 'false') . ",\n" .
                 "    'brute_force' => [\n" .
                 "        'enabled' => " . ($bruteForceEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_attempts' => $maxAttempts,\n" .
@@ -166,8 +173,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $filetypeBreakdown = [];
 
         foreach ($expiredFiles as $file) {
-            $filePath = __DIR__ . '/uploads/' . $file['filename'];
-            $thumbPath = __DIR__ . '/thumbnails/' . $file['thumbnail_path'];
+            $filePath = get_upload_path() . $file['filename'];
+            $thumbPath = get_thumbnails_path() . $file['thumbnail_path'];
 
             if (file_exists($filePath) && unlink($filePath)) {
                 $freedBytes += $file['filesize'];
@@ -213,8 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (is_file($file)) unlink($file);
                 }
             };
-            $clearDir(__DIR__ . '/uploads/');
-            $clearDir(__DIR__ . '/thumbnails/');
+            $clearDir(get_upload_path());
+            $clearDir(get_thumbnails_path());
 
             write_default_settings_file();
             $_SESSION['flash_success'][] = "✅ Site has been reset to post-install state.";
@@ -296,6 +303,9 @@ require_once __DIR__ . '/includes/header.php';
                 $fileIconsJson = !empty($fileIcons) ? json_encode($fileIcons, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '';
                 $tosEnabled = $settings['tos_enabled'] ?? false;
                 $tosText = trim($settings['tos_text'] ?? '');
+
+                $storageBasePath = trim($settings['storage_base_path'] ?? '');
+                $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 
                 include __DIR__ . '/admin_sections/site_settings.php';
                 break;

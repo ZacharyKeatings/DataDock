@@ -577,6 +577,17 @@ body {
 }
 
 .changelog-box,
+.share-list {
+    list-style: none;
+    padding: 0;
+}
+.share-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
 .release-notes-box {
     background-color: #222;
     color: #eee;

@@ -4,15 +4,31 @@ init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 $pageTitle = "Home";
+require_once 'config/settings.php';
 require_once 'includes/header.php';
 
-// Get latest 5 uploaded files (includes guest uploads via LEFT JOIN)
-$stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
-    LEFT JOIN users ON files.user_id = users.id 
-    WHERE (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
-    ORDER BY upload_date DESC 
-    LIMIT 5");
-$stmt->execute();
+$publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
+$userId = $_SESSION['user_id'] ?? null;
+
+// Get files to display
+if ($publicBrowsingEnabled) {
+    // Show only public files when anonymous browsing is enabled
+    $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
+        LEFT JOIN users ON files.user_id = users.id 
+        WHERE files.is_public = 1 
+        AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+        ORDER BY upload_date DESC 
+        LIMIT 20");
+    $stmt->execute();
+} else {
+    // Default: latest 5 uploads (no download links for anons)
+    $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
+        LEFT JOIN users ON files.user_id = users.id 
+        WHERE (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+        ORDER BY upload_date DESC 
+        LIMIT 5");
+    $stmt->execute();
+}
 $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -24,7 +40,7 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     ?>
     <div class="welcome-banner"><?= nl2br(sanitize_data($welcomeMessage)) ?></div>
     <?php endif; ?>
-    <p class="page-description">This site allows registered users to upload files and manage them securely. Below are the most recent uploads:</p>
+    <p class="page-description">This site allows registered users to upload files and manage them securely.<?= $publicBrowsingEnabled ? ' Below are publicly shared files:' : ' Below are the most recent uploads:' ?></p>
 
     <?php if ($recentFiles): ?>
         <div class="file-list">
@@ -36,6 +52,7 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div>Downloads</div>
                 <div>Uploaded</div>
                 <div>Preview</div>
+                <?php if ($publicBrowsingEnabled): ?><div>Download</div><?php endif; ?>
             </div>
             <?php foreach ($recentFiles as $file): ?>
                 <?php $fileIcon = get_file_icon($file['filetype'], $file['original_name'] ?? ''); ?>
@@ -50,11 +67,14 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
                     <div>
                         <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                            <img src="thumbnails/<?= sanitize_data($file['thumbnail_path']) ?>" alt="Thumbnail" class="thumbnail-small">
+                            <img src="thumbnail.php?id=<?= (int)$file['id'] ?>" alt="Thumbnail" class="thumbnail-small">
                         <?php else: ?>
                             —
                         <?php endif; ?>
                     </div>
+                    <?php if ($publicBrowsingEnabled): ?>
+                    <div><a href="download.php?id=<?= (int)$file['id'] ?>" class="btn btn-small">Download</a></div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
