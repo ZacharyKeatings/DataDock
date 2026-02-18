@@ -1,179 +1,158 @@
 # 📁 DataDock
 
-A lightweight, self-hosted PHP web application that allows registered users to upload, manage, and share files securely. Includes an admin dashboard for site management, user control, and file purging functionality.
+**A lightweight, self-hosted file manager** for uploading, managing, and sharing files securely. No cloud lock-in, no frameworks—just PHP, MySQL, and your server.
 
 <div align="center">
-<a href="https://github.com/ZacharyKeatings/DataDock/releases">
-   <img alt="DataDock Release" src="https://img.shields.io/github/v/release/ZacharyKeatings/DataDock">
-</a>
 
-<a href="https://github.com/ZacharyKeatings/DataDock/blob/main/LICENSE">
-   <img alt="DataDock License" src="https://img.shields.io/github/license/ZacharyKeatings/DataDock">
-</a>
+[![Release](https://img.shields.io/github/v/release/ZacharyKeatings/DataDock)](https://github.com/ZacharyKeatings/DataDock/releases)
+[![License](https://img.shields.io/github/license/ZacharyKeatings/DataDock)](https://github.com/ZacharyKeatings/DataDock/blob/main/LICENSE)
 
 </div>
 
-> ⭐ **If you found this project useful, please consider [starring the repository](https://github.com/ZacharyKeatings/DataDock)** — it helps others discover the project and keeps development going!
+---
+
+## Table of Contents
+
+- [Why DataDock?](#why-datadock)
+- [Features](#-features)
+- [Requirements](#-requirements)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Tech Stack](#-tech-stack)
+- [Security](#-security)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-# DataDock Roadmap
+## Why DataDock?
 
-A forward-looking plan for upcoming features, improvements, and maintenance of the DataDock self-hosted file manager.
+DataDock exists because **you shouldn’t have to trust your data to services that scrape and monetize it**. When you rely on big platforms, you rarely know how your data is really handled. DataDock is self-hosted and built with **minimal external dependencies** on purpose—so you avoid the supply-chain attacks and opaque behavior that plague many modern apps. The goal is simple: **regain control over your data and keep your autonomy.**
+
+- **Self-hosted** — Your data stays on your server. No third-party storage or accounts.
+- **Lightweight** — Vanilla PHP 8+, MySQL, and GD. No frameworks or heavy dependencies; fewer moving parts means a smaller attack surface and no dependency supply chain to blindly trust.
+- **Simple to run** — Web installer or upload to any Apache/Nginx + PHP host; optional custom storage path.
+- **Admin-first** — Site settings, user and file management, purging, maintenance mode, and one-click updates from the admin panel.
+- **User-friendly** — Drag-and-drop uploads, quotas, expiry, one-time links, ZIP download, QR codes, and optional public file browsing with per-file sharing.
+
+Ideal for small teams, internal file sharing, or anyone who wants a minimal, controllable alternative to cloud file services. For how DataDock handles data in practice, see [PRIVACY.md](PRIVACY.md).
 
 ---
 
 ## 📦 Features
 
-### ✅ User & Account Settings
-- [x]  User registration, login, and dashboard
-- [x]  Session-based authentication
-- [x]  Change user roles and delete users (admin only)
-- [x]  Enable/disable user registration
-- [x]  Optional guest uploads with quota enforcement (file count + size)
-- [x]  Enforce max storage and file limits per user
-- [ ]  User account & profile system
-- [x]  Public file browsing (anonymous access to uploads)
-- [x]  Default file expiry duration setting
-- [x]  Enforce unique email toggle
-- [ ]  Invite-only registration – Only allow signups from a link/token created by the admin.
-- [ ]  Password reset flow – Admin-initiated or token-based reset for forgotten passwords.
-- [x]  User-to-user file sharing – Share a file only with specific usernames.
+### Highlights
 
-### 🗂️ File Upload & Storage Settings
-- [x]  File upload with optional expiry
-- [x]  Auto-thumbnail generation for image files
-- [x]  Upload file size validation (frontend + backend)
-- [x]  Drag-and-drop + preview file upload support (redesigned upload page with hero and card-style options)
-- [x]  Date/time storage in UTC with frontend conversion
-- [x]  Max number of files per user
-- [x]  Max total storage per user (quota)
-- [x]  File management view for all users (admin panel)
-- [x]  Allowed file types (restrict extensions/MIME types)
-- [x]  Enable/disable thumbnail generation
-- [x]  Custom storage path support
-- [x]  File upload progress bar
-- [x]  Zip multiple files for download – Let users select files and download them as a single .zip.
-- [x]  Download as QR code – Generate and display QR code to link directly to file.
-- [x]  One-time download links (auto-expire after single use)
-- [x]  File checksum display – Show MD5/SHA256 so users can verify integrity.
-- [x]  Terms of Service / Acceptable Use – User must agree before uploading.
-- [x]  Download counter per file
-- [ ]  File search and filter – Search by filename, date, type; filter by visibility, expiry status.
-- [ ]  File metadata editing – Rename files, change expiry, add description without re-uploading.
-- [ ]  Soft delete / trash – Deleted files go to trash, restorable for a configurable period.
-- [ ]  Folders or tags – Organize files (folders or flat tags).
-- [ ]  Duplicate detection – Deduplicate by file hash to save storage.
+| Area | Capabilities |
+|------|----------------|
+| **Users & auth** | Registration (optional), guest uploads with quotas, role-based access, user-to-user file sharing. |
+| **Files & storage** | Upload with expiry, thumbnails, custom storage path, allowed types, ZIP download, one-time links, QR codes, checksums (MD5/SHA256). |
+| **Admin panel** | Site settings (branding, limits, brute-force protection), user and file management, manual purge, maintenance mode, site stats, one-click updates. |
+| **Security** | Secure password hashing, CSRF-safe forms, brute-force protection, config directory protection, optional install.php warning. |
 
-### 👑 Admin Panel
-- [x]  Admin panel with user and file management
-- [x]  Update site settings with card-based layout (site name, storage path, limits, etc.)
-- [x]  Enable/disable brute force protection and configure thresholds
-- [x]  Configure guest upload limits (max files and storage)
-- [x]  Manual purging of expired files with stats
-- [x]  View all uploaded files with summary stats (delete/download options)
-- [x]  Reset site to post-install state (remove all users, files, and settings except admin)
-- [x]  Sidebar-based admin panel UI improvements
-- [x]  Maintenance mode toggle (admin-only access)
-- [x]  Debug mode toggle (verbose errors)
-- [x]  Log file path and verbosity setting
-- [x]  Site stats overview (uploads, storage used, user count, etc.)
-- [ ]  Activity / audit log – View who uploaded, downloaded, shared, or deleted what and when.
-- [ ]  Storage / quota alerts – Admin notification when storage or quotas approach limits.
-- [ ]  Backup / export – Export database and optionally file metadata for disaster recovery.
-
-### 💬 Interface & Branding Settings
-- [x]  Install.php warning if not deleted post-setup (toggleable in settings)
-- [x]  Custom logo and favicon URLs
-- [x]  Welcome banner or message field
-- [x]  Install.php warning toggle
-- [x]  Dark mode / light mode UI toggle
-- [x]  Responsive layout (page sections, headings, file tables scale with viewport)
-- [ ]  Localization/multilanguage support
-- [ ]  Accessibility (WCAG) improvements
-- [x]  Custom file icons – Flat SVG icons per file type; custom URLs configurable in settings
-
-### 📧 Email / Notification Settings
-- [x]  Admin contact email field
-- [ ]  Email notifications on upload, expiry, etc.
-- [ ]  SMTP configuration (host, port, user, pass, encryption)
-- [ ]  Email registration confirmation
-
-### 🔒 Security Settings
-- [x]  Secure password hashing
-- [x]  Session management and role-based access
-- [x]  `config/` directory secured via `.htaccess`
-- [x]  CSRF-safe architecture (form-only POST)
-- [x]  Brute-force login protection (with configurable limits and lockout window)
-- [ ]  CAPTCHA on login/register forms
-- [ ]  Rate limiting on uploads – Throttle upload frequency per user or IP to prevent abuse.
-- [x]  Session timeout duration setting
-
-### 🔁 Versioning & Updates
-- [x]  Version display in admin panel / footer
-- [x]  One-click update system (GitHub release fetcher) with semantic version comparison
-- [x]  Changelog viewer (shows most recent section) and release notes
-
-### ⚠️ Reporting & Abuse
-- [ ]  Users can report files for malicious/adult content
+A full checklist of implemented and planned features is maintained in the **[Roadmap](ROADMAP.md)**.
 
 ---
 
-## ⚙️ Tech Stack
+## 📋 Requirements
 
-- **Backend**: PHP 8+ (Vanilla, no frameworks)
-- **Frontend**: HTML5, CSS3 (Vanilla), inline SVG icons
-- **Database**: MySQL (via PDO)
-- **Thumbnailing**: GD library
-- **Sessions**: Native PHP session handling
-- **Security**:
-  - CSRF-safe architecture (form-only POST)
-  - Passwords hashed with `password_hash`
-  - Session management and role-based access
-  - `install.php` warning if not deleted post-setup
+- **PHP** 8.0 or later (with PDO MySQL, GD, session support)
+- **MySQL** 5.7+ or MariaDB equivalent
+- **Web server** — Apache or Nginx with PHP support
+- **Optional:** writable directory outside the web root for custom storage path
 
 ---
 
 ## 🚀 Installation
 
-1. **Clone the repo**
+1. **Clone or download the repository**
    ```bash
    git clone https://github.com/ZacharyKeatings/DataDock.git
-   cd datadock
+   cd DataDock
    ```
 
-2. **Upload to your server**  
-   Host it on Apache, Nginx, or your shared hosting.
+2. **Point your web server** at the project directory (e.g. set document root to the cloned folder).
 
-3. **Create a MySQL database**
+3. **Create a MySQL database** (and optionally a dedicated user) for DataDock.
 
-4. **Run the installer**  
-   Visit `/install.php` in your browser and fill out:
-   - Database credentials
+4. **Run the web installer**  
+   Open `https://your-domain/install.php` in a browser and complete:
+   - Database host, name, user, and password
    - Site name
-   - Admin user info
+   - Admin username and password
 
-5. [x]  You're live!  
-   **Delete `install.php` immediately.**
+5. **Remove the installer**  
+   Delete or rename `install.php` after setup. If it still exists, a security warning is shown to the logged-in admin on every page until the file is removed (you can disable this warning in Admin Panel → Site Settings).
+
+For detailed upgrade steps and version-specific notes, see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## 🛡️ Security Notes
+## ⚙️ Configuration
 
-- All user inputs are sanitized
-- Uses `htmlspecialchars()` and custom `sanitize_data()`
-- File extensions are preserved, but MIME-type is validated via `mime_content_type`
-- Admin panel is locked behind session + role checks
-- `install.php` existence triggers an admin warning until deleted (toggleable in Site Settings)
+Most settings are managed in the **Admin Panel** after installation:
+
+- **General** — Site name, default file expiry, registration toggle, ToS, branding (logo, favicon, welcome message).
+- **User permissions** — Guest upload limits, max files and storage per user, unique email enforcement.
+- **Storage** — Custom storage path (uploads and thumbnails can live outside the web root).
+- **Security** — Brute-force protection thresholds, session timeout, install.php warning toggle.
+- **Logging** — Log file path and verbosity.
+
+There is no separate config file to edit for normal operation; the installer writes initial database and config, and the rest is done via the UI.
+
+---
+
+## ⚙️ Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Backend** | PHP 8+ (vanilla, no frameworks) |
+| **Frontend** | HTML5, CSS3, vanilla JS, inline SVG icons |
+| **Database** | MySQL (PDO) |
+| **Thumbnails** | GD library |
+| **Sessions** | Native PHP session handling |
+
+Security-related choices: CSRF-safe form handling, `password_hash` for passwords, role-based access, and optional install.php reminder.
+
+---
+
+## 🛡️ Security
+
+- **Input handling** — User input is sanitized (e.g. `htmlspecialchars()` and project `sanitize_data()`); file uploads are validated by size and MIME type.
+- **Access control** — Admin panel and sensitive actions require an authenticated session and appropriate role.
+- **Config protection** — The `config/` directory is protected (e.g. via `.htaccess` on Apache) so credentials are not directly accessible.
+- **Installation** — Deleting `install.php` after setup is recommended; a warning is shown to the logged-in admin on every page until it is removed (toggle in Site Settings).
+
+For security-sensitive deployments, use HTTPS, restrict admin access (e.g. by IP or VPN), and keep PHP and MySQL updated. Report vulnerabilities responsibly (e.g. via GitHub issues or contact details in the repo).
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [**PRIVACY.md**](PRIVACY.md) | How DataDock handles your data: no telemetry, no cloud sync; everything stays on your server. |
+| [**CONTRIBUTING.md**](CONTRIBUTING.md) | How to contribute: fork, branch naming, and pull requests. |
+| [**ROADMAP.md**](ROADMAP.md) | Full feature checklist (done and planned) with short descriptions. |
+| [**CHANGELOG.md**](CHANGELOG.md) | Release history and notable changes. |
 
 ---
 
 ## 🧑‍💻 Contributing
 
-Pull requests are welcome. Please open an issue to discuss any major changes before submitting one.
+Contributions are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the workflow: fork the repo, make changes in a branch (e.g. `feat/` or `fix/`), then open a pull request. For substantial changes, please open an issue first to discuss. By contributing, you agree that your contributions may be licensed under the same terms as the project (Unlicense).
 
 ---
 
 ## 📄 License
 
-This project is open-source and licensed under the [UniLicense](LICENSE).
+This project is open-source and licensed under the [Unlicense](LICENSE).
+
+---
+
+<div align="center">
+
+**If DataDock is useful to you, consider [starring the repository](https://github.com/ZacharyKeatings/DataDock)** — it helps others find the project.
+
+</div>
