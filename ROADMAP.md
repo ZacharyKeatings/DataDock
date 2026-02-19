@@ -37,7 +37,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Enable/disable user registration | Site-wide registration toggle. |
 | ✓ | Optional guest uploads with quota enforcement | File count and size limits for unauthenticated uploads. |
 | ✓ | Enforce max storage and file limits per user | Per-user quotas. |
-| ✓ | User account & profile system | Profile page and editable account details. |
+| ✓ | User account & profile system | Profile page and editable account details; profile statistics (files, storage, downloads, sharing, file types). |
+| ✓ | Public user profile page | View by username (user.php); avatar, bio, stats, public files list; usernames site-wide link to profile. |
+| ✓ | Profile avatar and bio | Optional avatar (URL or upload), bio (500 chars); profile completion reminder when empty. |
 | ✓ | Public file browsing | Anonymous access to uploads when enabled; public files on homepage. |
 | ✓ | Default file expiry duration setting | Site default for new uploads (e.g. 1 hour, 1 day, never). |
 | ✓ | Enforce unique email toggle | Strict (unique email) vs relaxed (username only unique). |

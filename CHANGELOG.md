@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v1.7.0] - 2026-02-19
 ### ✨ New Features (User System & Access Control)
 - **User profile & account settings** — Profile page (`profile.php`) with view and edit for username, email, and optional display name; change-password form (current password required). Profile link added to main nav when logged in.
+- **Profile statistics** — Private profile shows: files currently stored, storage used, total files/size (all time), expired files count, total downloads, public files count, average file size, files shared with you / shared by you, oldest and newest upload, and top file types and extensions by MIME and extension.
+- **Public user profile** — Public profile page (`user.php?username=…`) viewable without login: display name (or username), @username, optional avatar and bio, member since, public file stats (count, total size, total downloads, most common type), and a table of the user’s public files with download link when public browsing is enabled. Usernames across the site (homepage, dashboard, share page, admin user/file management, header) link to the corresponding public profile.
+- **Avatar & bio** — Optional profile picture: set by URL (http/https) or upload (JPEG, PNG, GIF, WebP; max 2 MB). Optional bio (max 500 characters). Both editable on profile and shown on public profile. Avatars served via `avatar.php`; uploads stored under `uploads/avatars/`.
+- **Profile completion reminder** — When display name, bio, and avatar are all empty, profile page shows a warning flash encouraging users to complete their public profile.
 - **Invite-only registration** — Site setting **Invite-only registration** in User Permissions. When enabled, new users must use a signup link; admins generate single-use, 7-day tokens from User Management. Table `signup_tokens` stores tokens; register flow validates token and marks it used on success.
 - **Password reset flow** — **Forgot password** link on login page; user enters email and receives a one-time reset link (shown on page; no email sent). **Reset password** page sets new password from token. Admins can generate a reset link for any user from User Management (**Copy reset link**); table `password_reset_tokens` with 1-hour expiry.
 
@@ -20,7 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Keyboard focus** — Visible focus ring (`:focus-visible`) on links, buttons, and form controls; nav links use high-contrast outline. CSS variables `--focus-ring` and `--focus-offset` for theming.
 
 ### Improved
-- Database migrations add `display_name` to `users`, and create `signup_tokens` and `password_reset_tokens` tables. New installs get default `invite_only_registration` in settings; existing installs receive the new setting via migration/defaults.
+- Database migrations add `display_name`, `avatar`, and `bio` to `users`, and create `signup_tokens` and `password_reset_tokens` tables. New installs get default `invite_only_registration` in settings; existing installs receive the new setting via migration/defaults.
+- Profile stat values use header background colour for consistency. Bio on public profile appears in a dedicated "Bio" card matching other sections. Bio textarea on profile matches width and background of other form fields. Nav "Logout (username)" spacing fixed so the username link has no extra gap (valid HTML and CSS for logout wrap).
 
 ---
 
