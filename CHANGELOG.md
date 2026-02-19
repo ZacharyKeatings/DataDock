@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.6.1] - 2026-02-18
+### ✨ New Features
+- **Bulk actions on dashboard** — Multi-select files for **Zip download**, **Toggle public/private**, and **Delete**; bulk action dropdown with confirmation for delete.
+- **File size and storage units in Site Settings** — Max file size and max storage per user can be set in bytes, KB, MB, or GB via unit selector; live byte-size hints and server limit display.
+- **Optional server PHP limit override** — New "Server PHP Limits" card in Site Settings: optionally write a `.user.ini` in the project root to override `upload_max_filesize` and `post_max_size`; option to remove overrides (delete `.user.ini`). Effective on next request where supported.
+
+### Improved
+- **File display** — Dashboard and admin file lists show human-readable dates and sizes; dashboard shows checksum (MD5/SHA256) with copy buttons and file sharing (Share, Public/Private) per file.
+- **Documentation** — Added [CONTRIBUTING.md](CONTRIBUTING.md) (fork, branch naming, PR workflow), [ROADMAP.md](ROADMAP.md) (feature checklist and plans), and [PRIVACY.md](PRIVACY.md) (data handling, no telemetry). ROADMAP legend updated for clearer status symbols (✓ / —).
+
+---
+
 ## [v1.6.0] - 2026-02-16
 ### ✨ New Features (Security & Storage)
 - **Custom storage path support** — Configurable `storage_base_path` in Site Settings; uploads and thumbnails can be stored outside the project root (e.g. `/var/data/datadock`).

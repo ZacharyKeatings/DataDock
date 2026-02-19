@@ -47,8 +47,8 @@ Ideal for small teams, internal file sharing, or anyone who wants a minimal, con
 | Area | Capabilities |
 |------|----------------|
 | **Users & auth** | Registration (optional), guest uploads with quotas, role-based access, user-to-user file sharing. |
-| **Files & storage** | Upload with expiry, thumbnails, custom storage path, allowed types, ZIP download, one-time links, QR codes, checksums (MD5/SHA256). |
-| **Admin panel** | Site settings (branding, limits, brute-force protection), user and file management, manual purge, maintenance mode, site stats, one-click updates. |
+| **Files & storage** | Upload with expiry, thumbnails, custom storage path, allowed types, ZIP download, one-time links, QR codes, checksums (MD5/SHA256). Bulk actions on dashboard: zip selected files, toggle public/private, or delete multiple. |
+| **Admin panel** | Site settings (branding, limits in B/KB/MB/GB, optional .user.ini override for PHP upload limits), user and file management, manual purge, maintenance mode, site stats, one-click updates. |
 | **Security** | Secure password hashing, CSRF-safe forms, brute-force protection, config directory protection, optional install.php warning. |
 
 A full checklist of implemented and planned features is maintained in the **[Roadmap](ROADMAP.md)**.
@@ -94,8 +94,9 @@ For detailed upgrade steps and version-specific notes, see [CHANGELOG.md](CHANGE
 Most settings are managed in the **Admin Panel** after installation:
 
 - **General** — Site name, default file expiry, registration toggle, ToS, branding (logo, favicon, welcome message).
-- **User permissions** — Guest upload limits, max files and storage per user, unique email enforcement.
+- **User permissions** — Guest upload limits, max files and storage per user (with byte/KB/MB/GB units), unique email enforcement.
 - **Storage** — Custom storage path (uploads and thumbnails can live outside the web root).
+- **Server PHP limits (optional)** — Override `upload_max_filesize` and `post_max_size` via a `.user.ini` file written from Site Settings; remove overrides when not needed.
 - **Security** — Brute-force protection thresholds, session timeout, install.php warning toggle.
 - **Logging** — Log file path and verbosity.
 

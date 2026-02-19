@@ -59,6 +59,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Max number of files per user | Configurable file count limit. |
 | ✓ | Max total storage per user (quota) | Total bytes per user. |
 | ✓ | File management view for all users | Admin panel file list and actions. |
+| ✓ | Bulk actions on dashboard | Multi-select: zip download, toggle public/private, delete. |
 | ✓ | Allowed file types | Restrict by extension and/or MIME type. |
 | ✓ | Enable/disable thumbnail generation | Site setting to turn thumbnails off. |
 | ✓ | Custom storage path support | Uploads and thumbnails outside web root. |
@@ -83,6 +84,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 |--------|---------|-------------|
 | ✓ | Admin panel with user and file management | Central admin UI. |
 | ✓ | Update site settings with card-based layout | Grouped sections: General, User Permissions, Storage, etc. |
+| ✓ | File size and storage inputs with units | Bytes, KB, MB, GB selectors; optional .user.ini override for PHP upload limits. |
 | ✓ | Enable/disable brute force protection | Configurable thresholds and lockout. |
 | ✓ | Configure guest upload limits | Max files and storage for guests. |
 | ✓ | Manual purging of expired files | Purge with stats. |
