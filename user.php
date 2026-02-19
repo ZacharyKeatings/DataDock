@@ -17,7 +17,7 @@ if ($usernameParam === '') {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT id, username, display_name, created_at FROM users WHERE username = ?");
+$stmt = $pdo->prepare("SELECT id, username, display_name, avatar, bio, created_at FROM users WHERE username = ?");
 $stmt->execute([$usernameParam]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$user) {
@@ -72,17 +72,38 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-section">
-    <h2 class="page-title"><?= sanitize_data($displayName) ?></h2>
-    <?php if ($displayName !== $user['username']): ?>
-    <p class="profile-public-username">@<?= sanitize_data($user['username']) ?></p>
-    <?php endif; ?>
-
+    <div class="profile-public-head">
+        <?php if (!empty(trim($user['avatar'] ?? ''))): ?>
+        <div class="profile-public-avatar">
+            <?php if (preg_match('#^https?://#i', $user['avatar'])): ?>
+            <img src="<?= sanitize_data($user['avatar']) ?>" alt="" class="profile-avatar-img" width="96" height="96" loading="lazy">
+            <?php else: ?>
+            <img src="avatar.php?username=<?= urlencode($user['username']) ?>" alt="" class="profile-avatar-img" width="96" height="96" loading="lazy">
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+        <div class="profile-public-title-wrap">
+            <h2 class="page-title"><?= sanitize_data($displayName) ?></h2>
+            <?php if ($displayName !== $user['username']): ?>
+            <p class="profile-public-username">@<?= sanitize_data($user['username']) ?></p>
+            <?php endif; ?>
+        </div>
+    </div>
     <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
         <h3 class="settings-card-title">Profile</h3>
         <div class="settings-card-body">
             <p><strong>Member since</strong> <?= format_datetime_display($user['created_at']) ?></p>
         </div>
     </div>
+
+    <?php if (!empty(trim($user['bio'] ?? ''))): ?>
+    <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
+        <h3 class="settings-card-title">Bio</h3>
+        <div class="settings-card-body profile-public-bio">
+            <?= nl2br(sanitize_data($user['bio'])) ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
         <h3 class="settings-card-title">Public file stats</h3>

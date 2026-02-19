@@ -74,6 +74,15 @@ function get_thumbnails_path(): string {
     return _resolve_storage_base() . '/thumbnails/';
 }
 
+/**
+ * Get the base path for avatar uploads (absolute path, trailing slash).
+ *
+ * @return string
+ */
+function get_avatars_path(): string {
+    return _resolve_storage_base() . '/uploads/avatars/';
+}
+
 
 
 /**

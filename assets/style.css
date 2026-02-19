@@ -826,11 +826,20 @@ body {
     display: block;
 }
 
-.form-group input {
+.form-group input,
+.form-group textarea {
     width: 100%;
+    max-width: 100%;
     padding: 0.6rem;
     border: 1px solid var(--color-border, #ccc);
     border-radius: 4px;
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+.form-group textarea {
+    min-height: 5rem;
+    resize: vertical;
 }
 
 .form-grid {
@@ -896,7 +905,7 @@ body {
   .profile-stat-value {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--color-primary, #0077cc);
+    color: var(--color-header-background);
   }
   .profile-stat-label {
     font-size: 0.85rem;
@@ -923,6 +932,36 @@ body {
     margin: -0.5rem 0 1rem;
     font-size: 1rem;
     opacity: 0.85;
+  }
+
+  .profile-public-head {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .profile-public-avatar {
+    flex-shrink: 0;
+  }
+  .profile-public-avatar .profile-avatar-img,
+  .profile-avatar-preview .profile-avatar-img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid var(--color-border, #ccc);
+  }
+  .profile-avatar-preview {
+    margin-bottom: 0.75rem;
+  }
+  .profile-public-bio {
+    line-height: 1.5;
+    color: var(--color-text);
+    white-space: pre-wrap;
+  }
+  .profile-avatar-group .form-group {
+    margin-bottom: 0.75rem;
   }
 
 .settings-row {

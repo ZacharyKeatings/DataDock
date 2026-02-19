@@ -8,7 +8,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
 
 $userId = $_SESSION['user_id'];
-$stmt = $pdo->prepare("SELECT id, username, email, display_name, role, created_at FROM users WHERE id = ?");
+$stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at FROM users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$user) {
@@ -20,6 +20,8 @@ if (!$user) {
 $username = $user['username'];
 $email = $user['email'];
 $displayName = $user['display_name'] ?? '';
+$avatar = $user['avatar'] ?? '';
+$bio = $user['bio'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -28,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $displayName = trim($_POST['display_name'] ?? '');
+        $bio = trim($_POST['bio'] ?? '');
+        $removeAvatar = !empty($_POST['remove_avatar']);
+        $avatarUrl = trim($_POST['avatar_url'] ?? '');
 
         if (strlen($username) < 3) {
             $_SESSION['flash_error'][] = "❌ Username must be at least 3 characters.";
@@ -37,6 +42,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (strlen($displayName) > 100) {
             $_SESSION['flash_error'][] = "❌ Display name must be 100 characters or less.";
+        }
+        if (strlen($bio) > 500) {
+            $_SESSION['flash_error'][] = "❌ Bio must be 500 characters or less.";
+        }
+        if ($avatarUrl !== '' && !filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
+            $_SESSION['flash_error'][] = "❌ Avatar URL must be a valid URL.";
+        }
+        if ($avatarUrl !== '' && !preg_match('#^https?://#i', $avatarUrl)) {
+            $_SESSION['flash_error'][] = "❌ Avatar URL must start with http:// or https://.";
+        }
+
+        $newAvatar = null;
+        if (!empty($_SESSION['flash_error'])) {
+            // keep current for re-display
+        } elseif ($removeAvatar) {
+            $newAvatar = '';
+            $stmt = $pdo->prepare("SELECT avatar FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $old = $stmt->fetchColumn();
+            if ($old && strpos($old, 'http') !== 0) {
+                $oldPath = get_avatars_path() . basename($old);
+                if (file_exists($oldPath)) @unlink($oldPath);
+            }
+        } elseif (!empty($_FILES['avatar_upload']['tmp_name']) && is_uploaded_file($_FILES['avatar_upload']['tmp_name'])) {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($_FILES['avatar_upload']['tmp_name']);
+            $allowed = ['image/jpeg' => true, 'image/png' => true, 'image/gif' => true, 'image/webp' => true];
+            $maxSize = 2 * 1024 * 1024;
+            if (!isset($allowed[$mime])) {
+                $_SESSION['flash_error'][] = "❌ Avatar must be JPEG, PNG, GIF, or WebP.";
+            } elseif ($_FILES['avatar_upload']['size'] > $maxSize) {
+                $_SESSION['flash_error'][] = "❌ Avatar must be 2 MB or smaller.";
+            } else {
+                $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'][$mime];
+                $dir = get_avatars_path();
+                if (!is_dir($dir)) @mkdir($dir, 0755, true);
+                $filename = $userId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+                if (move_uploaded_file($_FILES['avatar_upload']['tmp_name'], $dir . $filename)) {
+                    $stmt = $pdo->prepare("SELECT avatar FROM users WHERE id = ?");
+                    $stmt->execute([$userId]);
+                    $old = $stmt->fetchColumn();
+                    if ($old && strpos($old, 'http') !== 0) {
+                        $oldPath = $dir . basename($old);
+                        if (file_exists($oldPath)) @unlink($oldPath);
+                    }
+                    $newAvatar = $filename;
+                } else {
+                    $_SESSION['flash_error'][] = "❌ Could not save avatar upload.";
+                }
+            }
+        } elseif ($avatarUrl !== '') {
+            $newAvatar = $avatarUrl;
+            $stmt = $pdo->prepare("SELECT avatar FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $old = $stmt->fetchColumn();
+            if ($old && strpos($old, 'http') !== 0) {
+                $oldPath = get_avatars_path() . basename($old);
+                if (file_exists($oldPath)) @unlink($oldPath);
+            }
         }
 
         if (empty($_SESSION['flash_error'])) {
@@ -54,9 +118,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($_SESSION['flash_error'])) {
-            $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, display_name = ? WHERE id = ?");
-            $stmt->execute([$username, $email, $displayName ?: null, $userId]);
+            $avatarValue = ($newAvatar !== null) ? ($newAvatar === '' ? null : $newAvatar) : (trim($avatar) === '' ? null : $avatar);
+            $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, display_name = ?, avatar = ?, bio = ? WHERE id = ?");
+            $stmt->execute([$username, $email, $displayName ?: null, $avatarValue, $bio ?: null, $userId]);
             $_SESSION['username'] = $username;
+            $avatar = $avatarValue ?? '';
             $_SESSION['flash_success'][] = "✅ Profile updated.";
             header("Location: profile.php");
             exit;
@@ -154,12 +220,20 @@ while ($row = $extStmt->fetch(PDO::FETCH_ASSOC)) {
 arsort($extCounts);
 $topExtensions = array_slice($extCounts, 0, 10, true);
 
+$profileIncomplete = (trim($displayName) === '' && trim($bio) === '' && trim($avatar) === '');
+
 $pageTitle = "Profile";
 require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-section auth-form">
     <h2 class="page-title">Your profile</h2>
+
+    <?php if ($profileIncomplete): ?>
+    <div class="flash warning" role="alert">
+        <strong>Complete your profile:</strong> Add a display name, bio, or profile picture to personalize your <a href="user.php?username=<?= urlencode($user['username']) ?>">public profile</a>.
+    </div>
+    <?php endif; ?>
 
     <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
         <h3 class="settings-card-title">Your statistics</h3>
@@ -250,8 +324,35 @@ require_once __DIR__ . '/includes/header.php';
     <div class="settings-card" style="margin-bottom: 1.5rem;">
         <h3 class="settings-card-title">Edit profile</h3>
         <div class="settings-card-body">
-            <form method="post" class="form">
+            <form method="post" class="form" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="profile">
+                <div class="form-group profile-avatar-group">
+                    <label>Profile picture</label>
+                    <?php if (trim($avatar) !== ''): ?>
+                    <div class="profile-avatar-preview">
+                        <?php if (preg_match('#^https?://#i', $avatar)): ?>
+                        <img src="<?= sanitize_data($avatar) ?>" alt="Avatar" class="profile-avatar-img" loading="lazy">
+                        <?php else: ?>
+                        <img src="avatar.php?id=<?= (int) $userId ?>" alt="Avatar" class="profile-avatar-img" loading="lazy">
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                    <div class="form-group">
+                        <label for="avatar_url">Avatar URL</label>
+                        <input type="url" name="avatar_url" id="avatar_url" value="<?= preg_match('#^https?://#i', $avatar) ? sanitize_data($avatar) : '' ?>" placeholder="https://…">
+                    </div>
+                    <div class="form-group">
+                        <label for="avatar_upload">Or upload image (JPEG, PNG, GIF, WebP; max 2 MB)</label>
+                        <input type="file" name="avatar_upload" id="avatar_upload" accept="image/jpeg,image/png,image/gif,image/webp">
+                    </div>
+                    <?php if (trim($avatar) !== ''): ?>
+                    <div class="form-group settings-row-checkbox">
+                        <label>
+                            <input type="checkbox" name="remove_avatar" value="1"> Remove profile picture
+                        </label>
+                    </div>
+                    <?php endif; ?>
+                </div>
                 <div class="form-group">
                     <label for="profile_username">Username</label>
                     <input type="text" name="username" id="profile_username" value="<?= sanitize_data($username) ?>" required minlength="3">
@@ -263,6 +364,10 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="form-group">
                     <label for="profile_display_name">Display name (optional)</label>
                     <input type="text" name="display_name" id="profile_display_name" value="<?= sanitize_data($displayName) ?>" maxlength="100" placeholder="How you want to be shown">
+                </div>
+                <div class="form-group">
+                    <label for="profile_bio">Bio (optional, max 500 characters)</label>
+                    <textarea name="bio" id="profile_bio" maxlength="500" rows="4" placeholder="A short description for your public profile"><?= sanitize_data($bio) ?></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary">Save profile</button>
             </form>

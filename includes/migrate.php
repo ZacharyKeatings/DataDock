@@ -96,6 +96,20 @@ function run_migrations(PDO $pdo): void {
         ");
     } catch (PDOException $e) {}
 
+    // v1.7.0: users.avatar and users.bio for profile
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'avatar'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN avatar VARCHAR(500) DEFAULT NULL AFTER display_name");
+        }
+    } catch (PDOException $e) {}
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'bio'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN bio VARCHAR(500) DEFAULT NULL AFTER avatar");
+        }
+    } catch (PDOException $e) {}
+
     // v1.7.0: password_reset_tokens for password reset flow
     try {
         $pdo->exec("
