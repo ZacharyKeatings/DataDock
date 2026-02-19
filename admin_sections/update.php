@@ -129,11 +129,14 @@ $zipUrl = $release['download_url'];
 $tag    = $release['tag_name'] ?? 'unknown';
 
 if ($dryRun) {
-    $_SESSION['flash_success'][] = "🧪 <strong>Dry Run Mode Enabled</strong>";
-    $_SESSION['flash_success'][] = "ℹ️ Would download release zip from: <code>$zipUrl</code>";
-    $_SESSION['flash_success'][] = "📦 Would extract into: <code>$extractPath</code>";
-    $_SESSION['flash_success'][] = "📁 Would skip files/folders: <code>config/settings.php, config/db.php, uploads/, thumbnails/</code>";
-    $_SESSION['flash_success'][] = "🔁 Would overwrite other files with new version <strong>$tag</strong>";
+    $tagEsc = htmlspecialchars($tag, ENT_QUOTES, 'UTF-8');
+    $zipUrlEsc = htmlspecialchars($zipUrl, ENT_QUOTES, 'UTF-8');
+    $extractPathEsc = htmlspecialchars($extractPath, ENT_QUOTES, 'UTF-8');
+    $_SESSION['flash_success'][] = ['html' => true, 'msg' => "🧪 <strong>Dry Run Mode Enabled</strong>"];
+    $_SESSION['flash_success'][] = ['html' => true, 'msg' => "ℹ️ Would download release zip from: <code>$zipUrlEsc</code>"];
+    $_SESSION['flash_success'][] = ['html' => true, 'msg' => "📦 Would extract into: <code>$extractPathEsc</code>"];
+    $_SESSION['flash_success'][] = ['html' => true, 'msg' => "📁 Would skip files/folders: <code>config/settings.php, config/db.php, uploads/, thumbnails/</code>"];
+    $_SESSION['flash_success'][] = ['html' => true, 'msg' => "🔁 Would overwrite other files with new version <strong>$tagEsc</strong>"];
     ob_end_clean();
     header("Location: ../admin.php?section=updater");
     exit;
@@ -206,7 +209,7 @@ foreach (new RecursiveIteratorIterator(
 rrmdir($extractPath);
 unlink($zipPath);
 
-$_SESSION['flash_success'][] = "✅ DataDock has been updated to <strong>$tag</strong>.";
+$_SESSION['flash_success'][] = ['html' => true, 'msg' => "✅ DataDock has been updated to <strong>" . htmlspecialchars($tag, ENT_QUOTES, 'UTF-8') . "</strong>."];
 
 ob_end_clean();
 header("Location: ../admin.php?section=updater");

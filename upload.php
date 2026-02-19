@@ -361,10 +361,15 @@ require_once __DIR__ . '/includes/header.php';
         </div>
       </div>
 
-      <div id="progressContainer" class="upload-progress" style="display:none;">
-        <progress id="uploadProgress" max="100" value="0"></progress>
-        <span id="progressText">0%</span>
-      </div>
+      <?php
+      $container_id = 'progressContainer';
+      $progress_id  = 'uploadProgress';
+      $text_id      = 'progressText';
+      $value        = 0;
+      $label        = '0%';
+      $hidden       = true;
+      require_once __DIR__ . '/includes/progress_bar.php';
+      ?>
 
       <div class="upload-submit-wrap">
         <button type="submit" class="btn btn-primary btn-upload-submit">Upload</button>

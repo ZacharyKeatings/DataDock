@@ -111,7 +111,90 @@ function return_bytes(string $val): int {
     return $num;
 }
 
+/**
+ * Convert a byte count to a display value and unit for forms.
+ *
+ * @param int $bytes Size in bytes.
+ * @return array{0: float, 1: string} [value, unit] where unit is 'b','k','m','g'
+ */
+function bytes_to_display(int $bytes): array {
+    $bytes = (int) $bytes;
+    if ($bytes >= 1073741824) {
+        return [round($bytes / 1073741824, 2), 'g'];
+    }
+    if ($bytes >= 1048576) {
+        return [round($bytes / 1048576, 2), 'm'];
+    }
+    if ($bytes >= 1024) {
+        return [round($bytes / 1024, 2), 'k'];
+    }
+    return [$bytes, 'b'];
+}
 
+/**
+ * Convert form value + unit to bytes (supports decimals e.g. 1.5 MB).
+ *
+ * @param float|string $value Numeric value from form.
+ * @param string $unit One of 'b','k','m','g'
+ * @return int Size in bytes.
+ */
+function form_size_to_bytes($value, string $unit): int {
+    $value = (float) $value;
+    $unit = strtolower(trim($unit));
+    if (!in_array($unit, ['b', 'k', 'm', 'g'], true)) {
+        $unit = 'b';
+    }
+    switch ($unit) {
+        case 'g': $value *= 1024;
+        case 'm': $value *= 1024;
+        case 'k': $value *= 1024;
+    }
+    return (int) round($value);
+}
+
+/**
+ * Convert byte count to PHP ini size string (e.g. 64M, 1G).
+ *
+ * @param int $bytes Size in bytes.
+ * @return string Value suitable for upload_max_filesize / post_max_size.
+ */
+function bytes_to_ini_size(int $bytes): string {
+    $bytes = (int) $bytes;
+    if ($bytes <= 0) {
+        return '0';
+    }
+    if ($bytes >= 1073741824) {
+        return round($bytes / 1073741824) . 'G';
+    }
+    if ($bytes >= 1048576) {
+        return round($bytes / 1048576) . 'M';
+    }
+    if ($bytes >= 1024) {
+        return round($bytes / 1024) . 'K';
+    }
+    return (string) $bytes;
+}
+
+
+/**
+ * Format a MySQL datetime for display (date on top, time below, no seconds).
+ * Returns HTML: a wrapper with .datetime-date and .datetime-time spans.
+ *
+ * @param string|null $mysqlDatetime e.g. "2025-02-18 14:32:05"
+ * @return string HTML or empty string
+ */
+function format_datetime_display($mysqlDatetime) {
+    if ($mysqlDatetime === null || $mysqlDatetime === '') {
+        return '';
+    }
+    $t = strtotime($mysqlDatetime);
+    if (!$t) {
+        return '';
+    }
+    $date = date('M j, Y', $t);
+    $time = date('g:i A', $t);
+    return '<span class="datetime-wrap"><span class="datetime-date">' . htmlspecialchars($date) . '</span><span class="datetime-time">' . htmlspecialchars($time) . '</span></span>';
+}
 
 /**
  * Format file size in human-readable format.

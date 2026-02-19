@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $adminContactEmail = trim($_POST['admin_contact_email'] ?? '');
         $registrationEnabled = isset($_POST['registration_enabled']);
         $enforceUniqueEmail = isset($_POST['enforce_unique_email']);
-        $maxFileSize = (int) ($_POST['max_file_size'] ?? 0);
+        $maxFileSize = form_size_to_bytes($_POST['max_file_size'] ?? 0, $_POST['max_file_size_unit'] ?? 'm');
         $defaultFileExpiry = trim($_POST['default_file_expiry'] ?? 'never');
         $thumbnailsEnabled = isset($_POST['thumbnails_enabled']);
         $sessionTimeoutMinutes = (int) ($_POST['session_timeout_minutes'] ?? 60);
@@ -50,12 +50,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $guestUploadsEnabled = isset($_POST['guest_uploads_enabled']);
         $guestMaxFiles = (int) ($_POST['guest_max_files'] ?? 0);
-        $guestMaxStorage = (int) ($_POST['guest_max_storage'] ?? 0);
+        $guestMaxStorage = form_size_to_bytes($_POST['guest_max_storage'] ?? 0, $_POST['guest_max_storage_unit'] ?? 'm');
 
         $userMaxFilesEnabled = isset($_POST['user_max_files_enabled']);
         $userMaxStorageEnabled = isset($_POST['user_max_storage_enabled']);
         $userMaxFiles = (int) ($_POST['user_max_files'] ?? 0);
-        $userMaxStorage = (int) ($_POST['user_max_storage'] ?? 0);
+        $userMaxStorage = form_size_to_bytes($_POST['user_max_storage'] ?? 0, $_POST['user_max_storage_unit'] ?? 'm');
+
+        $serverUploadOverride = isset($_POST['server_upload_max']) && $_POST['server_upload_max'] !== '' ? form_size_to_bytes($_POST['server_upload_max'], $_POST['server_upload_max_unit'] ?? 'm') : 0;
+        $serverPostOverride = isset($_POST['server_post_max']) && $_POST['server_post_max'] !== '' ? form_size_to_bytes($_POST['server_post_max'], $_POST['server_post_max_unit'] ?? 'm') : 0;
 
         if ($userMaxFilesEnabled && $userMaxFiles < 1) {
             $_SESSION['flash_error'][] = "❌ Max files per user must be a positive number.";
@@ -154,6 +157,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['flash_success'][] = "✅ Site settings updated successfully.";
             } else {
                 $_SESSION['flash_error'][] = "❌ Failed to update site settings.";
+            }
+
+            $userIniPath = __DIR__ . '/.user.ini';
+            if (!empty($_POST['server_clear_user_ini']) && file_exists($userIniPath)) {
+                if (@unlink($userIniPath)) {
+                    $_SESSION['flash_success'][] = "✅ Server override removed (.user.ini deleted).";
+                } else {
+                    $_SESSION['flash_error'][] = "❌ Could not remove .user.ini. Check permissions.";
+                }
+            } elseif ($serverUploadOverride > 0 || $serverPostOverride > 0) {
+                $currentUploadBytes = return_bytes(ini_get('upload_max_filesize'));
+                $currentPostBytes = return_bytes(ini_get('post_max_size'));
+                $uploadIni = $serverUploadOverride > 0 ? bytes_to_ini_size($serverUploadOverride) : bytes_to_ini_size($currentUploadBytes);
+                $postIni = $serverPostOverride > 0 ? bytes_to_ini_size($serverPostOverride) : bytes_to_ini_size($currentPostBytes);
+                $userIniContent = "; DataDock server limits (optional override)\nupload_max_filesize = " . $uploadIni . "\npost_max_size = " . $postIni . "\n";
+                if (@file_put_contents($userIniPath, $userIniContent)) {
+                    $_SESSION['flash_success'][] = "✅ Server PHP limits written to .user.ini. They may take effect on the next request (not all hosts support .user.ini).";
+                } else {
+                    $_SESSION['flash_error'][] = "❌ Could not write .user.ini. Check permissions or set server limits in php.ini manually.";
+                }
             }
         }
 
@@ -275,6 +298,7 @@ require_once __DIR__ . '/includes/header.php';
                 $registrationEnabled = $settings['registration_enabled'] ?? true;
                 $enforceUniqueEmail = $settings['enforce_unique_email'] ?? true;
                 $maxFileSize = $settings['max_file_size'] ?? 5242880;
+                $maxFileSizeDisplay = bytes_to_display($maxFileSize);
                 $defaultFileExpiry = $settings['default_file_expiry'] ?? 'never';
                 $thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
                 $sessionTimeoutMinutes = (int) ($settings['session_timeout_minutes'] ?? 60);
@@ -284,6 +308,7 @@ require_once __DIR__ . '/includes/header.php';
                 $userMaxFiles = $userLimits['max_files'] ?? 100;
                 $userMaxStorageEnabled = $userLimits['max_storage_enabled'] ?? false;
                 $userMaxStorage = $userLimits['max_storage'] ?? 104857600;
+                $userMaxStorageDisplay = bytes_to_display($userMaxStorage);
                 $bruteForceEnabled = $settings['brute_force']['enabled'] ?? true;
                 $maxAttempts = $settings['brute_force']['max_attempts'] ?? 5;
                 $lockoutMinutes = $settings['brute_force']['lockout_minutes'] ?? 15;
@@ -291,6 +316,23 @@ require_once __DIR__ . '/includes/header.php';
                 $guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
                 $guestMaxFiles = $settings['guest_uploads']['max_files'] ?? 10;
                 $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
+                $guestMaxStorageDisplay = bytes_to_display($guestMaxStorage);
+                $serverUploadMax = ini_get('upload_max_filesize');
+                $serverPostMax = ini_get('post_max_size');
+                $serverUploadMaxBytes = return_bytes($serverUploadMax);
+                $serverPostMaxBytes = return_bytes($serverPostMax);
+                $userIniPath = __DIR__ . '/.user.ini';
+                $serverOverrideUploadDisplay = null;
+                $serverOverridePostDisplay = null;
+                if (file_exists($userIniPath)) {
+                    $userIni = @parse_ini_file($userIniPath);
+                    if (!empty($userIni['upload_max_filesize'])) {
+                        $serverOverrideUploadDisplay = bytes_to_display(return_bytes($userIni['upload_max_filesize']));
+                    }
+                    if (!empty($userIni['post_max_size'])) {
+                        $serverOverridePostDisplay = bytes_to_display(return_bytes($userIni['post_max_size']));
+                    }
+                }
                 $maintenanceMode = $settings['maintenance_mode'] ?? false;
                 $debugMode = $settings['debug_mode'] ?? false;
                 $logPath = trim($settings['log_path'] ?? '');
@@ -362,7 +404,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const utc = el.dataset.utc;
         if (utc) {
             const local = new Date(utc + ' UTC');
-            el.textContent = local.toLocaleString();
+            const d = document.createElement('span');
+            d.className = 'datetime-date';
+            d.textContent = local.toLocaleDateString();
+            const t = document.createElement('span');
+            t.className = 'datetime-time';
+            t.textContent = local.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+            el.textContent = '';
+            el.appendChild(d);
+            el.appendChild(t);
         } else {
             el.textContent = '—';
         }

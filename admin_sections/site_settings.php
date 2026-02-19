@@ -34,11 +34,61 @@
                         Enforce Unique Email (strict mode; uncheck for relaxed)
                     </label>
                 </div>
-                <div class="settings-row">
-                    <label for="max_file_size">Max File Size <span class="settings-unit">(bytes)</span></label>
-                    <input type="number" name="max_file_size" id="max_file_size" value="<?= sanitize_data($maxFileSize) ?>" required>
+                <div class="settings-row settings-row-split">
+                    <label for="max_file_size">Max File Size</label>
+                    <span class="settings-input-with-unit">
+                        <input type="number" name="max_file_size" id="max_file_size" value="<?= sanitize_data($maxFileSizeDisplay[0]) ?>" min="0" step="any" required>
+                        <select name="max_file_size_unit" id="max_file_size_unit" aria-label="Unit">
+                            <option value="b"<?= ($maxFileSizeDisplay[1] === 'b') ? ' selected' : '' ?>>Bytes</option>
+                            <option value="k"<?= ($maxFileSizeDisplay[1] === 'k') ? ' selected' : '' ?>>KB</option>
+                            <option value="m"<?= ($maxFileSizeDisplay[1] === 'm') ? ' selected' : '' ?>>MB</option>
+                            <option value="g"<?= ($maxFileSizeDisplay[1] === 'g') ? ' selected' : '' ?>>GB</option>
+                        </select>
+                    </span>
                 </div>
                 <p class="settings-hint" id="max_file_size_hint">≈ <?= format_filesize($maxFileSize) ?></p>
+                <p class="settings-hint settings-hint-server">Current server: <code>upload_max_filesize</code> = <?= format_filesize($serverUploadMaxBytes) ?>, <code>post_max_size</code> = <?= format_filesize($serverPostMaxBytes) ?>. Effective per-file max is the lower of app and server.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h4 class="settings-card-title">Server PHP Limits (optional override)</h4>
+            <div class="settings-card-body">
+                <p class="settings-hint">Override PHP’s upload limits by writing a <code>.user.ini</code> file in the project root. Takes effect on the next request on many hosts; not supported everywhere. Leave overrides empty to keep current server values.</p>
+                <div class="settings-row settings-row-split">
+                    <label for="server_upload_max">Override <code>upload_max_filesize</code></label>
+                    <span class="settings-input-with-unit">
+                        <input type="number" name="server_upload_max" id="server_upload_max" value="<?= $serverOverrideUploadDisplay !== null ? sanitize_data($serverOverrideUploadDisplay[0]) : '' ?>" min="0" step="any">
+                        <select name="server_upload_max_unit" id="server_upload_max_unit" aria-label="Unit">
+                            <option value="b"<?= ($serverOverrideUploadDisplay !== null && $serverOverrideUploadDisplay[1] === 'b') ? ' selected' : '' ?>>Bytes</option>
+                            <option value="k"<?= ($serverOverrideUploadDisplay !== null && $serverOverrideUploadDisplay[1] === 'k') ? ' selected' : '' ?>>KB</option>
+                            <option value="m"<?= ($serverOverrideUploadDisplay === null || $serverOverrideUploadDisplay[1] === 'm') ? ' selected' : '' ?>>MB</option>
+                            <option value="g"<?= ($serverOverrideUploadDisplay !== null && $serverOverrideUploadDisplay[1] === 'g') ? ' selected' : '' ?>>GB</option>
+                        </select>
+                    </span>
+                </div>
+                <p class="settings-hint">Current: <?= format_filesize($serverUploadMaxBytes) ?></p>
+                <div class="settings-row settings-row-split">
+                    <label for="server_post_max">Override <code>post_max_size</code></label>
+                    <span class="settings-input-with-unit">
+                        <input type="number" name="server_post_max" id="server_post_max" value="<?= $serverOverridePostDisplay !== null ? sanitize_data($serverOverridePostDisplay[0]) : '' ?>" min="0" step="any">
+                        <select name="server_post_max_unit" id="server_post_max_unit" aria-label="Unit">
+                            <option value="b"<?= ($serverOverridePostDisplay !== null && $serverOverridePostDisplay[1] === 'b') ? ' selected' : '' ?>>Bytes</option>
+                            <option value="k"<?= ($serverOverridePostDisplay !== null && $serverOverridePostDisplay[1] === 'k') ? ' selected' : '' ?>>KB</option>
+                            <option value="m"<?= ($serverOverridePostDisplay === null || $serverOverridePostDisplay[1] === 'm') ? ' selected' : '' ?>>MB</option>
+                            <option value="g"<?= ($serverOverridePostDisplay !== null && $serverOverridePostDisplay[1] === 'g') ? ' selected' : '' ?>>GB</option>
+                        </select>
+                    </span>
+                </div>
+                <p class="settings-hint">Current: <?= format_filesize($serverPostMaxBytes) ?></p>
+                <?php if (file_exists(__DIR__ . '/../.user.ini')): ?>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="server_clear_user_ini" value="1">
+                        Remove server overrides (delete .user.ini)
+                    </label>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -62,8 +112,16 @@
                     </label>
                 </div>
                 <div class="settings-row settings-row-split">
-                    <label for="user_max_storage">Max Storage <span class="settings-unit">(bytes)</span></label>
-                    <input type="number" name="user_max_storage" id="user_max_storage" value="<?= sanitize_data($userMaxStorage) ?>" min="0" <?= !$userMaxStorageEnabled ? 'disabled' : '' ?>>
+                    <label for="user_max_storage">Max Storage</label>
+                    <span class="settings-input-with-unit">
+                        <input type="number" name="user_max_storage" id="user_max_storage" value="<?= sanitize_data($userMaxStorageDisplay[0]) ?>" min="0" step="any" <?= !$userMaxStorageEnabled ? 'disabled' : '' ?>>
+                        <select name="user_max_storage_unit" id="user_max_storage_unit" aria-label="Unit" <?= !$userMaxStorageEnabled ? 'disabled' : '' ?>>
+                            <option value="b"<?= ($userMaxStorageDisplay[1] === 'b') ? ' selected' : '' ?>>Bytes</option>
+                            <option value="k"<?= ($userMaxStorageDisplay[1] === 'k') ? ' selected' : '' ?>>KB</option>
+                            <option value="m"<?= ($userMaxStorageDisplay[1] === 'm') ? ' selected' : '' ?>>MB</option>
+                            <option value="g"<?= ($userMaxStorageDisplay[1] === 'g') ? ' selected' : '' ?>>GB</option>
+                        </select>
+                    </span>
                 </div>
                 <p class="settings-hint" id="user_max_storage_hint">≈ <?= format_filesize($userMaxStorage) ?></p>
             </div>
@@ -83,8 +141,16 @@
                     <input type="number" name="guest_max_files" id="guest_max_files" value="<?= sanitize_data($guestMaxFiles) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
                 </div>
                 <div class="settings-row settings-row-split">
-                    <label for="guest_max_storage">Max Storage <span class="settings-unit">(bytes)</span></label>
-                    <input type="number" name="guest_max_storage" id="guest_max_storage" value="<?= sanitize_data($guestMaxStorage) ?>" min="0" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
+                    <label for="guest_max_storage">Max Storage</label>
+                    <span class="settings-input-with-unit">
+                        <input type="number" name="guest_max_storage" id="guest_max_storage" value="<?= sanitize_data($guestMaxStorageDisplay[0]) ?>" min="0" step="any" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
+                        <select name="guest_max_storage_unit" id="guest_max_storage_unit" aria-label="Unit" <?= !$guestUploadsEnabled ? 'disabled' : '' ?>>
+                            <option value="b"<?= ($guestMaxStorageDisplay[1] === 'b') ? ' selected' : '' ?>>Bytes</option>
+                            <option value="k"<?= ($guestMaxStorageDisplay[1] === 'k') ? ' selected' : '' ?>>KB</option>
+                            <option value="m"<?= ($guestMaxStorageDisplay[1] === 'm') ? ' selected' : '' ?>>MB</option>
+                            <option value="g"<?= ($guestMaxStorageDisplay[1] === 'g') ? ' selected' : '' ?>>GB</option>
+                        </select>
+                    </span>
                 </div>
                 <p class="settings-hint" id="guest_max_storage_hint">≈ <?= format_filesize($guestMaxStorage) ?></p>
             </div>
@@ -257,16 +323,23 @@
         if (n < 1073741824) return (n/1048576).toFixed(2) + ' MB';
         return (n/1073741824).toFixed(2) + ' GB';
     };
-    const updateHint = (inputId, hintId) => {
+    const unitToMultiplier = { b: 1, k: 1024, m: 1048576, g: 1073741824 };
+    const valueAndUnitToBytes = (value, unit) => (parseFloat(value) || 0) * (unitToMultiplier[unit] || 1);
+    const updateHintWithUnit = (inputId, unitId, hintId) => {
         const inp = document.getElementById(inputId);
+        const unitSel = document.getElementById(unitId);
         const hint = document.getElementById(hintId);
-        if (!inp || !hint) return;
-        const update = () => { hint.textContent = '≈ ' + formatBytes(parseInt(inp.value) || 0); };
+        if (!inp || !unitSel || !hint) return;
+        const update = () => {
+            const bytes = valueAndUnitToBytes(inp.value, unitSel.value);
+            hint.textContent = '≈ ' + formatBytes(bytes);
+        };
         inp.addEventListener('input', update);
+        unitSel.addEventListener('change', update);
     };
-    updateHint('max_file_size', 'max_file_size_hint');
-    updateHint('user_max_storage', 'user_max_storage_hint');
-    updateHint('guest_max_storage', 'guest_max_storage_hint');
+    updateHintWithUnit('max_file_size', 'max_file_size_unit', 'max_file_size_hint');
+    updateHintWithUnit('user_max_storage', 'user_max_storage_unit', 'user_max_storage_hint');
+    updateHintWithUnit('guest_max_storage', 'guest_max_storage_unit', 'guest_max_storage_hint');
 
     const toggleInputs = (checkboxId, inputIds) => {
         const cb = document.getElementById(checkboxId);
@@ -277,8 +350,8 @@
         toggle();
     };
     toggleInputs('user_max_files_enabled', ['user_max_files']);
-    toggleInputs('user_max_storage_enabled', ['user_max_storage']);
-    toggleInputs('guest_uploads_enabled', ['guest_max_files', 'guest_max_storage']);
+    toggleInputs('user_max_storage_enabled', ['user_max_storage', 'user_max_storage_unit']);
+    toggleInputs('guest_uploads_enabled', ['guest_max_files', 'guest_max_storage', 'guest_max_storage_unit']);
     toggleInputs('brute_force_enabled', ['max_attempts', 'lockout_minutes', 'lockout_window']);
 })();
 </script>

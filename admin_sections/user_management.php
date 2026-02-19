@@ -14,7 +14,7 @@
 
         <?php foreach ($users as $user): ?>
             <div class="file-row-user-management">
-                <div><?= sanitize_data($user['created_at']) ?></div>
+                <div><?= format_datetime_display($user['created_at']) ?></div>
                 <div><?= sanitize_data($user['username']) ?></div>
                 <div><?= sanitize_data($user['email']) ?></div>
                 <div><?= sanitize_data($user['file_count']) ?></div>

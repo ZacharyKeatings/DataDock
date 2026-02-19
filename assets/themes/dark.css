@@ -10,13 +10,14 @@
     --color-box-background: #37474f;
 
     --color-success-text: #ffffff;
-    --color-success-background: #1dbc25;
-    --color-success-border: #227217;
+    --color-success-background: #0d6b12;
+    --color-success-border: #0a4d0e;
 
     --color-warning-text: #ffecb3;
     --color-warning-background: #5d4037;
     --color-warning-border: #ffbc42;
 
+    --color-error: #c62828;
     --color-error-text: #ffffff;
     --color-error-background: #ac4444;
     --color-error-border: #9a0000;
@@ -101,7 +102,7 @@ a:hover {
 }
 
 .stat-value {
-    color: #00b894;
+    color: var(--color-header-background);
 }
 
 .sidebar-nav a {
@@ -111,6 +112,7 @@ a:hover {
 .sidebar-nav a.active,
 .sidebar-nav a:hover {
     background-color: var(--color-secondary);
+    color: var(--color-header-background);
 }
 
 .changelog-box,
@@ -144,6 +146,8 @@ a:hover {
     background: linear-gradient(135deg, rgba(3, 140, 150, 0.2) 0%, rgba(3, 140, 150, 0.28) 100%);
 }
 
-.upload-page .upload-progress {
+.upload-page .upload-progress,
+.upload-page .progress-bar-block,
+.progress-bar-block {
     background: rgba(3, 140, 150, 0.15);
 }

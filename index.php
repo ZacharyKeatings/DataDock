@@ -88,7 +88,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const utc = el.dataset.utc;
         if (utc) {
             const local = new Date(utc + ' UTC');
-            el.textContent = local.toLocaleString();
+            const d = document.createElement('span');
+            d.className = 'datetime-date';
+            d.textContent = local.toLocaleDateString();
+            const t = document.createElement('span');
+            t.className = 'datetime-time';
+            t.textContent = local.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+            el.textContent = '';
+            el.appendChild(d);
+            el.appendChild(t);
         } else {
             el.textContent = '—';
         }
