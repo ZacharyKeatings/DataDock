@@ -70,4 +70,45 @@ function run_migrations(PDO $pdo): void {
     } catch (PDOException $e) {
         // Ignore if exists
     }
+
+    // v1.7.0: users.display_name for profile
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'display_name'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN display_name VARCHAR(100) DEFAULT NULL AFTER email");
+        }
+    } catch (PDOException $e) {}
+
+    // v1.7.0: signup_tokens for invite-only registration
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS signup_tokens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                token VARCHAR(64) NOT NULL UNIQUE,
+                created_by_user_id INT NOT NULL,
+                expires_at DATETIME NOT NULL,
+                used_at DATETIME DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_token (token),
+                INDEX idx_expires (expires_at)
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    // v1.7.0: password_reset_tokens for password reset flow
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                token VARCHAR(64) NOT NULL UNIQUE,
+                expires_at DATETIME NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_token (token),
+                INDEX idx_expires (expires_at)
+            )
+        ");
+    } catch (PDOException $e) {}
 }

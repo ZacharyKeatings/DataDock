@@ -34,7 +34,7 @@ $totalSize = array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 
 
         <?php foreach ($allFiles as $file): ?>
             <div class="file-row-file-management">
-                <div><?= sanitize_data($file['username'] ?? 'Guest') ?></div>
+                <div><?= user_profile_link($file['username'] ?? null) ?></div>
                 <div class="file-name-cell">
                     <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?>
                     <span title="<?= sanitize_data($file['original_name']) ?>"><?= sanitize_data($file['original_name']) ?></span>

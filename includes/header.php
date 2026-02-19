@@ -40,11 +40,12 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
     <link rel="stylesheet" href="assets/<?= sanitize_data($themePath) ?>">
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div class="page-wrapper">
-        <header class="site-header">
+        <header class="site-header" role="banner">
             <div class="header-inner">
                 <div class="site-title">
-                    <a href="index.php">
+                    <a href="index.php" aria-label="<?= sanitize_data($siteName) ?> home">
                         <?php if (!empty($logoUrl)): ?>
                         <img src="<?= sanitize_data($logoUrl) ?>" alt="<?= sanitize_data($siteName) ?>" class="site-logo">
                         <?php else: ?>
@@ -52,19 +53,20 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                         <?php endif; ?>
                     </a>
                 </div>
-                <nav class="main-nav">
+                <nav class="main-nav" aria-label="Main navigation">
                     <span class="theme-toggle">
-                        <a href="set_theme.php?theme=light" class="theme-btn<?= $theme === 'light' ? ' active' : '' ?>" title="Light mode"><?= icon_svg('sun') ?></a>
-                        <a href="set_theme.php?theme=dark" class="theme-btn<?= $theme === 'dark' ? ' active' : '' ?>" title="Dark mode"><?= icon_svg('moon') ?></a>
+                        <a href="set_theme.php?theme=light" class="theme-btn<?= $theme === 'light' ? ' active' : '' ?>" title="Light mode" aria-label="Switch to light mode"><?= icon_svg('sun') ?></a>
+                        <a href="set_theme.php?theme=dark" class="theme-btn<?= $theme === 'dark' ? ' active' : '' ?>" title="Dark mode" aria-label="Switch to dark mode"><?= icon_svg('moon') ?></a>
                     </span>
                     <a href="index.php"<?= $currentPage === 'index.php' ? ' class="active"' : '' ?>>Home</a>
                     <?php if (!empty($_SESSION['user_id'])): ?>
                         <a href="dashboard.php"<?= $currentPage === 'dashboard.php' ? ' class="active"' : '' ?>>Your Files</a>
                         <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
+                        <a href="profile.php"<?= $currentPage === 'profile.php' ? ' class="active"' : '' ?>>Profile</a>
                         <?php if ($_SESSION['role'] === 'admin'): ?>
                             <a href="admin.php"<?= $currentPage === 'admin.php' ? ' class="active"' : '' ?>>Admin Panel</a>
                         <?php endif; ?>
-                        <a href="logout.php">Logout (<?= sanitize_data($_SESSION['username']) ?>)</a>
+                        <span class="nav-logout-wrap"><a href="logout.php">Logout</a> (<?= user_profile_link($_SESSION['username']) ?>)</span>
                     <?php else: ?>
                         <?php if ($guestUploadsEnabled): ?>
                             <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
@@ -76,14 +78,14 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
             </div>
         </header>
 
-        <main class="container">
+        <main id="main-content" class="container" role="main">
 
             <?php
             $installWarningEnabled = $settings['install_warning_enabled'] ?? true;
             if ($installWarningEnabled && !empty($_SESSION['user_id']) && $_SESSION['role'] === 'admin' && file_exists(__DIR__ . '/../install.php')) {
                 echo '
                 <div class="flash warning persistent">
-                    <button class="close-btn" onclick="this.parentElement.style.display=\'none\'">' . icon_svg('close') . '</button>
+                    <button type="button" class="close-btn" onclick="this.parentElement.style.display=\'none\'" aria-label="Dismiss">' . icon_svg('close') . '</button>
                     <div>
                         ' . icon_svg('warning') . ' <strong>Security Warning:</strong> <code>install.php</code> still exists on your server.<br>
                         For security, please <strong>delete or rename this file immediately</strong>.
@@ -95,8 +97,8 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
             <?php foreach (['success', 'error', 'warning'] as $type): ?>
                 <?php if (!empty($_SESSION["flash_$type"])): ?>
                     <?php foreach ((array)$_SESSION["flash_$type"] as $msg): ?>
-                        <div class="flash <?= $type ?>">
-                            <button class="close-btn" onclick="this.parentElement.remove()"><?= icon_svg('close') ?></button>
+                        <div class="flash <?= $type ?>" role="alert" aria-live="polite">
+                            <button type="button" class="close-btn" onclick="this.parentElement.remove()" aria-label="Dismiss"><?= icon_svg('close') ?></button>
                             <?= is_array($msg) && !empty($msg['html']) ? $msg['msg'] : sanitize_data($msg) ?>
                         </div>
                     <?php endforeach; unset($_SESSION["flash_$type"]); ?>

@@ -30,6 +30,12 @@
                 </div>
                 <div class="settings-row settings-row-checkbox">
                     <label>
+                        <input type="checkbox" name="invite_only_registration" <?= !empty($inviteOnlyRegistration) ? 'checked' : '' ?>>
+                        Invite-only registration (requires signup token; generate in User Management)
+                    </label>
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
                         <input type="checkbox" name="enforce_unique_email" <?= $enforceUniqueEmail ? 'checked' : '' ?>>
                         Enforce Unique Email (strict mode; uncheck for relaxed)
                     </label>

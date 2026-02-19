@@ -104,6 +104,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <button type="submit" class="btn btn-primary">Login</button>
+        <p style="margin-top: 1rem;"><a href="forgot_password.php">Forgot password?</a></p>
     </form>
 </div>
 

@@ -10,6 +10,20 @@ function sanitize_data($data) {
 }
 
 /**
+ * Output a username as a link to the public profile, or plain text for Guest/empty.
+ *
+ * @param string|null $username Username to display and link
+ * @return string HTML (link or escaped text)
+ */
+function user_profile_link($username) {
+    $username = $username === null ? '' : trim($username);
+    if ($username === '' || strtolower($username) === 'guest') {
+        return sanitize_data($username ?: 'Guest');
+    }
+    return '<a href="user.php?username=' . urlencode($username) . '">' . sanitize_data($username) . '</a>';
+}
+
+/**
  * Output inline SVG icon from sprite.
  *
  * @param string $name  Icon name (e.g. 'upload', 'folder', 'icon-sun')
@@ -227,6 +241,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'site_name' => " . var_export($siteName, true) . ",\n" .
         "    'admin_contact_email' => '',\n" .
         "    'registration_enabled' => true,\n" .
+        "    'invite_only_registration' => false,\n" .
         "    'enforce_unique_email' => true,\n" .
         "    'max_file_size' => 5242880,\n" .
         "    'default_file_expiry' => 'never',\n" .

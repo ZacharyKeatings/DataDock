@@ -37,12 +37,12 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Enable/disable user registration | Site-wide registration toggle. |
 | ✓ | Optional guest uploads with quota enforcement | File count and size limits for unauthenticated uploads. |
 | ✓ | Enforce max storage and file limits per user | Per-user quotas. |
-| — | User account & profile system | Profile page and editable account details. |
+| ✓ | User account & profile system | Profile page and editable account details. |
 | ✓ | Public file browsing | Anonymous access to uploads when enabled; public files on homepage. |
 | ✓ | Default file expiry duration setting | Site default for new uploads (e.g. 1 hour, 1 day, never). |
 | ✓ | Enforce unique email toggle | Strict (unique email) vs relaxed (username only unique). |
-| — | Invite-only registration | Signups only via link/token created by admin. |
-| — | Password reset flow | Admin-initiated or token-based reset for forgotten passwords. |
+| ✓ | Invite-only registration | Signups only via link/token created by admin. |
+| ✓ | Password reset flow | Admin-initiated or token-based reset for forgotten passwords. |
 | ✓ | User-to-user file sharing | Share files with specific usernames; "Shared with You" on dashboard. |
 
 ---
@@ -112,7 +112,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Dark mode / light mode UI toggle | Theme switcher; preference via cookie. |
 | ✓ | Responsive layout | Sections and file tables scale; horizontal scroll on small screens. |
 | — | Localization/multilanguage support | Multiple languages. |
-| — | Accessibility (WCAG) improvements | Improve accessibility. |
+| ✓ | Accessibility (WCAG) improvements | Improve accessibility. |
 | ✓ | Custom file icons | Flat SVG icons per type; custom URLs in settings. |
 
 ---

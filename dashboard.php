@@ -154,7 +154,7 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <?php foreach ($sharedFiles as $file): ?>
             <div class="file-row-dashboard">
                 <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
-                <div><?= sanitize_data($file['shared_by_username'] ?? '?') ?></div>
+                <div><?= user_profile_link($file['shared_by_username'] ?? null) ?></div>
                 <div><?= sanitize_data(get_friendly_filetype($file['filetype'])) ?></div>
                 <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
                 <div class="file-actions">

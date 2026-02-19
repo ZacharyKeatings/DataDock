@@ -99,7 +99,7 @@ require_once __DIR__ . '/includes/header.php';
         <ul class="share-list">
             <?php foreach ($shares as $s): ?>
             <li>
-                <?= sanitize_data($s['username']) ?>
+                <?= user_profile_link($s['username']) ?>
                 <form method="post" style="display:inline;" onsubmit="return confirm('Remove share with <?= htmlspecialchars($s['username']) ?>?')">
                     <input type="hidden" name="action" value="remove">
                     <input type="hidden" name="user_id" value="<?= (int)$s['shared_with_user_id'] ?>">

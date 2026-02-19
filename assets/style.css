@@ -19,6 +19,29 @@
     --color-error-background: #ac4444;
     --color-error-border: #9a0000;
 
+    /* WCAG focus indicator: visible outline for keyboard users */
+    --focus-ring: 2px solid var(--color-primary);
+    --focus-offset: 2px;
+  }
+
+  /* Skip link: visible only when focused (keyboard nav) */
+  .skip-link {
+    position: absolute;
+    top: -3rem;
+    left: 0.5rem;
+    z-index: 100;
+    padding: 0.5rem 1rem;
+    background: var(--color-header-background);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: top 0.2s ease;
+  }
+  .skip-link:focus {
+    top: 0.5rem;
+    outline: 2px solid #fff;
+    outline-offset: 2px;
   }
 
 html, body {
@@ -32,6 +55,19 @@ body {
     flex-direction: column;
     min-height: 100vh;
 }
+
+  /* Keyboard focus (WCAG 2.4.7): visible focus ring */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+  .main-nav a:focus-visible {
+    outline-color: #fff;
+  }
 
 /* Wrapper that holds the entire site content */
 .page-wrapper {
@@ -165,7 +201,13 @@ body {
     align-items: center;
 }
 
-.main-nav a {
+.main-nav .nav-logout-wrap {
+    margin-left: 1.5rem;
+  }
+  .main-nav .nav-logout-wrap a {
+    margin-left: 0;
+  }
+  .main-nav a {
     margin-left: 1.5rem;
     text-decoration: none;
     color: rgba(255, 255, 255, 0.9);
@@ -839,6 +881,49 @@ body {
     flex-direction: column;
     gap: 1rem;
 }
+
+  /* Profile statistics grid */
+  .profile-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem 1.5rem;
+  }
+  .profile-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .profile-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-primary, #0077cc);
+  }
+  .profile-stat-label {
+    font-size: 0.85rem;
+    color: var(--color-text);
+    opacity: 0.9;
+  }
+  .profile-stats-subtitle {
+    font-size: 0.95rem;
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+  }
+  .profile-stats-list {
+    margin: 0 0 1rem;
+    padding-left: 1.25rem;
+  }
+  .profile-stats-list:last-of-type {
+    margin-bottom: 0;
+  }
+  .profile-stats-list li {
+    margin-bottom: 0.35rem;
+  }
+
+  .profile-public-username {
+    margin: -0.5rem 0 1rem;
+    font-size: 1rem;
+    opacity: 0.85;
+  }
 
 .settings-row {
     display: grid;

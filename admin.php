@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newName = trim($_POST['site_name'] ?? '');
         $adminContactEmail = trim($_POST['admin_contact_email'] ?? '');
         $registrationEnabled = isset($_POST['registration_enabled']);
+        $inviteOnlyRegistration = isset($_POST['invite_only_registration']);
         $enforceUniqueEmail = isset($_POST['enforce_unique_email']);
         $maxFileSize = form_size_to_bytes($_POST['max_file_size'] ?? 0, $_POST['max_file_size_unit'] ?? 'm');
         $defaultFileExpiry = trim($_POST['default_file_expiry'] ?? 'never');
@@ -115,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'site_name' => " . var_export($newName, true) . ",\n" .
                 "    'admin_contact_email' => " . var_export($adminContactEmail, true) . ",\n" .
                 "    'registration_enabled' => " . ($registrationEnabled ? 'true' : 'false') . ",\n" .
+                "    'invite_only_registration' => " . ($inviteOnlyRegistration ? 'true' : 'false') . ",\n" .
                 "    'enforce_unique_email' => " . ($enforceUniqueEmail ? 'true' : 'false') . ",\n" .
                 "    'max_file_size' => $maxFileSize,\n" .
                 "    'default_file_expiry' => " . var_export($defaultFileExpiry, true) . ",\n" .
@@ -296,6 +298,7 @@ require_once __DIR__ . '/includes/header.php';
                 // Initialize site settings variables
                 $adminContactEmail = trim($settings['admin_contact_email'] ?? '');
                 $registrationEnabled = $settings['registration_enabled'] ?? true;
+                $inviteOnlyRegistration = !empty($settings['invite_only_registration']);
                 $enforceUniqueEmail = $settings['enforce_unique_email'] ?? true;
                 $maxFileSize = $settings['max_file_size'] ?? 5242880;
                 $maxFileSizeDisplay = bytes_to_display($maxFileSize);

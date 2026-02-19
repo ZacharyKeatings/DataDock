@@ -57,7 +57,7 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php foreach ($recentFiles as $file): ?>
                 <div class="file-row">
                     <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
-                    <div><?= sanitize_data($file['username'] ?? 'Guest') ?></div>
+                    <div><?= user_profile_link($file['username'] ?? null) ?></div>
                     <div title="<?= sanitize_data($file['filetype']) ?>">
                         <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
                     </div>
