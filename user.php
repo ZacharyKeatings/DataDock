@@ -1,7 +1,7 @@
 <?php
 /**
  * Public user profile page. No login required.
- * Shows display name (or username), member since, and public stats only.
+ * Shows display name (or username), member since, public stats, and list of public files.
  */
 require_once __DIR__ . '/includes/auth.php';
 init_session();
@@ -27,36 +27,142 @@ if (!$user) {
 }
 
 $displayName = trim($user['display_name'] ?? '') !== '' ? $user['display_name'] : $user['username'];
+$publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 
-// Public stats only: member since, count of current public files
-$publicFilesCount = $pdo->prepare("
-    SELECT COUNT(*) FROM files
+// Public stats: count, total size, total downloads for current public files
+$statsStmt = $pdo->prepare("
+    SELECT COUNT(*) AS file_count,
+           COALESCE(SUM(filesize), 0) AS total_size,
+           COALESCE(SUM(download_count), 0) AS total_downloads
+    FROM files
     WHERE user_id = ? AND is_public = 1 AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
 ");
-$publicFilesCount->execute([$user['id']]);
-$publicFileCount = (int) $publicFilesCount->fetchColumn();
+$statsStmt->execute([$user['id']]);
+$publicStats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+$publicFileCount = (int) ($publicStats['file_count'] ?? 0);
+$publicTotalSize = (int) ($publicStats['total_size'] ?? 0);
+$publicTotalDownloads = (int) ($publicStats['total_downloads'] ?? 0);
+
+// Most common file type among public files
+$topTypeStmt = $pdo->prepare("
+    SELECT filetype, COUNT(*) AS cnt
+    FROM files
+    WHERE user_id = ? AND is_public = 1 AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+      AND filetype IS NOT NULL AND filetype != ''
+    GROUP BY filetype
+    ORDER BY cnt DESC
+    LIMIT 1
+");
+$topTypeStmt->execute([$user['id']]);
+$topTypeRow = $topTypeStmt->fetch(PDO::FETCH_ASSOC);
+$topPublicFileType = $topTypeRow ? get_friendly_filetype($topTypeRow['filetype']) : null;
+
+// List of public files (for table)
+$filesStmt = $pdo->prepare("
+    SELECT id, original_name, filetype, filesize, download_count, upload_date, thumbnail_path
+    FROM files
+    WHERE user_id = ? AND is_public = 1 AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+    ORDER BY upload_date DESC
+");
+$filesStmt->execute([$user['id']]);
+$publicFiles = $filesStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = $displayName;
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="page-section auth-form">
+<div class="page-section">
     <h2 class="page-title"><?= sanitize_data($displayName) ?></h2>
     <?php if ($displayName !== $user['username']): ?>
     <p class="profile-public-username">@<?= sanitize_data($user['username']) ?></p>
     <?php endif; ?>
 
-    <div class="settings-card" style="margin-bottom: 1.5rem;">
+    <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
         <h3 class="settings-card-title">Profile</h3>
         <div class="settings-card-body">
             <p><strong>Member since</strong> <?= format_datetime_display($user['created_at']) ?></p>
-            <p><strong>Public files</strong> <?= $publicFileCount ?> file<?= $publicFileCount !== 1 ? 's' : '' ?></p>
         </div>
     </div>
 
+    <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
+        <h3 class="settings-card-title">Public file stats</h3>
+        <div class="settings-card-body profile-stats-grid">
+            <div class="profile-stat">
+                <span class="profile-stat-value"><?= $publicFileCount ?></span>
+                <span class="profile-stat-label">Public files</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value"><?= format_filesize($publicTotalSize) ?></span>
+                <span class="profile-stat-label">Total size (public)</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value"><?= number_format($publicTotalDownloads) ?></span>
+                <span class="profile-stat-label">Total downloads</span>
+            </div>
+            <?php if ($topPublicFileType): ?>
+            <div class="profile-stat">
+                <span class="profile-stat-value"><?= sanitize_data($topPublicFileType) ?></span>
+                <span class="profile-stat-label">Most common type</span>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php if ($publicFileCount > 0): ?>
+    <div class="page-section">
+        <h3 class="page-title">Public files</h3>
+        <div class="file-list file-list-index<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
+            <div class="file-row file-header">
+                <div>Filename</div>
+                <div>Type</div>
+                <div>Size</div>
+                <div>Downloads</div>
+                <div>Uploaded</div>
+                <div>Preview</div>
+                <?php if ($publicBrowsingEnabled): ?><div>Download</div><?php endif; ?>
+            </div>
+            <?php foreach ($publicFiles as $file): ?>
+                <div class="file-row">
+                    <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name'] ?? $file['id']) ?></div>
+                    <div title="<?= sanitize_data($file['filetype'] ?? '') ?>">
+                        <?= sanitize_data(get_friendly_filetype($file['filetype'] ?? '')) ?>
+                    </div>
+                    <div><?= format_filesize((int) ($file['filesize'] ?? 0)) ?></div>
+                    <div><?= (int) ($file['download_count'] ?? 0) ?></div>
+                    <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
+                    <div>
+                        <?php if (!empty($file['thumbnail_path']) && str_starts_with($file['filetype'] ?? '', 'image/')): ?>
+                            <img src="thumbnail.php?id=<?= (int) $file['id'] ?>" alt="Thumbnail" class="thumbnail-small">
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </div>
+                    <?php if ($publicBrowsingEnabled): ?>
+                    <div><a href="download.php?id=<?= (int) $file['id'] ?>" class="btn btn-small">Download</a></div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php else: ?>
+    <p class="profile-no-files">No public files yet.</p>
+    <?php endif; ?>
+
     <?php if (!empty($_SESSION['user_id']) && $_SESSION['user_id'] == $user['id']): ?>
-    <p><a href="profile.php" class="btn btn-primary">Edit your profile</a></p>
+    <p style="margin-top: 1.5rem;"><a href="profile.php" class="btn btn-primary">Edit your profile</a></p>
     <?php endif; ?>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.utc-datetime').forEach(el => {
+        var utc = el.dataset.utc;
+        if (utc) {
+            var local = new Date(utc + ' UTC');
+            el.textContent = local.toLocaleDateString() + ' ' + local.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        }
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
