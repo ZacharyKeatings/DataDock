@@ -196,6 +196,64 @@
                         <input type="number" name="lockout_window" id="lockout_window" value="<?= sanitize_data($lockoutWindow) ?>" min="1" required>
                     </div>
                 </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="adaptive_cooldown_enabled" <?= $adaptiveCooldownEnabled ? 'checked' : '' ?>>
+                        Adaptive cooldown (progressive lockout per IP across usernames)
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <label for="adaptive_cooldown_ip_window_minutes">Per-IP failure window (minutes)</label>
+                    <input type="number" name="adaptive_cooldown_ip_window_minutes" id="adaptive_cooldown_ip_window_minutes" value="<?= sanitize_data($adaptiveCooldownWindow) ?>" min="1">
+                </div>
+                <p class="settings-hint">More failed logins from the same IP → longer lockout (5 / 15 / 60 min).</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h4 class="settings-card-title">Upload Rate Limiting</h4>
+            <div class="settings-card-body">
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="rate_limit_uploads_enabled" <?= $rateLimitUploadsEnabled ? 'checked' : '' ?>>
+                        Enable upload rate limiting (per IP and per user)
+                    </label>
+                </div>
+                <div class="settings-row-grid">
+                    <div class="settings-row">
+                        <label for="rate_limit_window_minutes">Window (min)</label>
+                        <input type="number" name="rate_limit_window_minutes" id="rate_limit_window_minutes" value="<?= sanitize_data($rateLimitWindowMinutes) ?>" min="1">
+                    </div>
+                    <div class="settings-row">
+                        <label for="rate_limit_max_per_ip">Max uploads per IP</label>
+                        <input type="number" name="rate_limit_max_per_ip" id="rate_limit_max_per_ip" value="<?= sanitize_data($rateLimitMaxPerIp) ?>" min="0">
+                    </div>
+                    <div class="settings-row">
+                        <label for="rate_limit_max_per_user">Max uploads per user</label>
+                        <input type="number" name="rate_limit_max_per_user" id="rate_limit_max_per_user" value="<?= sanitize_data($rateLimitMaxPerUser) ?>" min="0">
+                    </div>
+                </div>
+                <p class="settings-hint">0 = no limit for that dimension. Throttles uploads within the time window.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h4 class="settings-card-title">Upload Security</h4>
+            <div class="settings-card-body">
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="rewrite_file_extension" <?= $rewriteFileExtension ? 'checked' : '' ?>>
+                        Store files without original extension (restore name on download)
+                    </label>
+                </div>
+                <p class="settings-hint">Reduces risk of executing uploaded files by extension on the server.</p>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="upload_quarantine_enabled" <?= $uploadQuarantineEnabled ? 'checked' : '' ?>>
+                        Upload quarantine (new uploads hidden until admin approval)
+                    </label>
+                </div>
+                <p class="settings-hint">For public instances: new uploads are pending until approved in File Management.</p>
             </div>
         </div>
 

@@ -48,6 +48,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $maxAttempts = (int) ($_POST['max_attempts'] ?? 5);
         $lockoutMinutes = (int) ($_POST['lockout_minutes'] ?? 15);
         $lockoutWindow = (int) ($_POST['lockout_window'] ?? 10);
+        $adaptiveCooldownEnabled = isset($_POST['adaptive_cooldown_enabled']);
+        $adaptiveCooldownWindow = (int) ($_POST['adaptive_cooldown_ip_window_minutes'] ?? 60);
+        $rateLimitUploadsEnabled = isset($_POST['rate_limit_uploads_enabled']);
+        $rateLimitWindowMinutes = (int) ($_POST['rate_limit_window_minutes'] ?? 1);
+        $rateLimitMaxPerIp = (int) ($_POST['rate_limit_max_per_ip'] ?? 30);
+        $rateLimitMaxPerUser = (int) ($_POST['rate_limit_max_per_user'] ?? 60);
+        $rewriteFileExtension = isset($_POST['rewrite_file_extension']);
+        $uploadQuarantineEnabled = isset($_POST['upload_quarantine_enabled']);
 
         $guestUploadsEnabled = isset($_POST['guest_uploads_enabled']);
         $guestMaxFiles = (int) ($_POST['guest_max_files'] ?? 0);
@@ -140,8 +148,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "        'enabled' => " . ($bruteForceEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_attempts' => $maxAttempts,\n" .
                 "        'lockout_minutes' => $lockoutMinutes,\n" .
-                "        'lockout_window' => $lockoutWindow\n" .
+                "        'lockout_window' => $lockoutWindow,\n" .
+                "        'adaptive_cooldown_enabled' => " . ($adaptiveCooldownEnabled ? 'true' : 'false') . ",\n" .
+                "        'adaptive_cooldown_ip_window_minutes' => $adaptiveCooldownWindow,\n" .
+                "        'adaptive_cooldown_steps' => [5 => 5, 15 => 15, 30 => 60]\n" .
                 "    ],\n" .
+                "    'rate_limit_uploads' => [\n" .
+                "        'enabled' => " . ($rateLimitUploadsEnabled ? 'true' : 'false') . ",\n" .
+                "        'window_minutes' => $rateLimitWindowMinutes,\n" .
+                "        'max_per_ip' => $rateLimitMaxPerIp,\n" .
+                "        'max_per_user' => $rateLimitMaxPerUser\n" .
+                "    ],\n" .
+                "    'rewrite_file_extension' => " . ($rewriteFileExtension ? 'true' : 'false') . ",\n" .
+                "    'upload_quarantine_enabled' => " . ($uploadQuarantineEnabled ? 'true' : 'false') . ",\n" .
                 "    'guest_uploads' => [\n" .
                 "        'enabled' => " . ($guestUploadsEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_files' => $guestMaxFiles,\n" .
@@ -239,6 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("DELETE FROM users WHERE role != 'admin'")->execute();
             $pdo->exec("DELETE FROM files");
             $pdo->exec("DELETE FROM login_attempts");
+            $pdo->exec("DELETE FROM upload_rate_log");
 
             $clearDir = function ($path) {
                 foreach (glob($path . '*') as $file) {
@@ -316,6 +336,14 @@ require_once __DIR__ . '/includes/header.php';
                 $maxAttempts = $settings['brute_force']['max_attempts'] ?? 5;
                 $lockoutMinutes = $settings['brute_force']['lockout_minutes'] ?? 15;
                 $lockoutWindow = $settings['brute_force']['lockout_window'] ?? 10;
+                $adaptiveCooldownEnabled = !empty($settings['brute_force']['adaptive_cooldown_enabled']);
+                $adaptiveCooldownWindow = (int) ($settings['brute_force']['adaptive_cooldown_ip_window_minutes'] ?? 60);
+                $rateLimitUploadsEnabled = !empty($settings['rate_limit_uploads']['enabled']);
+                $rateLimitWindowMinutes = (int) ($settings['rate_limit_uploads']['window_minutes'] ?? 1);
+                $rateLimitMaxPerIp = (int) ($settings['rate_limit_uploads']['max_per_ip'] ?? 30);
+                $rateLimitMaxPerUser = (int) ($settings['rate_limit_uploads']['max_per_user'] ?? 60);
+                $rewriteFileExtension = !empty($settings['rewrite_file_extension']);
+                $uploadQuarantineEnabled = !empty($settings['upload_quarantine_enabled']);
                 $guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
                 $guestMaxFiles = $settings['guest_uploads']['max_files'] ?? 10;
                 $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
@@ -372,13 +400,18 @@ require_once __DIR__ . '/includes/header.php';
                 break;
 
             case 'files':
-                // Fetch all file records (includes guest uploads via LEFT JOIN)
-                $stmt = $pdo->query("
+                // Filter by quarantine status (optional: pending only)
+                $fileStatusFilter = isset($_GET['status']) && $_GET['status'] === 'pending' ? 'pending' : 'all';
+                $filesSql = "
                     SELECT f.*, u.username 
                     FROM files f
                     LEFT JOIN users u ON f.user_id = u.id
-                    ORDER BY f.upload_date DESC
-                ");
+                ";
+                if ($fileStatusFilter === 'pending') {
+                    $filesSql .= " WHERE f.quarantine_status = 'pending'";
+                }
+                $filesSql .= " ORDER BY f.upload_date DESC";
+                $stmt = $pdo->query($filesSql);
                 $allFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 include __DIR__ . '/admin_sections/file_management.php';

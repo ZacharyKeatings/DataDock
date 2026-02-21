@@ -12,19 +12,21 @@ $userId = $_SESSION['user_id'] ?? null;
 
 // Get files to display
 if ($publicBrowsingEnabled) {
-    // Show only public files when anonymous browsing is enabled
+    // Show only public, approved files (quarantined/pending never visible publicly)
     $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
         LEFT JOIN users ON files.user_id = users.id 
         WHERE files.is_public = 1 
+        AND (files.quarantine_status = 'approved' OR files.quarantine_status IS NULL)
         AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
         ORDER BY upload_date DESC 
         LIMIT 20");
     $stmt->execute();
 } else {
-    // Default: latest 5 uploads (no download links for anons)
+    // Default: latest 5 uploads (no download links for anons); only approved
     $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
         LEFT JOIN users ON files.user_id = users.id 
-        WHERE (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+        WHERE (files.quarantine_status = 'approved' OR files.quarantine_status IS NULL)
+        AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
         ORDER BY upload_date DESC 
         LIMIT 5");
     $stmt->execute();

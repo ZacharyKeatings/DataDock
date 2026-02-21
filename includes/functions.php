@@ -272,8 +272,19 @@ function write_default_settings_file($siteName = 'DataDock') {
         "        'enabled' => true,\n" .
         "        'max_attempts' => 5,\n" .
         "        'lockout_minutes' => 15,\n" .
-        "        'lockout_window' => 10\n" .
+        "        'lockout_window' => 10,\n" .
+        "        'adaptive_cooldown_enabled' => true,\n" .
+        "        'adaptive_cooldown_ip_window_minutes' => 60,\n" .
+        "        'adaptive_cooldown_steps' => [5 => 5, 15 => 15, 30 => 60]\n" .
         "    ],\n" .
+        "    'rate_limit_uploads' => [\n" .
+        "        'enabled' => false,\n" .
+        "        'window_minutes' => 1,\n" .
+        "        'max_per_ip' => 30,\n" .
+        "        'max_per_user' => 60\n" .
+        "    ],\n" .
+        "    'rewrite_file_extension' => false,\n" .
+        "    'upload_quarantine_enabled' => false,\n" .
         "    'storage_base_path' => '',\n" .
         "    'public_browsing_enabled' => false,\n" .
         "    'guest_uploads' => [\n" .
@@ -325,6 +336,102 @@ function log_message($level, $message) {
     return @file_put_contents($absPath, $line, FILE_APPEND | LOCK_EX) !== false;
 }
 
+/**
+ * Risky MIME types that must never be served inline (force download to prevent execution).
+ *
+ * @return string[] MIME type prefixes or exact types
+ */
+function get_risky_inline_mimes(): array {
+    return [
+        'text/html', 'text/xml', 'application/xml', 'image/svg+xml',
+        'application/javascript', 'text/javascript', 'application/json',
+        'application/pdf', 'application/x-shockwave-flash',
+    ];
+}
+
+/**
+ * Whether the given MIME should always use Content-Disposition: attachment (no inline).
+ *
+ * @param string $mime
+ * @return bool
+ */
+function is_risky_mime_for_inline(string $mime): bool {
+    $mime = strtolower(trim($mime));
+    foreach (get_risky_inline_mimes() as $risky) {
+        if ($mime === $risky || str_starts_with($mime, $risky . ';') || str_starts_with($mime, $risky . ' ')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Check if file extension matches expected MIME (for anomaly detection).
+ * Returns true if mismatch (anomaly), false if extension matches common MIME for that extension.
+ *
+ * @param string $extension Lowercase file extension
+ * @param string $detectedMime Detected MIME type (e.g. from mime_content_type)
+ * @return bool True when extension vs MIME is suspicious
+ */
+function mime_extension_mismatch(string $extension, string $detectedMime): bool {
+    static $map = null;
+    if ($map === null) {
+        $map = [
+            'jpg' => ['image/jpeg'],
+            'jpeg' => ['image/jpeg'],
+            'png' => ['image/png'],
+            'gif' => ['image/gif'],
+            'webp' => ['image/webp'],
+            'bmp' => ['image/bmp', 'image/x-ms-bmp'],
+            'tiff' => ['image/tiff'],
+            'tif' => ['image/tiff'],
+            'ico' => ['image/x-icon', 'image/vnd.microsoft.icon'],
+            'svg' => ['image/svg+xml'],
+            'pdf' => ['application/pdf'],
+            'zip' => ['application/zip', 'application/x-zip-compressed'],
+            'rar' => ['application/vnd.rar', 'application/x-rar-compressed'],
+            '7z' => ['application/x-7z-compressed'],
+            'tar' => ['application/x-tar'],
+            'gz' => ['application/gzip', 'application/x-gzip'],
+            'txt' => ['text/plain'],
+            'html' => ['text/html'],
+            'htm' => ['text/html'],
+            'json' => ['application/json'],
+            'xml' => ['application/xml', 'text/xml'],
+            'csv' => ['text/csv', 'text/plain', 'application/csv'],
+            'rtf' => ['application/rtf', 'text/rtf'],
+            'mp3' => ['audio/mpeg', 'audio/mp3'],
+            'wav' => ['audio/wav', 'audio/x-wav'],
+            'ogg' => ['audio/ogg'],
+            'flac' => ['audio/flac', 'audio/x-flac'],
+            'm4a' => ['audio/mp4', 'audio/x-m4a'],
+            'mp4' => ['video/mp4'],
+            'mov' => ['video/quicktime'],
+            'webm' => ['video/webm'],
+            'mkv' => ['video/x-matroska'],
+            'avi' => ['video/x-msvideo', 'video/avi'],
+            'doc' => ['application/msword'],
+            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            'xls' => ['application/vnd.ms-excel'],
+            'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            'ppt' => ['application/vnd.ms-powerpoint'],
+            'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+            'odt' => ['application/vnd.oasis.opendocument.text'],
+            'ods' => ['application/vnd.oasis.opendocument.spreadsheet'],
+            'odp' => ['application/vnd.oasis.opendocument.presentation'],
+            'epub' => ['application/epub+zip'],
+        ];
+    }
+    $detectedMime = strtolower(trim($detectedMime));
+    if ($detectedMime === '' || $detectedMime === 'application/octet-stream') {
+        return false;
+    }
+    if (!isset($map[$extension])) {
+        return false;
+    }
+    return !in_array($detectedMime, $map[$extension], true);
+}
+
 function get_friendly_filetype($mime) {
     $map = [
         'application/pdf' => 'PDF Document',
@@ -337,27 +444,56 @@ function get_friendly_filetype($mime) {
         'text/plain' => 'Plain Text File',
         'text/html' => 'HTML Document',
         'application/zip' => 'ZIP Archive',
+        'application/x-zip-compressed' => 'ZIP Archive',
+        'application/vnd.rar' => 'RAR Archive',
         'application/x-rar-compressed' => 'RAR Archive',
+        'application/x-7z-compressed' => '7-Zip Archive',
+        'application/x-tar' => 'TAR Archive',
+        'application/gzip' => 'GZIP Archive',
+        'application/x-gzip' => 'GZIP Archive',
         'application/json' => 'JSON File',
         'application/xml' => 'XML File',
+        'application/rtf' => 'RTF Document',
+        'text/csv' => 'CSV Spreadsheet',
+        'application/csv' => 'CSV Spreadsheet',
         'application/octet-stream' => 'Binary File',
+        'application/epub+zip' => 'EPUB E-book',
+        'application/vnd.oasis.opendocument.text' => 'OpenDocument Text',
+        'application/vnd.oasis.opendocument.spreadsheet' => 'OpenDocument Spreadsheet',
+        'application/vnd.oasis.opendocument.presentation' => 'OpenDocument Presentation',
 
         // Images
         'image/jpeg' => 'JPEG Image',
         'image/png' => 'PNG Image',
         'image/gif' => 'GIF Image',
         'image/webp' => 'WebP Image',
+        'image/bmp' => 'BMP Image',
+        'image/x-ms-bmp' => 'BMP Image',
+        'image/tiff' => 'TIFF Image',
+        'image/x-icon' => 'ICO Image',
+        'image/vnd.microsoft.icon' => 'ICO Image',
         'image/svg+xml' => 'SVG Image',
+        'image/heic' => 'HEIC Image',
+        'image/avif' => 'AVIF Image',
 
         // Audio
         'audio/mpeg' => 'MP3 Audio',
+        'audio/mp3' => 'MP3 Audio',
         'audio/wav' => 'WAV Audio',
+        'audio/x-wav' => 'WAV Audio',
         'audio/ogg' => 'OGG Audio',
+        'audio/flac' => 'FLAC Audio',
+        'audio/x-flac' => 'FLAC Audio',
+        'audio/mp4' => 'M4A Audio',
+        'audio/x-m4a' => 'M4A Audio',
 
         // Video
         'video/mp4' => 'MP4 Video',
         'video/webm' => 'WebM Video',
         'video/x-msvideo' => 'AVI Video',
+        'video/avi' => 'AVI Video',
+        'video/quicktime' => 'QuickTime Video',
+        'video/x-matroska' => 'MKV Video',
     ];
 
     return $map[$mime] ?? 'Unknown File Type';
@@ -388,13 +524,14 @@ function get_file_icon($filetype, $filename = null) {
     }
     if ($ext) {
         $extMap = [
-            'pdf' => 'file-doc', 'doc' => 'file-doc', 'docx' => 'file-doc',
-            'xls' => 'file-sheet', 'xlsx' => 'file-sheet', 'ppt' => 'file-slide', 'pptx' => 'file-slide',
+            'pdf' => 'file-doc', 'doc' => 'file-doc', 'docx' => 'file-doc', 'rtf' => 'file-doc', 'odt' => 'file-doc', 'epub' => 'file-doc',
+            'xls' => 'file-sheet', 'xlsx' => 'file-sheet', 'ods' => 'file-sheet', 'csv' => 'file-sheet',
+            'ppt' => 'file-slide', 'pptx' => 'file-slide', 'odp' => 'file-slide',
             'txt' => 'file-doc', 'json' => 'file-doc', 'xml' => 'file-doc',
-            'zip' => 'file-archive', 'rar' => 'file-archive',
-            'mp3' => 'file-audio', 'wav' => 'file-audio', 'ogg' => 'file-audio',
-            'mp4' => 'file-video', 'webm' => 'file-video', 'avi' => 'file-video',
-            'jpg' => 'file-image', 'jpeg' => 'file-image', 'png' => 'file-image', 'gif' => 'file-image', 'webp' => 'file-image', 'svg' => 'file-image',
+            'zip' => 'file-archive', 'rar' => 'file-archive', '7z' => 'file-archive', 'tar' => 'file-archive', 'gz' => 'file-archive',
+            'mp3' => 'file-audio', 'wav' => 'file-audio', 'ogg' => 'file-audio', 'flac' => 'file-audio', 'm4a' => 'file-audio',
+            'mp4' => 'file-video', 'webm' => 'file-video', 'avi' => 'file-video', 'mov' => 'file-video', 'mkv' => 'file-video',
+            'jpg' => 'file-image', 'jpeg' => 'file-image', 'png' => 'file-image', 'gif' => 'file-image', 'webp' => 'file-image', 'bmp' => 'file-image', 'tiff' => 'file-image', 'tif' => 'file-image', 'ico' => 'file-image', 'svg' => 'file-image', 'heic' => 'file-image', 'avif' => 'file-image',
         ];
         if (isset($extMap[$ext])) return $extMap[$ext];
     }

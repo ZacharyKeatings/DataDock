@@ -40,6 +40,8 @@ function install_database($host, $user, $pass, $dbname) {
                 download_count INT NOT NULL DEFAULT 0,
                 checksum_md5 VARCHAR(32) DEFAULT NULL,
                 checksum_sha256 VARCHAR(64) DEFAULT NULL,
+                quarantine_status ENUM('pending','approved') NOT NULL DEFAULT 'approved',
+                mime_anomaly TINYINT(1) NOT NULL DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ");
@@ -78,10 +80,22 @@ function install_database($host, $user, $pass, $dbname) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT DEFAULT NULL,
                 anon_id VARCHAR(64) DEFAULT NULL,
+                ip_address VARCHAR(45) DEFAULT NULL,
                 success TINYINT(1) NOT NULL DEFAULT 0,
                 attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_login_attempts_ip (ip_address, attempted_at)
             );
+        ");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS upload_rate_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ip_address VARCHAR(45) NOT NULL,
+                user_id INT DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_upload_rate_ip (ip_address, created_at),
+                INDEX idx_upload_rate_user (user_id, created_at)
+            )
         ");
 
         return true;

@@ -1,6 +1,7 @@
 <?php
 $fileCount = count($allFiles);
 $totalSize = array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 0), 0);
+$fileStatusFilter = $fileStatusFilter ?? 'all';
 ?>
 <div class="admin-file-management">
     <div class="file-mgmt-header">
@@ -8,10 +9,18 @@ $totalSize = array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 
         <div class="file-mgmt-summary">
             <span class="file-mgmt-stat"><strong><?= number_format($fileCount) ?></strong> file<?= $fileCount !== 1 ? 's' : '' ?></span>
             <span class="file-mgmt-stat"><strong><?= format_filesize($totalSize) ?></strong> total</span>
+            <?php if ($fileStatusFilter === 'pending'): ?>
+                <span class="file-mgmt-stat file-mgmt-filter-label">(pending)</span>
+            <?php endif; ?>
         </div>
     </div>
 
     <div class="file-mgmt-toolbar">
+        <div class="file-mgmt-filter">
+            <span class="file-mgmt-filter-label">Status:</span>
+            <a href="admin.php?section=files" class="btn btn-small<?= $fileStatusFilter === 'all' ? ' btn-primary' : '' ?>">All</a>
+            <a href="admin.php?section=files&status=pending" class="btn btn-small<?= $fileStatusFilter === 'pending' ? ' btn-primary' : '' ?>">Pending</a>
+        </div>
         <form method="post" class="file-mgmt-purge-form">
             <input type="hidden" name="purge" value="1">
             <button type="submit" class="btn btn-primary">Purge Expired Files</button>
@@ -25,6 +34,7 @@ $totalSize = array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 
             <div>Filename</div>
             <div>Type</div>
             <div>Size</div>
+            <div>Status</div>
             <div>Downloads</div>
             <div>Uploaded</div>
             <div>Expires</div>
@@ -38,11 +48,23 @@ $totalSize = array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 
                 <div class="file-name-cell">
                     <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?>
                     <span title="<?= sanitize_data($file['original_name']) ?>"><?= sanitize_data($file['original_name']) ?></span>
+                    <?php if (!empty($file['mime_anomaly'])): ?>
+                        <span class="badge badge-warning" title="Extension vs MIME mismatch – review recommended">MIME?</span>
+                    <?php endif; ?>
                 </div>
                 <div title="<?= sanitize_data($file['filetype']) ?>">
                     <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
                 </div>
                 <div><?= format_filesize($file['filesize']) ?></div>
+                <div>
+                    <?php
+                    $q = $file['quarantine_status'] ?? 'approved';
+                    if ($q === 'pending'): ?>
+                        <span class="badge badge-pending">Pending</span>
+                    <?php else: ?>
+                        <span class="badge badge-ok">Approved</span>
+                    <?php endif; ?>
+                </div>
                 <div><?= (int) ($file['download_count'] ?? 0) ?></div>
                 <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
                 <div>
@@ -58,6 +80,9 @@ $totalSize = array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 
                     <?php endif; ?>
                 </div>
                 <div class="file-actions">
+                    <?php if (($file['quarantine_status'] ?? '') === 'pending'): ?>
+                        <a href="approve_file.php?id=<?= (int)$file['id'] ?>" class="btn btn-small">Approve</a>
+                    <?php endif; ?>
                     <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a>
                     <a href="delete.php?id=<?= $file['id'] ?>&from=admin" class="btn btn-small btn-danger" onclick="return confirm('Delete this file?')">Delete</a>
                 </div>

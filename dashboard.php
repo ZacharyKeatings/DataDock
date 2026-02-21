@@ -13,7 +13,7 @@ require_once __DIR__ . '/includes/header.php';
 $userId = $_SESSION['user_id'];
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 
-// Fetch user's files
+// Fetch user's files (include own pending/quarantined so they see "Pending approval")
 $stmt = $pdo->prepare("SELECT * FROM files 
     WHERE user_id = ? 
     AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) 
@@ -21,13 +21,14 @@ $stmt = $pdo->prepare("SELECT * FROM files
 $stmt->execute([$userId]);
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch files shared with user
+// Fetch files shared with user (exclude quarantined)
 $stmt = $pdo->prepare("
     SELECT f.*, u.username as shared_by_username
     FROM files f
     JOIN file_shares fs ON f.id = fs.file_id
     JOIN users u ON fs.shared_by_user_id = u.id
     WHERE fs.shared_with_user_id = ?
+    AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
     AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
     ORDER BY f.upload_date DESC
 ");
@@ -65,11 +66,18 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div>Actions</div>
             </div>
 
-            <?php foreach ($files as $file): ?>
+            <?php foreach ($files as $file):
+                $isPending = ($file['quarantine_status'] ?? 'approved') === 'pending';
+            ?>
                 <div class="file-row-dashboard-wrapper">
                     <div class="file-row-dashboard">
-                        <div><input type="checkbox" name="ids[]" value="<?= $file['id'] ?>" class="zip-checkbox"></div>
-                        <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
+                        <div><input type="checkbox" name="ids[]" value="<?= $file['id'] ?>" class="zip-checkbox"<?= $isPending ? ' disabled title="Available after approval"' : '' ?>></div>
+                        <div>
+                            <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?>
+                            <?php if ($isPending): ?>
+                                <span class="badge badge-pending" title="Hidden from public until an admin approves">Pending approval</span>
+                            <?php endif; ?>
+                        </div>
                         <div title="<?= sanitize_data($file['filetype']) ?>">
                             <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
                         </div>
@@ -92,17 +100,21 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <details class="file-actions-dropdown">
                                 <summary class="btn btn-small">Actions <span class="dropdown-arrow" aria-hidden="true">▾</span></summary>
                                 <div class="dropdown-menu">
-                                    <?php if ($publicBrowsingEnabled): ?>
-                                    <form method="post" action="toggle_public.php" class="dropdown-item-form">
-                                        <input type="hidden" name="id" value="<?= $file['id'] ?>">
-                                        <button type="submit" class="dropdown-item" title="<?= $file['is_public'] ? 'Make private' : 'Make public' ?>">
-                                            <span class="btn-icon"><?= icon_svg($file['is_public'] ? 'lock-open' : 'lock') ?></span> <?= $file['is_public'] ? 'Public' : 'Private' ?>
-                                        </button>
-                                    </form>
+                                    <?php if ($isPending): ?>
+                                        <span class="dropdown-item dropdown-item-muted">Download, share &amp; link available after approval</span>
+                                    <?php else: ?>
+                                        <?php if ($publicBrowsingEnabled): ?>
+                                        <form method="post" action="toggle_public.php" class="dropdown-item-form">
+                                            <input type="hidden" name="id" value="<?= $file['id'] ?>">
+                                            <button type="submit" class="dropdown-item" title="<?= $file['is_public'] ? 'Make private' : 'Make public' ?>">
+                                                <span class="btn-icon"><?= icon_svg($file['is_public'] ? 'lock-open' : 'lock') ?></span> <?= $file['is_public'] ? 'Public' : 'Private' ?>
+                                            </button>
+                                        </form>
+                                        <?php endif; ?>
+                                        <a href="share.php?id=<?= $file['id'] ?>" class="dropdown-item">Share</a>
+                                        <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
+                                        <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">One-time link</a>
                                     <?php endif; ?>
-                                    <a href="share.php?id=<?= $file['id'] ?>" class="dropdown-item">Share</a>
-                                    <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
-                                    <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">One-time link</a>
                                     <a href="delete.php?id=<?= $file['id'] ?>" class="dropdown-item dropdown-item-danger" onclick="return confirm('Delete this file?')">Delete</a>
                                 </div>
                             </details>

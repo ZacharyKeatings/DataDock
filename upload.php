@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/config/settings.php';
 
 // feature flags & limits
@@ -51,10 +52,24 @@ $autoDeleteDurations  = [
 $defaultFileExpiry = $settings['default_file_expiry'] ?? 'never';
 if (!isset($autoDeleteDurations[$defaultFileExpiry])) $defaultFileExpiry = 'never';
 $thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
+$rewriteFileExtension = !empty($settings['rewrite_file_extension']);
+$uploadQuarantineEnabled = !empty($settings['upload_quarantine_enabled']);
 
 $tosEnabled = !empty($settings['tos_enabled']);
 $tosText    = trim($settings['tos_text'] ?? '');
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
+
+// Accepted file types by category (for expandable help on upload page)
+$allowedFileTypesByCategory = [
+    'Images'        => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'ico', 'svg', 'heic', 'avif'],
+    'Documents'    => ['pdf', 'doc', 'docx', 'rtf', 'odt', 'txt', 'epub'],
+    'Spreadsheets' => ['xls', 'xlsx', 'ods', 'csv'],
+    'Presentations'=> ['ppt', 'pptx', 'odp'],
+    'Archives'     => ['zip', 'rar', '7z', 'tar', 'gz'],
+    'Audio'        => ['mp3', 'wav', 'ogg', 'flac', 'm4a'],
+    'Video'        => ['mp4', 'mov', 'webm', 'mkv', 'avi'],
+    'Data & code'  => ['json', 'xml', 'html', 'htm'],
+];
 
 // disable form if guest uploads off and no user
 $formDisabled = false;
@@ -97,6 +112,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($tosEnabled && !isset($_POST['tos_accepted'])) {
         $_SESSION['flash_error'][] = "❌ You must accept the Terms of Service to upload files.";
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['errors' => $_SESSION['flash_error'] ?? [], 'success' => []]);
+            exit;
+        }
+        header("Location: upload.php");
+        exit;
+    }
+
+    // rate limiting: per IP and per user
+    $clientIp = get_client_ip();
+    if (!check_upload_rate_limit($pdo, $currentUserId, $clientIp, $settings)) {
+        $_SESSION['flash_error'][] = "❌ Upload rate limit exceeded. Please try again in a few minutes.";
         if ($isAjax) {
             header('Content-Type: application/json');
             echo json_encode(['errors' => $_SESSION['flash_error'] ?? [], 'success' => []]);
@@ -202,9 +230,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // move file
-        $mimeType      = mime_content_type($tmpPath);
-        $uniqueName    = uniqid('', true) . ".$extension";
-        $uploadDir     = get_upload_path();
+        $mimeType   = mime_content_type($tmpPath);
+        $uniqueName = $rewriteFileExtension ? uniqid('', true) : (uniqid('', true) . ".$extension");
+        $uploadDir  = get_upload_path();
         if (!is_dir($uploadDir)) {
             @mkdir($uploadDir, 0755, true);
         }
@@ -214,10 +242,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $checksumMd5   = hash_file('md5', $destPath);
         $checksumSha   = hash_file('sha256', $destPath);
 
+        // MIME anomaly: extension vs detected MIME mismatch (for admin review)
+        $mimeAnomaly = (int) mime_extension_mismatch($extension, $mimeType);
+
         // generate thumbnail if image (when enabled)
         $thumbnailName = null;
         if ($thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
-            $thumbnailName = 'thumb_' . $uniqueName . '.jpg';
+            $thumbBase = pathinfo($uniqueName, PATHINFO_FILENAME) ?: $uniqueName;
+            $thumbnailName = 'thumb_' . $thumbBase . '.jpg';
             $thumbDir      = get_thumbnails_path();
             if (!is_dir($thumbDir)) {
                 @mkdir($thumbDir, 0755, true);
@@ -245,14 +277,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $isPublic = isset($_POST['is_public']) ? 1 : 0;
+        $quarantineStatus = $uploadQuarantineEnabled ? 'pending' : 'approved';
 
         // insert DB record
         $ins = $pdo->prepare("
             INSERT INTO files
               (user_id, guest_id, is_public, filename, original_name,
                filetype, filesize, thumbnail_path,
-               upload_date, expiry_date, checksum_md5, checksum_sha256)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               upload_date, expiry_date, checksum_md5, checksum_sha256,
+               quarantine_status, mime_anomaly)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $ins->execute([
             $currentUserId,
@@ -267,11 +301,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $expiryTs,
             $checksumMd5,
             $checksumSha,
+            $quarantineStatus,
+            $mimeAnomaly,
         ]);
     }
 
-    // on success
+    // on success: record rate limit events (one per file actually inserted)
     if (empty($_SESSION['flash_error'])) {
+        $filesInRequest = count(array_filter($_FILES['upload']['name'] ?? []));
+        if ($filesInRequest > 0) {
+            record_upload_rate_limit($pdo, $clientIp, $currentUserId, $filesInRequest);
+        }
         $_SESSION['flash_success'][] = "✅ File(s) uploaded successfully.";
     }
 
@@ -327,11 +367,21 @@ require_once __DIR__ . '/includes/header.php';
       </div>
       <input type="file" name="upload[]" id="upload" multiple hidden required>
 
-      <div class="upload-meta">
-        <small>
-          <strong>Forbidden:</strong> <?= implode(', ', $forbiddenExtensions) ?>
-        </small>
-      </div>
+      <details class="upload-accepted-types">
+        <summary class="upload-accepted-types-summary">Accepted file types</summary>
+        <div class="upload-accepted-types-content">
+          <p class="upload-accepted-types-intro">You can upload the following types (and other file types not listed below, except those in the forbidden list).</p>
+          <div class="upload-accepted-types-grid">
+            <?php foreach ($allowedFileTypesByCategory as $category => $exts): ?>
+              <div class="upload-accepted-types-category">
+                <strong><?= sanitize_data($category) ?></strong>
+                <span class="upload-accepted-types-exts"><?= implode(', ', array_map('sanitize_data', $exts)) ?></span>
+              </div>
+            <?php endforeach; ?>
+          </div>
+          <p class="upload-accepted-types-note"><strong>Not allowed:</strong> <?= implode(', ', $forbiddenExtensions) ?></p>
+        </div>
+      </details>
 
       <div id="preview" class="upload-preview"></div>
       <div id="uploadResult" class="upload-result"></div>

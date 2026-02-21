@@ -140,7 +140,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | CSRF-safe architecture | Form-only POST; tokens where needed. |
 | ✓ | Brute-force login protection | Configurable limits and lockout window. |
 | — | CAPTCHA on login/register forms | Reduce automated abuse. |
-| — | Rate limiting on uploads | Throttle upload frequency per user or IP. |
+| ✓ | Rate limiting on uploads | Throttle upload frequency per user or IP. |
 | ✓ | Session timeout duration setting | Configurable session lifetime. |
 
 ---
@@ -195,10 +195,10 @@ Additional hardening with minimal complexity.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Content-Disposition enforcement | Force download for risky types to prevent inline execution. |
-| — | Optional file extension rewriting | Store files without original extension; restore on download. |
-| — | Upload quarantine mode | New uploads invisible until admin approval (for public instances). |
-| — | Automatic MIME anomaly detection | Flag when extension and MIME type disagree for admin review. |
+| ✓ | Content-Disposition enforcement | Force download for risky types to prevent inline execution. |
+| ✓ | Optional file extension rewriting | Store files without original extension; restore on download. |
+| ✓ | Upload quarantine mode | New uploads invisible until admin approval (for public instances). |
+| ✓ | Automatic MIME anomaly detection | Flag when extension and MIME type disagree for admin review. |
 
 ---
 
@@ -242,8 +242,8 @@ Makes DataDock easier to deploy and operate in production environments.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Per-IP upload throttling | Throttle uploads per IP or per account. |
-| — | Adaptive cooldown | Progressive slowdown for repeated failed logins from one IP across usernames. |
+| ✓ | Per-IP upload throttling | Throttle uploads per IP or per account. |
+| ✓ | Adaptive cooldown | Progressive slowdown for repeated failed logins from one IP across usernames. |
 
 ---
 

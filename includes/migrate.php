@@ -125,4 +125,43 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    // v1.8.0: login_attempts.ip_address for per-IP adaptive cooldown
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM login_attempts LIKE 'ip_address'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE login_attempts ADD COLUMN ip_address VARCHAR(45) DEFAULT NULL AFTER anon_id");
+            $pdo->exec("CREATE INDEX idx_login_attempts_ip ON login_attempts(ip_address, attempted_at)");
+        }
+    } catch (PDOException $e) {}
+
+    // v1.8.0: upload_rate_log for per-IP and per-user upload throttling
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS upload_rate_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ip_address VARCHAR(45) NOT NULL,
+                user_id INT DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_upload_rate_ip (ip_address, created_at),
+                INDEX idx_upload_rate_user (user_id, created_at)
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    // v1.8.0: files.quarantine_status (pending = invisible until admin approval)
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'quarantine_status'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE files ADD COLUMN quarantine_status ENUM('pending','approved') NOT NULL DEFAULT 'approved' AFTER checksum_sha256");
+        }
+    } catch (PDOException $e) {}
+
+    // v1.8.0: files.mime_anomaly (extension vs MIME mismatch flag for admin review)
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'mime_anomaly'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE files ADD COLUMN mime_anomaly TINYINT(1) NOT NULL DEFAULT 0 AFTER quarantine_status");
+        }
+    } catch (PDOException $e) {}
 }

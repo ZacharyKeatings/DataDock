@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.8.0] - 2026-02-20
+### Security Hardening & Rate Limiting (Bot mitigation, abuse prevention)
+
+#### New Features
+- **Rate limiting on uploads** — Configurable per-IP and per-user upload throttling. Site setting **Upload Rate Limiting** with window (minutes), max uploads per IP, and max uploads per user. When exceeded, uploads are blocked with a short message.
+- **Per-IP upload throttling** — Upload events logged in `upload_rate_log`; throttle applies by IP for guests and by IP + user for logged-in users.
+- **Adaptive cooldown for failed logins** — Progressive lockout by IP across usernames. After repeated failed logins from the same IP (in a configurable window), lockout duration increases (e.g. 5 → 15 → 60 minutes). Site setting **Adaptive cooldown** under Brute Force; per-IP failure window and steps configurable. Failed attempts now store `ip_address` in `login_attempts`.
+- **Content-Disposition enforcement** — Risky MIME types (HTML, SVG, JS, PDF, etc.) are always served with `Content-Disposition: attachment` to prevent inline execution in the browser. Helper `is_risky_mime_for_inline()` and `send_download_disposition()` in download flow.
+- **Optional file extension rewriting** — Site setting **Store files without original extension**: files are stored on disk without the original extension (e.g. `uuid` only); original filename is restored on download. Reduces risk of executing uploaded files by extension on the server.
+- **Upload quarantine mode** — Site setting **Upload quarantine**: new uploads are stored with `quarantine_status = 'pending'` and are invisible in public/one-time flows until an admin approves them in File Management. Pending files do not appear on the public index even if marked public. Uploaders see their own pending files on the dashboard with a “Pending approval” badge; Download, Share, One-time link, and Make public are disabled until approved. Admins see **Pending** / **Approved** and an **Approve** action.
+- **Automatic MIME anomaly detection** — On upload, extension vs detected MIME is compared; if they don’t match expected mapping, the file is flagged with `mime_anomaly` for admin review. Admin File Management shows a **MIME?** badge on such files.
+- **Upload page: Accepted file types** — Expandable section on the upload page (“Accepted file types”) that lists allowed types by category (Images, Documents, Spreadsheets, Presentations, Archives, Audio, Video, Data & code) with extensions, plus a reminder of the forbidden list. Uses native `<details>`/`<summary>`; no JavaScript required.
+
+#### Improved
+- Database migrations: `login_attempts.ip_address`, table `upload_rate_log`, `files.quarantine_status`, `files.mime_anomaly`. New installs and reset get the full schema.
+- Admin File Management: Status column (Pending/Approved), MIME anomaly badge, Approve button for pending files. Reset Site clears `upload_rate_log`.
+- Dashboard, shared files, download, one-time, public download, share, create-onetime, and download ZIP respect quarantine (only approved files visible or allowed for non-admins). Public index (`index.php`) shows only approved files.
+- `approve_file.php` added for admin to approve a single quarantined file.
+- **Known file types expanded** — Support for many additional common types across MIME anomaly detection, friendly type labels, and file icons: Images (bmp, tiff, tif, ico, heic, avif), Documents (rtf, odt, epub), Spreadsheets (ods, csv), Presentations (ppt, pptx, odp), Archives (rar, 7z, tar, gz), Audio (ogg, flac, m4a), Video (mov, webm, mkv, avi). Reduces false “MIME?” flags and improves display of file type and icon in lists.
+
+---
+
 ## [v1.7.0] - 2026-02-19
 ### ✨ New Features (User System & Access Control)
 - **User profile & account settings** — Profile page (`profile.php`) with view and edit for username, email, and optional display name; change-password form (current password required). Profile link added to main nav when logged in.

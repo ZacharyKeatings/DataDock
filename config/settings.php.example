@@ -29,8 +29,21 @@ $settings = [
         'enabled' => true,
         'max_attempts' => 5,
         'lockout_minutes' => 15,
-        'lockout_window' => 10
+        'lockout_window' => 10,
+        'adaptive_cooldown_enabled' => true,
+        'adaptive_cooldown_ip_window_minutes' => 60,
+        'adaptive_cooldown_steps' => [5 => 5, 15 => 15, 30 => 60]
     ],
+
+    'rate_limit_uploads' => [
+        'enabled' => false,
+        'window_minutes' => 1,
+        'max_per_ip' => 30,
+        'max_per_user' => 60
+    ],
+
+    'rewrite_file_extension' => false,
+    'upload_quarantine_enabled' => false,
 
     'storage_base_path' => '',  // Custom base for uploads/thumbnails (empty = project root)
 
