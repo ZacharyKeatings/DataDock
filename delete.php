@@ -32,33 +32,47 @@ if (!$file) {
     exit;
 }
 
-// Delete physical file
-$uploadPath = get_upload_path() . $file['filename'];
-if (file_exists($uploadPath)) {
-    unlink($uploadPath);
-}
+$permanent = isset($_GET['permanent']) && $_GET['permanent'] === '1';
 
-// Delete thumbnail if exists
-if (!empty($file['thumbnail_path'])) {
-    $thumbPath = get_thumbnails_path() . $file['thumbnail_path'];
-    if (file_exists($thumbPath)) {
-        unlink($thumbPath);
+if ($permanent) {
+    // Permanent delete: remove file from disk and DB (e.g. from trash)
+    $uploadPath = get_upload_path() . $file['filename'];
+    if (file_exists($uploadPath)) {
+        unlink($uploadPath);
     }
-}
-
-// Delete DB record
-if ($isAdmin) {
-    $stmt = $pdo->prepare("DELETE FROM files WHERE id = ?");
-    $stmt->execute([$fileId]);
+    if (!empty($file['thumbnail_path'])) {
+        $thumbPath = get_thumbnails_path() . $file['thumbnail_path'];
+        if (file_exists($thumbPath)) {
+            unlink($thumbPath);
+        }
+    }
+    if ($isAdmin) {
+        $stmt = $pdo->prepare("DELETE FROM files WHERE id = ?");
+        $stmt->execute([$fileId]);
+    } else {
+        $stmt = $pdo->prepare("DELETE FROM files WHERE id = ? AND user_id = ?");
+        $stmt->execute([$fileId, $userId]);
+    }
+    $_SESSION['flash_success'][] = [
+        'html' => true,
+        'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> permanently deleted."
+    ];
+    $redirect = (isset($_GET['from']) && $_GET['from'] === 'trash') ? 'trash.php' : ((isset($_GET['from']) && $_GET['from'] === 'admin') ? 'admin.php?section=files' : 'dashboard.php');
 } else {
-    $stmt = $pdo->prepare("DELETE FROM files WHERE id = ? AND user_id = ?");
-    $stmt->execute([$fileId, $userId]);
+    // Soft delete: move to trash (set deleted_at)
+    if ($isAdmin) {
+        $stmt = $pdo->prepare("UPDATE files SET deleted_at = UTC_TIMESTAMP() WHERE id = ?");
+        $stmt->execute([$fileId]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE files SET deleted_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ?");
+        $stmt->execute([$fileId, $userId]);
+    }
+    $_SESSION['flash_success'][] = [
+        'html' => true,
+        'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> moved to trash."
+    ];
+    $redirect = (isset($_GET['from']) && $_GET['from'] === 'admin') ? 'admin.php?section=files' : 'dashboard.php';
 }
 
-$_SESSION['flash_success'][] = [
-    'html' => true,
-    'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> deleted successfully."
-];
-$redirect = (isset($_GET['from']) && $_GET['from'] === 'admin') ? 'admin.php?section=files' : 'dashboard.php';
 header("Location: $redirect");
 exit;

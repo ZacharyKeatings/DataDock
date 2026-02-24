@@ -1,9 +1,9 @@
 <?php
 // Site stats overview
-$stmt = $pdo->query("SELECT COUNT(*) FROM files");
+$stmt = $pdo->query("SELECT COUNT(*) FROM files WHERE deleted_at IS NULL");
 $totalUploads = (int) $stmt->fetchColumn();
 
-$stmt = $pdo->query("SELECT COALESCE(SUM(filesize), 0) FROM files");
+$stmt = $pdo->query("SELECT COALESCE(SUM(filesize), 0) FROM files WHERE deleted_at IS NULL");
 $totalStorage = (int) $stmt->fetchColumn();
 
 $stmt = $pdo->query("SELECT COUNT(*) FROM users");
@@ -16,7 +16,7 @@ $adminCount = (int) $stmt->fetchColumn();
 $stmt = $pdo->query("
     SELECT filetype, COUNT(*) AS cnt, SUM(filesize) AS size
     FROM files
-    WHERE filetype IS NOT NULL AND filetype != ''
+    WHERE deleted_at IS NULL AND filetype IS NOT NULL AND filetype != ''
     GROUP BY filetype
     ORDER BY cnt DESC
     LIMIT 10
@@ -26,7 +26,8 @@ $fileTypeBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Expiring soon (next 7 days)
 $stmt = $pdo->prepare("
     SELECT COUNT(*) FROM files
-    WHERE expiry_date IS NOT NULL
+    WHERE deleted_at IS NULL
+    AND expiry_date IS NOT NULL
     AND expiry_date > UTC_TIMESTAMP()
     AND expiry_date <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 DAY)
 ");

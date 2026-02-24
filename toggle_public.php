@@ -21,7 +21,7 @@ if (!$publicBrowsingEnabled) {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT id, is_public FROM files WHERE id = ? AND user_id = ?");
+$stmt = $pdo->prepare("SELECT id, is_public FROM files WHERE id = ? AND user_id = ? AND deleted_at IS NULL");
 $stmt->execute([$fileId, $userId]);
 $file = $stmt->fetch(PDO::FETCH_ASSOC);
 

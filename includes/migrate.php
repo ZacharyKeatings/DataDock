@@ -164,4 +164,21 @@ function run_migrations(PDO $pdo): void {
             $pdo->exec("ALTER TABLE files ADD COLUMN mime_anomaly TINYINT(1) NOT NULL DEFAULT 0 AFTER quarantine_status");
         }
     } catch (PDOException $e) {}
+
+    // v1.9.0: files.description for user-editable metadata
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'description'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE files ADD COLUMN description VARCHAR(500) DEFAULT NULL AFTER original_name");
+        }
+    } catch (PDOException $e) {}
+
+    // v1.9.0: files.deleted_at for soft delete / trash
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'deleted_at'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE files ADD COLUMN deleted_at DATETIME DEFAULT NULL AFTER mime_anomaly");
+            $pdo->exec("CREATE INDEX idx_files_deleted_at ON files(deleted_at)");
+        }
+    } catch (PDOException $e) {}
 }

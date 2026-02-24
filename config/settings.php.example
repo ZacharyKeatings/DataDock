@@ -60,6 +60,8 @@ $settings = [
         'max_files' => 100,
         'max_storage_enabled' => false,
         'max_storage' => 104857600 // 100 MB
-    ]
+    ],
+
+    'trash_retention_days' => 30  // Days to keep files in trash before auto-purge; 0 = keep until manually purged
 ];
 ?>

@@ -15,7 +15,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $fileId = (int) $_GET['id'];
 
-$stmt = $pdo->prepare("SELECT thumbnail_path, filetype FROM files WHERE id = ? AND thumbnail_path IS NOT NULL AND thumbnail_path != ''");
+$stmt = $pdo->prepare("SELECT thumbnail_path, filetype FROM files WHERE id = ? AND deleted_at IS NULL AND thumbnail_path IS NOT NULL AND thumbnail_path != ''");
 $stmt->execute([$fileId]);
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 

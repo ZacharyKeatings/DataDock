@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.9.0] - 2026-02-23
+### File Management & Discovery
+
+#### New Features
+- **File search and filter** — Dashboard filter bar: search by filename or description; filter by upload date range, file type (MIME), visibility (public/private when public browsing is on), and expiry (has expiry / no expiry). Uses a shared query helper reused for metadata and trash.
+- **File metadata editing** — **Edit** in file actions opens `edit_file.php`: change display name, optional description (max 500 chars), and expiry (Never, Keep current, or preset durations). File on disk is unchanged.
+- **Soft delete / trash** — Deleting a file (single or bulk) moves it to **Trash** instead of removing it. **Trash** page lists deleted files with **Restore** and **Delete permanently**. Restore returns the file to Your Files. Site setting **Trash retention (days)** (default 30): files older than that are eligible for **Purge Trash** in Admin → File Management. Set to 0 to keep trash until manually purged.
+
+#### Improved
+- Database: `files.description` (VARCHAR 500, optional), `files.deleted_at` (DATETIME NULL, indexed). Migrations and fresh installs include the new columns.
+- All file lists and download/share/one-time flows exclude trashed files (`deleted_at IS NULL`). Quota and stats count only non-trashed files.
+- Admin File Management: list excludes trashed by default; **Purge Trash** button runs retention-based purge (or purges all trashed if retention is 0). **Purge Expired Files** only purges non-trashed expired files.
+- Admin Site Settings: **Trash retention (days)** under Upload & Session (0–3650). Default 30.
+- Nav: **Trash** link for logged-in users. Config/settings: `trash_retention_days` in `config/settings.php.example` and default settings writer.
+
+---
+
 ## [v1.8.0] - 2026-02-20
 ### Security Hardening & Rate Limiting (Bot mitigation, abuse prevention)
 

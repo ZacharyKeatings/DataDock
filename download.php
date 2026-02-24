@@ -21,7 +21,7 @@ $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 // One-time download via token (no login required)
 if (isset($_GET['token']) && !empty($_GET['token'])) {
     $token = trim($_GET['token']);
-    $stmt = $pdo->prepare("SELECT f.* FROM files f JOIN download_tokens dt ON f.id = dt.file_id WHERE dt.token = ? AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)");
+    $stmt = $pdo->prepare("SELECT f.* FROM files f JOIN download_tokens dt ON f.id = dt.file_id WHERE dt.token = ? AND f.deleted_at IS NULL AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)");
     $stmt->execute([$token]);
     $file = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($file) {
@@ -49,7 +49,7 @@ if (isset($_GET['token']) && !empty($_GET['token'])) {
 // Anonymous download of public files (when public browsing is enabled)
 if (empty($userId) && isset($_GET['id']) && is_numeric($_GET['id']) && $publicBrowsingEnabled) {
     $fileId = (int) $_GET['id'];
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND is_public = 1 AND (quarantine_status = 'approved' OR quarantine_status IS NULL) AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND is_public = 1 AND deleted_at IS NULL AND (quarantine_status = 'approved' OR quarantine_status IS NULL) AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
     $stmt->execute([$fileId]);
     $file = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($file) {
@@ -77,14 +77,15 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $fileId = (int) $_GET['id'];
 
 if ($isAdmin) {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND deleted_at IS NULL");
     $stmt->execute([$fileId]);
 } else {
-    // Owner OR shared with this user; exclude quarantined (invisible until approved)
+    // Owner OR shared with this user; exclude quarantined and trashed
     $stmt = $pdo->prepare("
         SELECT f.* FROM files f
         LEFT JOIN file_shares fs ON f.id = fs.file_id AND fs.shared_with_user_id = ?
         WHERE f.id = ? AND (f.user_id = ? OR fs.id IS NOT NULL)
+        AND f.deleted_at IS NULL
         AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
     ");
     $stmt->execute([$userId, $fileId, $userId]);

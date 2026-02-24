@@ -16,6 +16,7 @@ if ($publicBrowsingEnabled) {
     $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
         LEFT JOIN users ON files.user_id = users.id 
         WHERE files.is_public = 1 
+        AND files.deleted_at IS NULL
         AND (files.quarantine_status = 'approved' OR files.quarantine_status IS NULL)
         AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
         ORDER BY upload_date DESC 
@@ -25,7 +26,8 @@ if ($publicBrowsingEnabled) {
     // Default: latest 5 uploads (no download links for anons); only approved
     $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
         LEFT JOIN users ON files.user_id = users.id 
-        WHERE (files.quarantine_status = 'approved' OR files.quarantine_status IS NULL)
+        WHERE files.deleted_at IS NULL
+        AND (files.quarantine_status = 'approved' OR files.quarantine_status IS NULL)
         AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
         ORDER BY upload_date DESC 
         LIMIT 5");

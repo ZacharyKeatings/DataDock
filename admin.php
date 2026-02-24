@@ -26,6 +26,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $enforceUniqueEmail = isset($_POST['enforce_unique_email']);
         $maxFileSize = form_size_to_bytes($_POST['max_file_size'] ?? 0, $_POST['max_file_size_unit'] ?? 'm');
         $defaultFileExpiry = trim($_POST['default_file_expiry'] ?? 'never');
+        $trashRetentionDays = (int) ($_POST['trash_retention_days'] ?? 30);
+        if ($trashRetentionDays < 0) {
+            $trashRetentionDays = 0;
+        }
+        if ($trashRetentionDays > 3650) {
+            $trashRetentionDays = 3650;
+        }
         $thumbnailsEnabled = isset($_POST['thumbnails_enabled']);
         $sessionTimeoutMinutes = (int) ($_POST['session_timeout_minutes'] ?? 60);
         $installWarningEnabled = isset($_POST['install_warning_enabled']);
@@ -172,6 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "        'max_storage_enabled' => " . ($userMaxStorageEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_storage' => $userMaxStorage\n" .
                 "    ],\n" .
+                "    'trash_retention_days' => $trashRetentionDays,\n" .
                 "];\n?>";
 
             if (file_put_contents($settingsFile, $updatedSettings)) {
@@ -208,7 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['purge'])) {
         // --- PURGE EXPIRED FILES ---
         $now = date('Y-m-d H:i:s');
-        $stmt = $pdo->prepare("SELECT * FROM files WHERE expiry_date IS NOT NULL AND expiry_date < ?");
+        $stmt = $pdo->prepare("SELECT * FROM files WHERE deleted_at IS NULL AND expiry_date IS NOT NULL AND expiry_date < ?");
         $stmt->execute([$now]);
         $expiredFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -248,6 +256,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_warning'][] = "⚠️ No expired files found.";
         }
 
+        header("Location: admin.php?section=files");
+        exit;
+    }
+
+    if (isset($_POST['purge_trash'])) {
+        // --- PURGE TRASH (files past retention or all if retention 0) ---
+        if (file_exists($settingsFile)) {
+            require $settingsFile;
+        }
+        $settings = $settings ?? [];
+        $retentionDays = (int) ($settings['trash_retention_days'] ?? 30);
+
+        if ($retentionDays > 0) {
+            $stmt = $pdo->prepare("SELECT * FROM files WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)");
+            $stmt->execute([$retentionDays]);
+        } else {
+            $stmt = $pdo->query("SELECT * FROM files WHERE deleted_at IS NOT NULL");
+        }
+        $trashedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $deletedCount = 0;
+        $freedBytes = 0;
+        foreach ($trashedFiles as $file) {
+            $filePath = get_upload_path() . $file['filename'];
+            $thumbPath = !empty($file['thumbnail_path']) ? get_thumbnails_path() . $file['thumbnail_path'] : '';
+            if (file_exists($filePath) && unlink($filePath)) {
+                $freedBytes += (int) ($file['filesize'] ?? 0);
+            }
+            if ($thumbPath !== '' && file_exists($thumbPath)) {
+                unlink($thumbPath);
+            }
+            $pdo->prepare("DELETE FROM files WHERE id = ?")->execute([$file['id']]);
+            $deletedCount++;
+        }
+
+        if ($deletedCount > 0) {
+            $_SESSION['flash_success'][] = "✅ Purged $deletedCount file(s) from trash.";
+            $_SESSION['flash_success'][] = "💾 Space freed: " . format_filesize($freedBytes) . ".";
+        } else {
+            $_SESSION['flash_warning'][] = "⚠️ No files to purge (trash empty or none past retention).";
+        }
         header("Location: admin.php?section=files");
         exit;
     }
@@ -323,6 +372,7 @@ require_once __DIR__ . '/includes/header.php';
                 $maxFileSize = $settings['max_file_size'] ?? 5242880;
                 $maxFileSizeDisplay = bytes_to_display($maxFileSize);
                 $defaultFileExpiry = $settings['default_file_expiry'] ?? 'never';
+                $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
                 $thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
                 $sessionTimeoutMinutes = (int) ($settings['session_timeout_minutes'] ?? 60);
                 $installWarningEnabled = $settings['install_warning_enabled'] ?? true;
@@ -390,7 +440,7 @@ require_once __DIR__ . '/includes/header.php';
                         COUNT(f.id) AS file_count, 
                         COALESCE(SUM(f.filesize), 0) AS total_size
                     FROM users u
-                    LEFT JOIN files f ON u.id = f.user_id
+                    LEFT JOIN files f ON u.id = f.user_id AND f.deleted_at IS NULL
                     GROUP BY u.id
                     ORDER BY u.created_at DESC
                 ");
@@ -400,15 +450,16 @@ require_once __DIR__ . '/includes/header.php';
                 break;
 
             case 'files':
-                // Filter by quarantine status (optional: pending only)
+                // Filter by quarantine status (optional: pending only); exclude trashed by default
                 $fileStatusFilter = isset($_GET['status']) && $_GET['status'] === 'pending' ? 'pending' : 'all';
                 $filesSql = "
                     SELECT f.*, u.username 
                     FROM files f
                     LEFT JOIN users u ON f.user_id = u.id
+                    WHERE f.deleted_at IS NULL
                 ";
                 if ($fileStatusFilter === 'pending') {
-                    $filesSql .= " WHERE f.quarantine_status = 'pending'";
+                    $filesSql .= " AND f.quarantine_status = 'pending'";
                 }
                 $filesSql .= " ORDER BY f.upload_date DESC";
                 $stmt = $pdo->query($filesSql);

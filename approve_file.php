@@ -11,7 +11,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 $fileId = (int) $_GET['id'];
 
-$stmt = $pdo->prepare("UPDATE files SET quarantine_status = 'approved' WHERE id = ? AND (quarantine_status = 'pending' OR quarantine_status IS NULL)");
+$stmt = $pdo->prepare("UPDATE files SET quarantine_status = 'approved' WHERE id = ? AND deleted_at IS NULL AND (quarantine_status = 'pending' OR quarantine_status IS NULL)");
 $stmt->execute([$fileId]);
 if ($stmt->rowCount() > 0) {
     $_SESSION['flash_success'][] = "✅ File approved; it is now visible to the owner and shared users.";

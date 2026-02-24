@@ -30,7 +30,7 @@ if (empty($ids)) {
 
 $userId = $_SESSION['user_id'];
 $placeholders = implode(',', array_fill(0, count($ids), '?'));
-$stmt = $pdo->prepare("SELECT id FROM files WHERE id IN ($placeholders) AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) AND user_id = ?");
+$stmt = $pdo->prepare("SELECT id FROM files WHERE id IN ($placeholders) AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) AND user_id = ?");
 $stmt->execute(array_merge($ids, [$userId]));
 $owned = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

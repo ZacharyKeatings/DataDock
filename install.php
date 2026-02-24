@@ -32,6 +32,7 @@ function install_database($host, $user, $pass, $dbname) {
                 is_public TINYINT(1) NOT NULL DEFAULT 0,
                 filename VARCHAR(255) NOT NULL,
                 original_name VARCHAR(255),
+                description VARCHAR(500) DEFAULT NULL,
                 filetype VARCHAR(100),
                 filesize INT,
                 thumbnail_path VARCHAR(255),
@@ -42,7 +43,9 @@ function install_database($host, $user, $pass, $dbname) {
                 checksum_sha256 VARCHAR(64) DEFAULT NULL,
                 quarantine_status ENUM('pending','approved') NOT NULL DEFAULT 'approved',
                 mime_anomaly TINYINT(1) NOT NULL DEFAULT 0,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                deleted_at DATETIME DEFAULT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_files_deleted_at (deleted_at)
             )
         ");
 

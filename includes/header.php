@@ -61,6 +61,7 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                     <a href="index.php"<?= $currentPage === 'index.php' ? ' class="active"' : '' ?>>Home</a>
                     <?php if (!empty($_SESSION['user_id'])): ?>
                         <a href="dashboard.php"<?= $currentPage === 'dashboard.php' ? ' class="active"' : '' ?>>Your Files</a>
+                        <a href="trash.php"<?= $currentPage === 'trash.php' ? ' class="active"' : '' ?>>Trash</a>
                         <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
                         <a href="profile.php"<?= $currentPage === 'profile.php' ? ' class="active"' : '' ?>>Profile</a>
                         <?php if ($_SESSION['role'] === 'admin'): ?>

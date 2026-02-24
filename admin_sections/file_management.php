@@ -21,10 +21,16 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
             <a href="admin.php?section=files" class="btn btn-small<?= $fileStatusFilter === 'all' ? ' btn-primary' : '' ?>">All</a>
             <a href="admin.php?section=files&status=pending" class="btn btn-small<?= $fileStatusFilter === 'pending' ? ' btn-primary' : '' ?>">Pending</a>
         </div>
+        <div class="file-mgmt-purge-forms" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
         <form method="post" class="file-mgmt-purge-form">
             <input type="hidden" name="purge" value="1">
             <button type="submit" class="btn btn-primary">Purge Expired Files</button>
         </form>
+        <form method="post" class="file-mgmt-purge-form">
+            <input type="hidden" name="purge_trash" value="1">
+            <button type="submit" class="btn btn-small">Purge Trash</button>
+        </form>
+        </div>
     </div>
 
     <?php if ($allFiles): ?>

@@ -13,31 +13,94 @@ require_once __DIR__ . '/includes/header.php';
 $userId = $_SESSION['user_id'];
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 
-// Fetch user's files (include own pending/quarantined so they see "Pending approval")
-$stmt = $pdo->prepare("SELECT * FROM files 
-    WHERE user_id = ? 
-    AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) 
-    ORDER BY upload_date DESC");
-$stmt->execute([$userId]);
+// Filters (search, date, type, visibility, expiry)
+$expiryParam = isset($_GET['expiry']) && in_array($_GET['expiry'], ['has', 'none'], true) ? $_GET['expiry'] : null;
+$listOptions = [
+    'user_id' => $userId,
+    'exclude_trashed' => true,
+    'expiry_filter' => $expiryParam === 'has' ? 'valid_has' : ($expiryParam === 'none' ? 'valid_none' : 'valid'),
+    'search' => isset($_GET['q']) ? trim($_GET['q']) : '',
+    'date_from' => isset($_GET['date_from']) ? trim($_GET['date_from']) : '',
+    'date_to' => isset($_GET['date_to']) ? trim($_GET['date_to']) : '',
+    'filetype' => isset($_GET['type']) ? trim($_GET['type']) : '',
+    'visibility' => isset($_GET['visibility']) && in_array($_GET['visibility'], ['public', 'private'], true) ? $_GET['visibility'] : 'all',
+];
+[$where, $params] = build_files_list_where($listOptions);
+$stmt = $pdo->prepare("SELECT * FROM files f WHERE $where ORDER BY f.upload_date DESC");
+$stmt->execute($params);
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch files shared with user (exclude quarantined)
+// Fetch files shared with user (exclude quarantined and trashed)
 $stmt = $pdo->prepare("
     SELECT f.*, u.username as shared_by_username
     FROM files f
     JOIN file_shares fs ON f.id = fs.file_id
     JOIN users u ON fs.shared_by_user_id = u.id
     WHERE fs.shared_with_user_id = ?
+    AND f.deleted_at IS NULL
     AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
     AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
     ORDER BY f.upload_date DESC
 ");
 $stmt->execute([$userId]);
 $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Distinct file types for filter dropdown (user's non-trashed files)
+$stmt = $pdo->prepare("SELECT DISTINCT filetype FROM files WHERE user_id = ? AND deleted_at IS NULL AND filetype IS NOT NULL AND filetype != '' ORDER BY filetype");
+$stmt->execute([$userId]);
+$distinctTypes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 ?>
 
 <div class="page-section">
     <h2 class="page-title">Your Uploaded Files</h2>
+
+    <form method="get" action="dashboard.php" class="dashboard-filters" style="margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+        <div class="filter-group">
+            <label for="filter-q" class="filter-label">Search</label>
+            <input type="text" name="q" id="filter-q" value="<?= isset($_GET['q']) ? sanitize_data($_GET['q']) : '' ?>" placeholder="Filename or description" style="min-width:12rem;">
+        </div>
+        <div class="filter-group">
+            <label for="filter-date_from" class="filter-label">From date</label>
+            <input type="date" name="date_from" id="filter-date_from" value="<?= isset($_GET['date_from']) ? sanitize_data($_GET['date_from']) : '' ?>">
+        </div>
+        <div class="filter-group">
+            <label for="filter-date_to" class="filter-label">To date</label>
+            <input type="date" name="date_to" id="filter-date_to" value="<?= isset($_GET['date_to']) ? sanitize_data($_GET['date_to']) : '' ?>">
+        </div>
+        <div class="filter-group">
+            <label for="filter-type" class="filter-label">Type</label>
+            <select name="type" id="filter-type">
+                <option value="">All types</option>
+                <?php foreach ($distinctTypes as $ft): ?>
+                    <option value="<?= sanitize_data($ft) ?>"<?= (isset($_GET['type']) && $_GET['type'] === $ft) ? ' selected' : '' ?>><?= sanitize_data(get_friendly_filetype($ft)) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php if ($publicBrowsingEnabled): ?>
+        <div class="filter-group">
+            <label for="filter-visibility" class="filter-label">Visibility</label>
+            <select name="visibility" id="filter-visibility">
+                <option value="">All</option>
+                <option value="public"<?= (isset($_GET['visibility']) && $_GET['visibility'] === 'public') ? ' selected' : '' ?>>Public</option>
+                <option value="private"<?= (isset($_GET['visibility']) && $_GET['visibility'] === 'private') ? ' selected' : '' ?>>Private</option>
+            </select>
+        </div>
+        <?php endif; ?>
+        <div class="filter-group">
+            <label for="filter-expiry" class="filter-label">Expiry</label>
+            <select name="expiry" id="filter-expiry">
+                <option value="">All</option>
+                <option value="has"<?= (isset($_GET['expiry']) && $_GET['expiry'] === 'has') ? ' selected' : '' ?>>Has expiry</option>
+                <option value="none"<?= (isset($_GET['expiry']) && $_GET['expiry'] === 'none') ? ' selected' : '' ?>>No expiry</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <button type="submit" class="btn btn-small">Filter</button>
+            <?php if (!empty($_GET['q']) || !empty($_GET['date_from']) || !empty($_GET['date_to']) || !empty($_GET['type']) || !empty($_GET['visibility']) || !empty($_GET['expiry'])): ?>
+            <a href="dashboard.php" class="btn btn-small">Clear</a>
+            <?php endif; ?>
+        </div>
+    </form>
 
     <?php if ($files): ?>
         <div class="bulk-actions-bar" style="margin-bottom:1rem;">
@@ -103,6 +166,7 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <?php if ($isPending): ?>
                                         <span class="dropdown-item dropdown-item-muted">Download, share &amp; link available after approval</span>
                                     <?php else: ?>
+                                        <a href="edit_file.php?id=<?= $file['id'] ?>" class="dropdown-item">Edit</a>
                                         <?php if ($publicBrowsingEnabled): ?>
                                         <form method="post" action="toggle_public.php" class="dropdown-item-form">
                                             <input type="hidden" name="id" value="<?= $file['id'] ?>">

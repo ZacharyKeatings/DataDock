@@ -203,6 +203,7 @@ body {
 
 .main-nav .nav-logout-wrap {
     margin-left: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
   }
   .main-nav .nav-logout-wrap a {
     margin-left: 0;
@@ -253,7 +254,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    overflow-x: auto;
+    overflow-x: visible;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -267,6 +269,9 @@ body {
     font-size: clamp(0.8rem, 1.5vw, 0.95rem);
     word-break: break-word;
     min-width: min(100%, 720px);
+}
+.file-list .file-row:nth-child(even) {
+    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
 }
 
 /* Index page: 8 columns when Download button present */
@@ -334,6 +339,15 @@ body {
 .file-row-dashboard.file-header {
     border-bottom: 1px solid var(--color-border, #ddd);
 }
+/* Alternating row background (dashboard: wrapper + checksums) */
+.file-row-dashboard-wrapper:nth-child(even) .file-row-dashboard,
+.file-row-dashboard-wrapper:nth-child(even) .file-row-checksums {
+    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
+}
+/* Shared with you list: alternate data rows (skip header) */
+.file-list .file-row-dashboard:not(.file-header):nth-child(even) {
+    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
+}
 .file-row-dashboard-wrapper .file-row-dashboard {
     border-bottom: none;
 }
@@ -341,7 +355,7 @@ body {
     padding: 0.5rem clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.5rem, 1.5vw, 0.75rem);
     border-bottom: 1px solid var(--color-border, #ddd);
     font-size: clamp(0.8rem, 1.5vw, 0.95rem);
-    background: rgba(0,0,0,0.03);
+    background: transparent;
 }
 .file-row-checksums .checksum-none {
     color: var(--color-border);
@@ -486,6 +500,9 @@ body {
     min-width: 0;
     width: 100%;
 }
+.file-list-admin .file-row-file-management:nth-child(even) {
+    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
+}
 
 .file-actions {
     display: flex;
@@ -504,10 +521,15 @@ body {
     min-width: 0;
 }
 
-/* Actions dropdown (Your Files) */
+/* Actions dropdown (Your Files) – overlay on top, no table scroll */
 .file-actions-dropdown {
     position: relative;
     display: inline-block;
+    overflow: visible;
+}
+.file-row-dashboard .file-actions,
+.file-row-dashboard-wrapper .file-actions {
+    overflow: visible;
 }
 .file-actions-dropdown summary {
     list-style: none;
@@ -529,7 +551,7 @@ body {
     border: 1px solid var(--color-border, #ddd);
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10;
+    z-index: 1000;
     padding: 0.35rem 0;
     overflow: hidden;
 }
@@ -993,6 +1015,13 @@ body {
   }
   .profile-avatar-group .form-group {
     margin-bottom: 0.75rem;
+  }
+  .profile-avatar-group .form-group.settings-row-checkbox label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: auto;
+    white-space: nowrap;
   }
 
 .settings-row {

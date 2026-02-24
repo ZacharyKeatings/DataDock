@@ -16,10 +16,10 @@ $userId = $_SESSION['user_id'];
 $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 
 if ($isAdmin) {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND deleted_at IS NULL");
     $stmt->execute([$fileId]);
 } else {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ? AND (quarantine_status = 'approved' OR quarantine_status IS NULL)");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND (quarantine_status = 'approved' OR quarantine_status IS NULL)");
     $stmt->execute([$fileId, $userId]);
 }
 $file = $stmt->fetch(PDO::FETCH_ASSOC);

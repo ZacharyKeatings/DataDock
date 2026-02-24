@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT COUNT(*) AS file_count,
                    COALESCE(SUM(filesize), 0) AS total_size
               FROM files
-             WHERE guest_id = ?
+             WHERE guest_id = ? AND deleted_at IS NULL
         ");
         $stmt->execute([$guestId]);
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT COUNT(*) AS file_count,
                    COALESCE(SUM(filesize), 0) AS total_size
               FROM files
-             WHERE user_id = ?
+             WHERE user_id = ? AND deleted_at IS NULL
         ");
         $stmt->execute([$currentUserId]);
         $userStats = $stmt->fetch(PDO::FETCH_ASSOC);

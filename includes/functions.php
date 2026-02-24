@@ -297,7 +297,8 @@ function write_default_settings_file($siteName = 'DataDock') {
         "        'max_files' => 100,\n" .
         "        'max_storage_enabled' => false,\n" .
         "        'max_storage' => 104857600\n" . // 100MB
-        "    ]\n" .
+        "    ],\n" .
+        "    'trash_retention_days' => 30\n" .
         "];\n?>";
 
     file_put_contents(__DIR__ . '/../config/settings.php', $settings);
@@ -542,6 +543,79 @@ function get_file_icon($filetype, $filename = null) {
         if ($filetype === 'application/pdf') return 'file-doc';
     }
     return 'file';
+}
+
+/**
+ * Build WHERE clause and params for file listing (dashboard, trash, admin).
+ * Uses table alias "f" so it works with "SELECT * FROM files f" or "SELECT f.*, u.username FROM files f LEFT JOIN users u ...".
+ *
+ * @param array $options  user_id (int|null), is_admin (bool), trashed_only (bool), exclude_trashed (bool),
+ *                        search (string), date_from (Y-m-d), date_to (Y-m-d), filetype (string),
+ *                        visibility ('all'|'public'|'private'), expiry_filter ('all'|'has'|'none'|'expired'|'valid')
+ * @param string $alias   Table alias used in SQL (default 'f')
+ * @return array{0: string, 1: array} [WHERE clause fragment, params]
+ */
+function build_files_list_where(array $options, string $alias = 'f'): array {
+    $conditions = [];
+    $params = [];
+    $pre = $alias ? $alias . '.' : '';
+
+    if (!empty($options['user_id']) && empty($options['is_admin'])) {
+        $conditions[] = $pre . 'user_id = ?';
+        $params[] = $options['user_id'];
+    }
+
+    if (!empty($options['trashed_only'])) {
+        $conditions[] = $pre . 'deleted_at IS NOT NULL';
+    } elseif (!isset($options['exclude_trashed']) || $options['exclude_trashed']) {
+        $conditions[] = $pre . 'deleted_at IS NULL';
+    }
+
+    if (!empty($options['search'])) {
+        $term = '%' . trim($options['search']) . '%';
+        $conditions[] = '(' . $pre . 'original_name LIKE ? OR ' . $pre . 'description LIKE ?)';
+        $params[] = $term;
+        $params[] = $term;
+    }
+
+    if (!empty($options['date_from'])) {
+        $conditions[] = $pre . 'upload_date >= ?';
+        $params[] = $options['date_from'] . ' 00:00:00';
+    }
+    if (!empty($options['date_to'])) {
+        $conditions[] = $pre . 'upload_date <= ?';
+        $params[] = $options['date_to'] . ' 23:59:59';
+    }
+
+    if (isset($options['filetype']) && $options['filetype'] !== '') {
+        $conditions[] = $pre . 'filetype = ?';
+        $params[] = $options['filetype'];
+    }
+
+    $vis = $options['visibility'] ?? 'all';
+    if ($vis === 'public') {
+        $conditions[] = $pre . 'is_public = 1';
+    } elseif ($vis === 'private') {
+        $conditions[] = $pre . 'is_public = 0';
+    }
+
+    $exp = $options['expiry_filter'] ?? 'all';
+    if ($exp === 'has') {
+        $conditions[] = $pre . 'expiry_date IS NOT NULL';
+    } elseif ($exp === 'none') {
+        $conditions[] = $pre . 'expiry_date IS NULL';
+    } elseif ($exp === 'expired') {
+        $conditions[] = $pre . 'expiry_date IS NOT NULL AND ' . $pre . 'expiry_date <= UTC_TIMESTAMP()';
+    } elseif ($exp === 'valid') {
+        $conditions[] = '(' . $pre . 'expiry_date IS NULL OR ' . $pre . 'expiry_date > UTC_TIMESTAMP())';
+    } elseif ($exp === 'valid_has') {
+        $conditions[] = $pre . 'expiry_date IS NOT NULL AND ' . $pre . 'expiry_date > UTC_TIMESTAMP()';
+    } elseif ($exp === 'valid_none') {
+        $conditions[] = $pre . 'expiry_date IS NULL';
+    }
+
+    $where = $conditions ? implode(' AND ', $conditions) : '1=1';
+    return [$where, $params];
 }
 
 /**

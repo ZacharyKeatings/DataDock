@@ -268,6 +268,11 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="settings-row">
+                    <label for="trash_retention_days">Trash retention (days)</label>
+                    <input type="number" name="trash_retention_days" id="trash_retention_days" value="<?= (int)($trashRetentionDays ?? 30) ?>" min="0" max="3650">
+                </div>
+                <p class="settings-hint">How long deleted files stay in trash before auto-purge. 0 = keep until manually purged.</p>
                 <div class="settings-row settings-row-checkbox">
                     <label>
                         <input type="checkbox" name="thumbnails_enabled" <?= $thumbnailsEnabled ? 'checked' : '' ?>>

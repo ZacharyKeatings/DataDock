@@ -35,7 +35,7 @@ $statsStmt = $pdo->prepare("
            COALESCE(SUM(filesize), 0) AS total_size,
            COALESCE(SUM(download_count), 0) AS total_downloads
     FROM files
-    WHERE user_id = ? AND is_public = 1 AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+    WHERE user_id = ? AND is_public = 1 AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
 ");
 $statsStmt->execute([$user['id']]);
 $publicStats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -47,7 +47,7 @@ $publicTotalDownloads = (int) ($publicStats['total_downloads'] ?? 0);
 $topTypeStmt = $pdo->prepare("
     SELECT filetype, COUNT(*) AS cnt
     FROM files
-    WHERE user_id = ? AND is_public = 1 AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+    WHERE user_id = ? AND is_public = 1 AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
       AND filetype IS NOT NULL AND filetype != ''
     GROUP BY filetype
     ORDER BY cnt DESC
@@ -61,7 +61,7 @@ $topPublicFileType = $topTypeRow ? get_friendly_filetype($topTypeRow['filetype']
 $filesStmt = $pdo->prepare("
     SELECT id, original_name, filetype, filesize, download_count, upload_date, thumbnail_path
     FROM files
-    WHERE user_id = ? AND is_public = 1 AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+    WHERE user_id = ? AND is_public = 1 AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
     ORDER BY upload_date DESC
 ");
 $filesStmt->execute([$user['id']]);

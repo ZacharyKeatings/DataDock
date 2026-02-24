@@ -72,9 +72,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | File checksum display | MD5 and SHA256 with copy buttons. |
 | ✓ | Terms of Service / Acceptable Use | Configurable ToS; users must accept before uploading. |
 | ✓ | Download counter per file | Count and display downloads. |
-| — | File search and filter | Search by filename, date, type; filter by visibility, expiry. |
-| — | File metadata editing | Rename, change expiry, add description without re-upload. |
-| — | Soft delete / trash | Deleted files in trash, restorable for a period. |
+| ✓ | File search and filter | Search by filename, date, type; filter by visibility, expiry. |
+| ✓ | File metadata editing | Rename, change expiry, add description without re-upload. |
+| ✓ | Soft delete / trash | Deleted files in trash, restorable for a period. |
 | — | Folders or tags | Organize files (folders or flat tags). |
 | — | Duplicate detection | Deduplicate by file hash to save storage. |
 

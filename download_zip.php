@@ -21,14 +21,14 @@ $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 
 $placeholders = implode(',', array_fill(0, count($ids), '?'));
 if ($isAdmin) {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id IN ($placeholders) AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id IN ($placeholders) AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
     $stmt->execute($ids);
 } else {
-    // Owner OR shared with user
+    // Owner OR shared with user; exclude trashed
     $stmt = $pdo->prepare("
         SELECT f.* FROM files f
         LEFT JOIN file_shares fs ON f.id = fs.file_id AND fs.shared_with_user_id = ?
-        WHERE f.id IN ($placeholders) AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
+        WHERE f.id IN ($placeholders) AND f.deleted_at IS NULL AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
         AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
         AND (f.user_id = ? OR fs.id IS NOT NULL)
     ");

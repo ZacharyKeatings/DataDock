@@ -11,6 +11,7 @@
     --color-warning-text: #663c00;
     --color-warning-background: #fff4e5;
     --color-warning-border: #ffa726;
+    --color-file-row-alt: rgba(0, 0, 0, 0.04);
   }
   
   /* Optional: theme-specific overrides */

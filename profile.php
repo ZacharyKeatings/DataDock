@@ -162,7 +162,7 @@ $statsCurrent = $pdo->prepare("
            MIN(upload_date) AS oldest_upload,
            MAX(upload_date) AS newest_upload
     FROM files
-    WHERE user_id = ? AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+    WHERE user_id = ? AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
 ");
 $statsCurrent->execute([$userId]);
 $current = $statsCurrent->fetch(PDO::FETCH_ASSOC);
@@ -171,16 +171,16 @@ $statsAll = $pdo->prepare("
     SELECT COUNT(*) AS file_count,
            COALESCE(SUM(filesize), 0) AS total_size,
            COALESCE(SUM(download_count), 0) AS total_downloads
-    FROM files WHERE user_id = ?
+    FROM files WHERE user_id = ? AND deleted_at IS NULL
 ");
 $statsAll->execute([$userId]);
 $allTime = $statsAll->fetch(PDO::FETCH_ASSOC);
 
-$expiredCount = $pdo->prepare("SELECT COUNT(*) FROM files WHERE user_id = ? AND expiry_date IS NOT NULL AND expiry_date <= UTC_TIMESTAMP()");
+$expiredCount = $pdo->prepare("SELECT COUNT(*) FROM files WHERE user_id = ? AND deleted_at IS NULL AND expiry_date IS NOT NULL AND expiry_date <= UTC_TIMESTAMP()");
 $expiredCount->execute([$userId]);
 $expiredFilesCount = (int) $expiredCount->fetchColumn();
 
-$publicCount = $pdo->prepare("SELECT COUNT(*) FROM files WHERE user_id = ? AND is_public = 1 AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
+$publicCount = $pdo->prepare("SELECT COUNT(*) FROM files WHERE user_id = ? AND is_public = 1 AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
 $publicCount->execute([$userId]);
 $publicFilesCount = (int) $publicCount->fetchColumn();
 
@@ -196,7 +196,7 @@ $sharedByMeCount = (int) $sharedByMe->fetchColumn();
 $topTypes = $pdo->prepare("
     SELECT filetype, COUNT(*) AS cnt, COALESCE(SUM(filesize), 0) AS size
     FROM files
-    WHERE user_id = ? AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) AND (filetype IS NOT NULL AND filetype != '')
+    WHERE user_id = ? AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) AND (filetype IS NOT NULL AND filetype != '')
     GROUP BY filetype
     ORDER BY cnt DESC
     LIMIT 10
@@ -207,7 +207,7 @@ $topFileTypes = $topTypes->fetchAll(PDO::FETCH_ASSOC);
 // By extension (from original_name) for current files
 $extStmt = $pdo->prepare("
     SELECT original_name FROM files
-    WHERE user_id = ? AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) AND original_name IS NOT NULL AND original_name != ''
+    WHERE user_id = ? AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP()) AND original_name IS NOT NULL AND original_name != ''
 ");
 $extStmt->execute([$userId]);
 $extCounts = [];
