@@ -174,6 +174,34 @@
         </div>
 
         <div class="settings-card">
+            <h4 class="settings-card-title">Organization &amp; deduplication (v2.0)</h4>
+            <div class="settings-card-body">
+                <input type="hidden" name="deduplicate_storage" value="0">
+                <input type="hidden" name="folders_enabled" value="0">
+                <input type="hidden" name="tags_enabled" value="0">
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="deduplicate_storage" value="1" <?= !empty($deduplicateStorage) ? 'checked' : '' ?>>
+                        Deduplicate by SHA-256 (reuse one on-disk copy per partition when the same file is uploaded again)
+                    </label>
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="folders_enabled" value="1" <?= !empty($foldersEnabledSetting) ? 'checked' : '' ?>>
+                        Enable folders on the dashboard
+                    </label>
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="tags_enabled" value="1" <?= !empty($tagsEnabledSetting) ? 'checked' : '' ?>>
+                        Enable tags (edit file, filter on dashboard)
+                    </label>
+                </div>
+                <p class="settings-hint">Manage storage roots and per-user assignment under <a href="admin.php?section=storage">Storage partitions</a>.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
             <h4 class="settings-card-title">Brute Force Protection</h4>
             <div class="settings-card-body">
                 <div class="settings-row settings-row-checkbox">

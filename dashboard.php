@@ -6,14 +6,38 @@ require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/dashboard_actions.php';
+
+datadock_process_dashboard_post($pdo);
 
 $pageTitle = "Your Files";
 require_once __DIR__ . '/includes/header.php';
 
+// Relative URLs (same directory as this script); avoids broken SCRIPT_NAME / rewrite edge cases.
+$dashUrl = 'dashboard.php';
+$uploadUrl = 'upload.php';
+
 $userId = $_SESSION['user_id'];
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
+$foldersEnabled = !isset($settings['folders_enabled']) || !empty($settings['folders_enabled']);
+$tagsEnabled = !isset($settings['tags_enabled']) || !empty($settings['tags_enabled']);
 
-// Filters (search, date, type, visibility, expiry)
+$currentFolderId = 0;
+if ($foldersEnabled && isset($_GET['folder']) && is_numeric($_GET['folder'])) {
+    $currentFolderId = (int) $_GET['folder'];
+    if ($currentFolderId < 0) {
+        $currentFolderId = 0;
+    }
+    if ($currentFolderId > 0) {
+        $chk = $pdo->prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?');
+        $chk->execute([$currentFolderId, $userId]);
+        if (!$chk->fetch()) {
+            $currentFolderId = 0;
+        }
+    }
+}
+
+// Filters (search, date, type, visibility, expiry, folder, tag)
 $expiryParam = isset($_GET['expiry']) && in_array($_GET['expiry'], ['has', 'none'], true) ? $_GET['expiry'] : null;
 $listOptions = [
     'user_id' => $userId,
@@ -25,6 +49,17 @@ $listOptions = [
     'filetype' => isset($_GET['type']) ? trim($_GET['type']) : '',
     'visibility' => isset($_GET['visibility']) && in_array($_GET['visibility'], ['public', 'private'], true) ? $_GET['visibility'] : 'all',
 ];
+if ($foldersEnabled) {
+    $listOptions['folder_id'] = $currentFolderId;
+}
+if ($tagsEnabled && !empty($_GET['tag']) && is_numeric($_GET['tag'])) {
+    $listOptions['tag_id'] = (int) $_GET['tag'];
+    $tagChk = $pdo->prepare('SELECT id FROM tags WHERE id = ? AND user_id = ?');
+    $tagChk->execute([(int) $_GET['tag'], $userId]);
+    if (!$tagChk->fetch()) {
+        unset($listOptions['tag_id']);
+    }
+}
 [$where, $params] = build_files_list_where($listOptions);
 $stmt = $pdo->prepare("SELECT * FROM files f WHERE $where ORDER BY f.upload_date DESC");
 $stmt->execute($params);
@@ -49,12 +84,121 @@ $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt = $pdo->prepare("SELECT DISTINCT filetype FROM files WHERE user_id = ? AND deleted_at IS NULL AND filetype IS NOT NULL AND filetype != '' ORDER BY filetype");
 $stmt->execute([$userId]);
 $distinctTypes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$subfolders = [];
+$folderTrail = [];
+$allFoldersFlat = [];
+if ($foldersEnabled) {
+    $stmt = $pdo->prepare('SELECT id, name FROM folders WHERE user_id = ? AND parent_id = ? ORDER BY name ASC');
+    $stmt->execute([$userId, $currentFolderId]);
+    $subfolders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $fid = $currentFolderId;
+    while ($fid > 0) {
+        $stmt = $pdo->prepare('SELECT id, name, parent_id FROM folders WHERE id = ? AND user_id = ?');
+        $stmt->execute([$fid, $userId]);
+        $fr = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$fr) {
+            break;
+        }
+        array_unshift($folderTrail, $fr);
+        $fid = (int) $fr['parent_id'];
+    }
+
+    $stmt = $pdo->prepare('SELECT id, name, parent_id FROM folders WHERE user_id = ? ORDER BY parent_id, name');
+    $stmt->execute([$userId]);
+    $allFoldersFlat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+$userTags = [];
+if ($tagsEnabled) {
+    $stmt = $pdo->prepare('SELECT id, name FROM tags WHERE user_id = ? ORDER BY name ASC');
+    $stmt->execute([$userId]);
+    $userTags = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+$dashQueryBase = [];
+if (!empty($_GET['q'])) {
+    $dashQueryBase['q'] = $_GET['q'];
+}
+if (!empty($_GET['date_from'])) {
+    $dashQueryBase['date_from'] = $_GET['date_from'];
+}
+if (!empty($_GET['date_to'])) {
+    $dashQueryBase['date_to'] = $_GET['date_to'];
+}
+if (!empty($_GET['type'])) {
+    $dashQueryBase['type'] = $_GET['type'];
+}
+if (!empty($_GET['visibility'])) {
+    $dashQueryBase['visibility'] = $_GET['visibility'];
+}
+if (!empty($_GET['expiry'])) {
+    $dashQueryBase['expiry'] = $_GET['expiry'];
+}
+if ($tagsEnabled && !empty($_GET['tag'])) {
+    $dashQueryBase['tag'] = $_GET['tag'];
+}
 ?>
+
 
 <div class="page-section">
     <h2 class="page-title">Your Uploaded Files</h2>
+    <?php if ($foldersEnabled): ?>
+    <nav class="folder-breadcrumb" aria-label="Folder path" style="margin-bottom:0.75rem;font-size:0.95rem;">
+        <?php
+        $dashRoot = $dashUrl . (!empty($dashQueryBase) ? '?' . http_build_query($dashQueryBase) : '');
+        ?>
+        <a href="<?= sanitize_data($dashRoot) ?>">All files</a>
+        <?php foreach ($folderTrail as $ti => $tr): ?>
+            <span aria-hidden="true"> / </span>
+            <?php
+            $q = $dashQueryBase;
+            $q['folder'] = (int) $tr['id'];
+            $href = $dashUrl . '?' . http_build_query($q);
+            ?>
+            <?php if ($ti < count($folderTrail) - 1): ?>
+                <a href="<?= sanitize_data($href) ?>"><?= sanitize_data($tr['name']) ?></a>
+            <?php else: ?>
+                <strong><?= sanitize_data($tr['name']) ?></strong>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </nav>
+    <?php
+    $uploadHere = $uploadUrl;
+    if ($currentFolderId > 0) {
+        $uploadHere .= '?folder=' . (int) $currentFolderId;
+    }
+    ?>
+    <p style="margin:0 0 0.75rem 0;"><a href="<?= sanitize_data($uploadHere) ?>" class="btn btn-small"><?= $currentFolderId > 0 ? 'Upload to this folder' : 'Upload files' ?></a></p>
+    <?php if (!empty($subfolders)): ?>
+    <ul style="list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:0.5rem;margin:0 0 1rem 0;">
+        <?php
+        foreach ($subfolders as $sf) {
+            $q = $dashQueryBase;
+            $q['folder'] = (int) $sf['id'];
+            $href = $dashUrl . '?' . http_build_query($q);
+            echo '<li><a href="' . sanitize_data($href) . '" class="btn btn-small">' . icon_svg('folder') . ' ' . sanitize_data($sf['name']) . '</a></li>';
+        }
+        ?>
+    </ul>
+    <?php endif; ?>
+    <form method="post" action="" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:flex-end;margin-bottom:1rem;">
+        <input type="hidden" name="datadock_folder_create" value="1">
+        <input type="hidden" name="redirect_folder" value="<?= (int) $currentFolderId ?>">
+        <input type="hidden" name="parent_id" value="<?= (int) $currentFolderId ?>">
+        <div class="filter-group">
+            <label for="new-folder-name" class="filter-label">New folder</label>
+            <input type="text" name="name" id="new-folder-name" maxlength="255" placeholder="Name" required style="min-width:10rem;">
+        </div>
+        <button type="submit" class="btn btn-small">Create folder</button>
+    </form>
+    <?php endif; ?>
 
-    <form method="get" action="dashboard.php" class="dashboard-filters" style="margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+    <form method="get" action="<?= sanitize_data($dashUrl) ?>" class="dashboard-filters" style="margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+        <?php if ($foldersEnabled && $currentFolderId > 0): ?>
+        <input type="hidden" name="folder" value="<?= (int) $currentFolderId ?>">
+        <?php endif; ?>
         <div class="filter-group">
             <label for="filter-q" class="filter-label">Search</label>
             <input type="text" name="q" id="filter-q" value="<?= isset($_GET['q']) ? sanitize_data($_GET['q']) : '' ?>" placeholder="Filename or description" style="min-width:12rem;">
@@ -94,10 +238,28 @@ $distinctTypes = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 <option value="none"<?= (isset($_GET['expiry']) && $_GET['expiry'] === 'none') ? ' selected' : '' ?>>No expiry</option>
             </select>
         </div>
+        <?php if ($tagsEnabled && !empty($userTags)): ?>
+        <div class="filter-group">
+            <label for="filter-tag" class="filter-label">Tag</label>
+            <select name="tag" id="filter-tag">
+                <option value="">All tags</option>
+                <?php foreach ($userTags as $tg): ?>
+                    <option value="<?= (int) $tg['id'] ?>"<?= (isset($_GET['tag']) && (int) $_GET['tag'] === (int) $tg['id']) ? ' selected' : '' ?>><?= sanitize_data($tg['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
         <div class="filter-group">
             <button type="submit" class="btn btn-small">Filter</button>
-            <?php if (!empty($_GET['q']) || !empty($_GET['date_from']) || !empty($_GET['date_to']) || !empty($_GET['type']) || !empty($_GET['visibility']) || !empty($_GET['expiry'])): ?>
-            <a href="dashboard.php" class="btn btn-small">Clear</a>
+            <?php
+            $hasFilters = !empty($_GET['q']) || !empty($_GET['date_from']) || !empty($_GET['date_to']) || !empty($_GET['type']) || !empty($_GET['visibility']) || !empty($_GET['expiry']) || !empty($_GET['tag']);
+            $clearHref = $dashUrl;
+            if ($foldersEnabled && $currentFolderId > 0) {
+                $clearHref .= '?folder=' . (int) $currentFolderId;
+            }
+            ?>
+            <?php if ($hasFilters): ?>
+            <a href="<?= sanitize_data($clearHref) ?>" class="btn btn-small">Clear</a>
             <?php endif; ?>
         </div>
     </form>
@@ -167,6 +329,25 @@ $distinctTypes = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                         <span class="dropdown-item dropdown-item-muted">Download, share &amp; link available after approval</span>
                                     <?php else: ?>
                                         <a href="edit_file.php?id=<?= $file['id'] ?>" class="dropdown-item">Edit</a>
+                                        <?php if ($foldersEnabled && !empty($allFoldersFlat)): ?>
+                                        <form method="post" action="" class="dropdown-item-form" style="padding:0.35rem 0.75rem;border-bottom:1px solid var(--border-color,#eee);">
+                                            <input type="hidden" name="datadock_move_file" value="1">
+                                            <input type="hidden" name="file_id" value="<?= (int) $file['id'] ?>">
+                                            <input type="hidden" name="redirect_folder" value="<?= (int) $currentFolderId ?>">
+                                            <label for="move-<?= (int) $file['id'] ?>" style="display:block;font-size:0.8rem;margin-bottom:0.25rem;">Move to folder</label>
+                                            <select name="folder_id" id="move-<?= (int) $file['id'] ?>" onchange="this.form.submit()" style="max-width:100%;">
+                                                <option value="">— Root —</option>
+                                                <?php
+                                                $curF = isset($file['folder_id']) ? (int) $file['folder_id'] : 0;
+                                                foreach ($allFoldersFlat as $mf) {
+                                                    $mid = (int) $mf['id'];
+                                                    $sel = ($mid === $curF) ? ' selected' : '';
+                                                    echo '<option value="' . $mid . '"' . $sel . '>' . sanitize_data($mf['name']) . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </form>
+                                        <?php endif; ?>
                                         <?php if ($publicBrowsingEnabled): ?>
                                         <form method="post" action="toggle_public.php" class="dropdown-item-form">
                                             <input type="hidden" name="id" value="<?= $file['id'] ?>">

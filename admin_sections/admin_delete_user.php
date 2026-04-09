@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 init_session();
 require_admin();
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'])) {
     $userId = (int) $_POST['user_id'];
@@ -19,8 +20,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'])) {
         if ($user) {
             $username = $user['username'];
 
-            // Delete user
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+            $stmt = $pdo->prepare('SELECT * FROM files WHERE user_id = ?');
+            $stmt->execute([$userId]);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $fileRow) {
+                datadock_release_file_storage($pdo, $fileRow);
+            }
+
+            // Delete user (cascades files, folders, tags, etc.)
+            $stmt = $pdo->prepare('DELETE FROM users WHERE id = ?');
             $stmt->execute([$userId]);
 
             $_SESSION['flash_success'][] = "✅ User '$username' deleted successfully.";

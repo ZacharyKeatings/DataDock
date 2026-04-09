@@ -22,6 +22,7 @@ if ($inviteOnly): ?>
             <div>Email</div>
             <div>Files</div>
             <div>Storage</div>
+            <div>Partition</div>
             <div>Role</div>
             <div>Reset password</div>
             <div>Delete</div>
@@ -34,6 +35,18 @@ if ($inviteOnly): ?>
                 <div><?= sanitize_data($user['email']) ?></div>
                 <div><?= sanitize_data($user['file_count']) ?></div>
                 <div><?= format_filesize($user['total_size']) ?></div>
+                <div>
+                    <form method="post" action="admin_sections/admin_set_user_partition.php" style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;">
+                        <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
+                        <select name="storage_partition_id" aria-label="Storage partition" style="max-width:10rem;font-size:0.85rem;">
+                            <option value="">Default</option>
+                            <?php foreach ($storagePartitionsList ?? [] as $sp): ?>
+                                <option value="<?= (int) $sp['id'] ?>"<?= ((int) ($user['storage_partition_id'] ?? 0) === (int) $sp['id']) ? ' selected' : '' ?>><?= sanitize_data($sp['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="submit" class="btn btn-small">Save</button>
+                    </form>
+                </div>
                 <div>
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                         <form method="post" action="admin_sections/admin_change_role.php" onsubmit="return confirm('Change this user’s role?')" style="display: flex; gap: 0.5rem;">

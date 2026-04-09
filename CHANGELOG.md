@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.0.0] - 2026-04-08
+### Organization & Storage Efficiency
+
+#### New Features
+- **Folders** — Nested folders per user (`parent_id` with `0` = root). Dashboard breadcrumb, subfolder links, create folder, and move file via the Actions menu. Filter bar preserves folder scope; uploads can target the current folder (`upload.php?folder=` or “Upload to this folder”).
+- **Tags** — Comma-separated tags on **Edit file**; optional tag filter on the dashboard when tags exist. Settings can disable tags or folders independently.
+- **Storage partitions** — Multiple storage roots (`storage_partitions`); each root uses the same layout as the site default (`uploads/`, `thumbnails/`). Empty partition root inherits **Custom Storage Base Path** from Site Settings. Admin **Storage partitions** lists usage and sets the default partition. **User Management** assigns a user to a partition (new uploads use that root; existing files stay where they are until moved by re-upload or admin tooling).
+- **Deduplication** — Optional SHA-256 deduplication per partition (`storage_objects` + `files.storage_object_id`): identical content reuses one on-disk file and increments reference counts. Site setting **Deduplicate by SHA-256** (with hidden-field safe defaults). Deletes and purges decrement refs and remove the blob when the last reference is gone.
+- **Disk path resolution** — `includes/storage.php` centralizes partition-aware paths for downloads, thumbnails, ZIP, one-time links, delete/purge, and uploads.
+
+#### Improved
+- Database migrations add `storage_partitions`, `storage_objects`, `folders`, `tags`, `file_tags`, and extend `files` / `users`. Fresh installs pick this up on first DB connection after deploy.
+- **Reset site** clears `storage_objects` and `folders` / `tags`, and empties uploads/thumbnails under **every** partition root.
+- **Delete user** (admin) releases on-disk storage for that user’s files before removing the account.
+- Dashboard folder create and file move use **same-page POST** (`includes/dashboard_actions.php`) so subdirectories and servers with odd `SCRIPT_NAME` / rewrites do not 404 on separate endpoints.
+
+---
+
 ## [v1.9.0] - 2026-02-23
 ### File Management & Discovery
 

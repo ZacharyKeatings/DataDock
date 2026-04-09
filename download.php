@@ -26,7 +26,7 @@ if (isset($_GET['token']) && !empty($_GET['token'])) {
     $file = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($file) {
         $pdo->prepare("DELETE FROM download_tokens WHERE token = ?")->execute([$token]);
-        $path = get_upload_path() . $file['filename'];
+        $path = datadock_file_main_path($pdo, $file);
         if (file_exists($path)) {
             $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$file['id']]);
             header('Content-Description: File Transfer');
@@ -53,7 +53,7 @@ if (empty($userId) && isset($_GET['id']) && is_numeric($_GET['id']) && $publicBr
     $stmt->execute([$fileId]);
     $file = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($file) {
-        $path = get_upload_path() . $file['filename'];
+        $path = datadock_file_main_path($pdo, $file);
         if (file_exists($path)) {
             $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$fileId]);
             header('Content-Description: File Transfer');
@@ -98,7 +98,7 @@ if (!$file) {
     exit;
 }
 
-$path = get_upload_path() . $file['filename'];
+$path = datadock_file_main_path($pdo, $file);
 if (!file_exists($path)) {
     $_SESSION['flash_error'][] = "❌ File is missing from server.";
     header("Location: dashboard.php");

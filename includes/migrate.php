@@ -181,4 +181,121 @@ function run_migrations(PDO $pdo): void {
             $pdo->exec("CREATE INDEX idx_files_deleted_at ON files(deleted_at)");
         }
     } catch (PDOException $e) {}
+
+    // v2.0.0: storage partitions
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS storage_partitions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                root_path VARCHAR(500) NOT NULL DEFAULT '',
+                is_default TINYINT(1) NOT NULL DEFAULT 0,
+                sort_order INT NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $n = (int) $pdo->query('SELECT COUNT(*) FROM storage_partitions')->fetchColumn();
+        if ($n === 0) {
+            $pdo->exec("INSERT INTO storage_partitions (id, name, root_path, is_default, sort_order) VALUES (1, 'Default', '', 1, 0)");
+        }
+    } catch (PDOException $e) {}
+
+    // v2.0.0: users.storage_partition_id
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'storage_partition_id'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE users ADD COLUMN storage_partition_id INT DEFAULT NULL AFTER role');
+            $pdo->exec('ALTER TABLE users ADD CONSTRAINT fk_users_storage_partition FOREIGN KEY (storage_partition_id) REFERENCES storage_partitions(id) ON DELETE SET NULL');
+        }
+    } catch (PDOException $e) {}
+
+    // v2.0.0: folders (before files FK)
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS folders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                parent_id INT NOT NULL DEFAULT 0,
+                name VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_folder (user_id, parent_id, name),
+                INDEX idx_folder_parent (user_id, parent_id)
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    // v2.0.0: deduplicated storage objects
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS storage_objects (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                storage_partition_id INT NOT NULL,
+                sha256 CHAR(64) NOT NULL,
+                stored_filename VARCHAR(255) NOT NULL,
+                byte_size INT NOT NULL DEFAULT 0,
+                ref_count INT NOT NULL DEFAULT 0,
+                FOREIGN KEY (storage_partition_id) REFERENCES storage_partitions(id),
+                UNIQUE KEY uq_part_sha (storage_partition_id, sha256),
+                INDEX idx_so_part (storage_partition_id)
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    // v2.0.0: files.storage_partition_id, folder_id, storage_object_id
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'storage_partition_id'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE files ADD COLUMN storage_partition_id INT NOT NULL DEFAULT 1 AFTER user_id');
+            $pdo->exec('UPDATE files SET storage_partition_id = 1 WHERE storage_partition_id IS NULL OR storage_partition_id = 0');
+            $pdo->exec('ALTER TABLE files ADD CONSTRAINT fk_files_storage_partition FOREIGN KEY (storage_partition_id) REFERENCES storage_partitions(id)');
+            $pdo->exec('CREATE INDEX idx_files_partition ON files(storage_partition_id)');
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'folder_id'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE files ADD COLUMN folder_id INT DEFAULT NULL AFTER storage_partition_id');
+            $pdo->exec('ALTER TABLE files ADD CONSTRAINT fk_files_folder FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL');
+            $pdo->exec('CREATE INDEX idx_files_folder ON files(folder_id)');
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'storage_object_id'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE files ADD COLUMN storage_object_id INT DEFAULT NULL AFTER filename');
+            $pdo->exec('ALTER TABLE files ADD CONSTRAINT fk_files_storage_object FOREIGN KEY (storage_object_id) REFERENCES storage_objects(id)');
+            $pdo->exec('CREATE INDEX idx_files_storage_object ON files(storage_object_id)');
+        }
+    } catch (PDOException $e) {}
+
+    // v2.0.0: tags
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tags (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_tag (user_id, name)
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS file_tags (
+                file_id INT NOT NULL,
+                tag_id INT NOT NULL,
+                PRIMARY KEY (file_id, tag_id),
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+            )
+        ");
+    } catch (PDOException $e) {}
 }

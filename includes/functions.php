@@ -120,7 +120,21 @@ function get_current_page() {
     return basename($_SERVER['PHP_SELF']);
 }
 
-
+/**
+ * Absolute path from the web root to a PHP script in the same directory as the current script.
+ * Use for form actions and redirects when the app lives in a subdirectory or URLs are rewritten
+ * (relative filenames can resolve to the wrong path and cause 404s on POST).
+ */
+function app_script_url(string $filename): string {
+    $filename = ltrim(str_replace('\\', '/', $filename), '/');
+    $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? '/index.php');
+    $script = str_replace('\\', '/', (string) $script);
+    $dir = dirname($script);
+    if ($dir === '/' || $dir === '.' || $dir === '') {
+        return '/' . $filename;
+    }
+    return rtrim($dir, '/') . '/' . $filename;
+}
 
 function return_bytes(string $val): int {
     $val = trim($val);
@@ -298,7 +312,10 @@ function write_default_settings_file($siteName = 'DataDock') {
         "        'max_storage_enabled' => false,\n" .
         "        'max_storage' => 104857600\n" . // 100MB
         "    ],\n" .
-        "    'trash_retention_days' => 30\n" .
+        "    'trash_retention_days' => 30,\n" .
+        "    'deduplicate_storage' => true,\n" .
+        "    'folders_enabled' => true,\n" .
+        "    'tags_enabled' => true\n" .
         "];\n?>";
 
     file_put_contents(__DIR__ . '/../config/settings.php', $settings);
@@ -551,7 +568,8 @@ function get_file_icon($filetype, $filename = null) {
  *
  * @param array $options  user_id (int|null), is_admin (bool), trashed_only (bool), exclude_trashed (bool),
  *                        search (string), date_from (Y-m-d), date_to (Y-m-d), filetype (string),
- *                        visibility ('all'|'public'|'private'), expiry_filter ('all'|'has'|'none'|'expired'|'valid')
+ *                        visibility ('all'|'public'|'private'), expiry_filter ('all'|'has'|'none'|'expired'|'valid'),
+ *                        folder_id (omit | 0 for root only | positive id), tag_id (positive id)
  * @param string $alias   Table alias used in SQL (default 'f')
  * @return array{0: string, 1: array} [WHERE clause fragment, params]
  */
@@ -612,6 +630,23 @@ function build_files_list_where(array $options, string $alias = 'f'): array {
         $conditions[] = $pre . 'expiry_date IS NOT NULL AND ' . $pre . 'expiry_date > UTC_TIMESTAMP()';
     } elseif ($exp === 'valid_none') {
         $conditions[] = $pre . 'expiry_date IS NULL';
+    }
+
+    if (array_key_exists('folder_id', $options)) {
+        $fid = $options['folder_id'];
+        if ($fid === null || $fid === '') {
+            // no folder filter
+        } elseif ($fid === 0 || $fid === '0') {
+            $conditions[] = $pre . 'folder_id IS NULL';
+        } else {
+            $conditions[] = $pre . 'folder_id = ?';
+            $params[] = (int) $fid;
+        }
+    }
+
+    if (!empty($options['tag_id'])) {
+        $conditions[] = 'EXISTS (SELECT 1 FROM file_tags ft WHERE ft.file_id = ' . $pre . 'id AND ft.tag_id = ?)';
+        $params[] = (int) $options['tag_id'];
     }
 
     $where = $conditions ? implode(' AND ', $conditions) : '1=1';
@@ -711,3 +746,5 @@ function basic_markdown($text) {
 
     return implode("\n", $lines);
 }
+
+require_once __DIR__ . '/storage.php';

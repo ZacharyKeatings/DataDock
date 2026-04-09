@@ -30,7 +30,7 @@ if (!$file) {
     exit;
 }
 
-$path = get_upload_path() . $file['filename'];
+$path = datadock_file_main_path($pdo, $file);
 if (!file_exists($path)) {
     $_SESSION['flash_error'][] = "❌ File is missing from server.";
     header("Location: dashboard.php");

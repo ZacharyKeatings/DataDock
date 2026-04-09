@@ -44,6 +44,14 @@ if (!$file) {
     exit;
 }
 
+$tagsEnabled = !isset($settings['tags_enabled']) || !empty($settings['tags_enabled']);
+$fileTagsStr = '';
+if ($tagsEnabled) {
+    $stmt = $pdo->prepare('SELECT t.name FROM tags t INNER JOIN file_tags ft ON ft.tag_id = t.id WHERE ft.file_id = ? ORDER BY t.name');
+    $stmt->execute([$fileId]);
+    $fileTagsStr = implode(', ', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $originalName = trim($_POST['original_name'] ?? '');
     $description = trim($_POST['description'] ?? '');
@@ -82,6 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE files SET original_name = ?, description = ?, expiry_date = ? WHERE id = ? AND user_id = ?");
             $stmt->execute([$originalName, $description === '' ? null : $description, $expiryDate, $fileId, $userId]);
         }
+        if ($tagsEnabled) {
+            $tagOwner = (int) ($file['user_id'] ?? $userId);
+            if ($tagOwner > 0) {
+                datadock_sync_file_tags($pdo, $fileId, $tagOwner, (string) ($_POST['tags'] ?? ''));
+            }
+        }
         $_SESSION['flash_success'][] = "✅ File metadata updated.";
         header("Location: dashboard.php");
         exit;
@@ -106,6 +120,12 @@ require_once __DIR__ . '/includes/header.php';
                 <label for="description">Description <span class="label-optional">(optional, max 500 characters)</span></label>
                 <textarea name="description" id="description" rows="3" maxlength="500"><?= sanitize_data($file['description'] ?? '') ?></textarea>
             </div>
+            <?php if ($tagsEnabled && !empty($file['user_id'])): ?>
+            <div class="form-group">
+                <label for="tags">Tags <span class="label-optional">(optional, comma-separated)</span></label>
+                <input type="text" name="tags" id="tags" value="<?= sanitize_data($fileTagsStr) ?>" maxlength="2000" placeholder="e.g. work, reference">
+            </div>
+            <?php endif; ?>
             <div class="form-group">
                 <label for="duration">Expires</label>
                 <select name="duration" id="duration">

@@ -36,16 +36,7 @@ $permanent = isset($_GET['permanent']) && $_GET['permanent'] === '1';
 
 if ($permanent) {
     // Permanent delete: remove file from disk and DB (e.g. from trash)
-    $uploadPath = get_upload_path() . $file['filename'];
-    if (file_exists($uploadPath)) {
-        unlink($uploadPath);
-    }
-    if (!empty($file['thumbnail_path'])) {
-        $thumbPath = get_thumbnails_path() . $file['thumbnail_path'];
-        if (file_exists($thumbPath)) {
-            unlink($thumbPath);
-        }
-    }
+    datadock_release_file_storage($pdo, $file);
     if ($isAdmin) {
         $stmt = $pdo->prepare("DELETE FROM files WHERE id = ?");
         $stmt->execute([$fileId]);

@@ -15,7 +15,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $fileId = (int) $_GET['id'];
 
-$stmt = $pdo->prepare("SELECT thumbnail_path, filetype FROM files WHERE id = ? AND deleted_at IS NULL AND thumbnail_path IS NOT NULL AND thumbnail_path != ''");
+$stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND deleted_at IS NULL AND thumbnail_path IS NOT NULL AND thumbnail_path != ''");
 $stmt->execute([$fileId]);
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -24,7 +24,11 @@ if (!$row) {
     exit;
 }
 
-$path = get_thumbnails_path() . $row['thumbnail_path'];
+$path = datadock_file_thumb_path($pdo, $row);
+if ($path === null) {
+    http_response_code(404);
+    exit;
+}
 if (!file_exists($path) || !is_readable($path)) {
     http_response_code(404);
     exit;

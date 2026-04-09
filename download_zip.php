@@ -51,7 +51,7 @@ if (!$zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
 }
 
 foreach ($files as $file) {
-    $fullPath = get_upload_path() . $file['filename'];
+    $fullPath = datadock_file_main_path($pdo, $file);
     if (file_exists($fullPath)) {
         $zip->addFile($fullPath, $file['original_name'] ?: $file['filename']);
     }

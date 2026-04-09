@@ -63,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rateLimitMaxPerUser = (int) ($_POST['rate_limit_max_per_user'] ?? 60);
         $rewriteFileExtension = isset($_POST['rewrite_file_extension']);
         $uploadQuarantineEnabled = isset($_POST['upload_quarantine_enabled']);
+        $deduplicateStorage = !empty($_POST['deduplicate_storage']);
+        $foldersEnabledSetting = !empty($_POST['folders_enabled']);
+        $tagsEnabledSetting = !empty($_POST['tags_enabled']);
 
         $guestUploadsEnabled = isset($_POST['guest_uploads_enabled']);
         $guestMaxFiles = (int) ($_POST['guest_max_files'] ?? 0);
@@ -168,6 +171,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    ],\n" .
                 "    'rewrite_file_extension' => " . ($rewriteFileExtension ? 'true' : 'false') . ",\n" .
                 "    'upload_quarantine_enabled' => " . ($uploadQuarantineEnabled ? 'true' : 'false') . ",\n" .
+                "    'deduplicate_storage' => " . ($deduplicateStorage ? 'true' : 'false') . ",\n" .
+                "    'folders_enabled' => " . ($foldersEnabledSetting ? 'true' : 'false') . ",\n" .
+                "    'tags_enabled' => " . ($tagsEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'guest_uploads' => [\n" .
                 "        'enabled' => " . ($guestUploadsEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_files' => $guestMaxFiles,\n" .
@@ -213,6 +219,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if (isset($_POST['add_storage_partition'])) {
+        $pname = trim((string) ($_POST['partition_name'] ?? ''));
+        $proot = trim((string) ($_POST['partition_root'] ?? ''));
+        if ($pname === '') {
+            $_SESSION['flash_error'][] = '❌ Partition name is required.';
+        } else {
+            try {
+                $pdo->prepare('INSERT INTO storage_partitions (name, root_path, is_default, sort_order) VALUES (?, ?, 0, 0)')->execute([$pname, $proot]);
+                $_SESSION['flash_success'][] = '✅ Storage partition added. Create uploads/ and thumbnails/ under the root if needed.';
+            } catch (PDOException $e) {
+                $_SESSION['flash_error'][] = '❌ Could not add partition.';
+            }
+        }
+        header('Location: admin.php?section=storage');
+        exit;
+    }
+
+    if (isset($_POST['set_default_partition'])) {
+        $pid = (int) ($_POST['partition_id'] ?? 0);
+        if ($pid > 0) {
+            $pdo->exec('UPDATE storage_partitions SET is_default = 0');
+            $pdo->prepare('UPDATE storage_partitions SET is_default = 1 WHERE id = ?')->execute([$pid]);
+            $_SESSION['flash_success'][] = '✅ Default storage partition updated.';
+        }
+        header('Location: admin.php?section=storage');
+        exit;
+    }
+
     if (isset($_POST['purge'])) {
         // --- PURGE EXPIRED FILES ---
         $now = date('Y-m-d H:i:s');
@@ -225,20 +259,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $filetypeBreakdown = [];
 
         foreach ($expiredFiles as $file) {
-            $filePath = get_upload_path() . $file['filename'];
-            $thumbPath = get_thumbnails_path() . $file['thumbnail_path'];
+            $freedBytes += (int) ($file['filesize'] ?? 0);
+            $type = $file['filetype'] ?? 'unknown';
+            $filetypeBreakdown[$type] = ($filetypeBreakdown[$type] ?? 0) + 1;
 
-            if (file_exists($filePath) && unlink($filePath)) {
-                $freedBytes += $file['filesize'];
-                $type = $file['filetype'] ?? 'unknown';
-                $filetypeBreakdown[$type] = ($filetypeBreakdown[$type] ?? 0) + 1;
-            }
-
-            if (!empty($file['thumbnail_path']) && file_exists($thumbPath)) {
-                unlink($thumbPath);
-            }
-
-            $pdo->prepare("DELETE FROM files WHERE id = ?")->execute([$file['id']]);
+            datadock_release_file_storage($pdo, $file);
+            $pdo->prepare('DELETE FROM files WHERE id = ?')->execute([$file['id']]);
             $deletedCount++;
         }
 
@@ -279,15 +305,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deletedCount = 0;
         $freedBytes = 0;
         foreach ($trashedFiles as $file) {
-            $filePath = get_upload_path() . $file['filename'];
-            $thumbPath = !empty($file['thumbnail_path']) ? get_thumbnails_path() . $file['thumbnail_path'] : '';
-            if (file_exists($filePath) && unlink($filePath)) {
-                $freedBytes += (int) ($file['filesize'] ?? 0);
-            }
-            if ($thumbPath !== '' && file_exists($thumbPath)) {
-                unlink($thumbPath);
-            }
-            $pdo->prepare("DELETE FROM files WHERE id = ?")->execute([$file['id']]);
+            $freedBytes += (int) ($file['filesize'] ?? 0);
+            datadock_release_file_storage($pdo, $file);
+            $pdo->prepare('DELETE FROM files WHERE id = ?')->execute([$file['id']]);
             $deletedCount++;
         }
 
@@ -304,18 +324,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['confirm_reset']) && $_POST['confirm_reset'] === 'yes') {
         // --- RESET SITE ---
         try {
-            $pdo->prepare("DELETE FROM users WHERE role != 'admin'")->execute();
-            $pdo->exec("DELETE FROM files");
-            $pdo->exec("DELETE FROM login_attempts");
-            $pdo->exec("DELETE FROM upload_rate_log");
+            $pdo->prepare('DELETE FROM users WHERE role != \'admin\'')->execute();
+            $pdo->exec('DELETE FROM files');
+            $pdo->exec('DELETE FROM storage_objects');
+            $pdo->exec('DELETE FROM folders');
+            $pdo->exec('DELETE FROM tags');
+            $pdo->exec('DELETE FROM login_attempts');
+            $pdo->exec('DELETE FROM upload_rate_log');
 
-            $clearDir = function ($path) {
-                foreach (glob($path . '*') as $file) {
-                    if (is_file($file)) unlink($file);
-                }
-            };
-            $clearDir(get_upload_path());
-            $clearDir(get_thumbnails_path());
+            datadock_clear_all_partition_files_on_disk($pdo);
 
             write_default_settings_file();
             $_SESSION['flash_success'][] = "✅ Site has been reset to post-install state.";
@@ -342,6 +359,7 @@ require_once __DIR__ . '/includes/header.php';
                 <ul>
                     <li><a href="?section=overview"<?= $section === 'overview' ? ' class="active"' : '' ?>>Overview</a></li>
                     <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
+                    <li><a href="?section=storage"<?= $section === 'storage' ? ' class="active"' : '' ?>>Storage partitions</a></li>
                     <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
                     <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
                     <li><a href="?section=updater"<?= $section === 'updater' ? ' class="active"' : '' ?>>Updater & Changelog</a></li>
@@ -429,6 +447,9 @@ require_once __DIR__ . '/includes/header.php';
 
                 $storageBasePath = trim($settings['storage_base_path'] ?? '');
                 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
+                $deduplicateStorage = !empty($settings['deduplicate_storage'] ?? true);
+                $foldersEnabledSetting = !isset($settings['folders_enabled']) || !empty($settings['folders_enabled']);
+                $tagsEnabledSetting = !isset($settings['tags_enabled']) || !empty($settings['tags_enabled']);
 
                 include __DIR__ . '/admin_sections/site_settings.php';
                 break;
@@ -436,17 +457,30 @@ require_once __DIR__ . '/includes/header.php';
             case 'users':
                 // Fetch user stats
                 $stmt = $pdo->query("
-                    SELECT u.id, u.username, u.email, u.role, u.created_at, 
-                        COUNT(f.id) AS file_count, 
+                    SELECT u.id, u.username, u.email, u.role, u.created_at, u.storage_partition_id,
+                        COUNT(f.id) AS file_count,
                         COALESCE(SUM(f.filesize), 0) AS total_size
                     FROM users u
                     LEFT JOIN files f ON u.id = f.user_id AND f.deleted_at IS NULL
-                    GROUP BY u.id
+                    GROUP BY u.id, u.username, u.email, u.role, u.created_at, u.storage_partition_id
                     ORDER BY u.created_at DESC
                 ");
                 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $storagePartitionsList = $pdo->query('SELECT id, name, is_default FROM storage_partitions ORDER BY sort_order, id')->fetchAll(PDO::FETCH_ASSOC);
 
                 include __DIR__ . '/admin_sections/user_management.php';
+                break;
+
+            case 'storage':
+                $stmt = $pdo->query("
+                    SELECT sp.*,
+                        (SELECT COUNT(*) FROM files f WHERE f.storage_partition_id = sp.id AND f.deleted_at IS NULL) AS file_count,
+                        (SELECT COUNT(*) FROM users u WHERE u.storage_partition_id = sp.id) AS user_count
+                    FROM storage_partitions sp
+                    ORDER BY sp.sort_order, sp.id
+                ");
+                $storagePartitions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                include __DIR__ . '/admin_sections/storage_partitions.php';
                 break;
 
             case 'files':

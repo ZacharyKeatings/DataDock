@@ -47,6 +47,11 @@ $settings = [
 
     'storage_base_path' => '',  // Custom base for uploads/thumbnails (empty = project root)
 
+    // v2.0: deduplication and organization (see Admin → Site Settings + Storage partitions)
+    'deduplicate_storage' => true,
+    'folders_enabled' => true,
+    'tags_enabled' => true,
+
     'public_browsing_enabled' => false,  // Allow anonymous browsing of public files
 
     'guest_uploads' => [

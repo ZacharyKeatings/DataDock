@@ -229,18 +229,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             continue;
         }
 
-        // move file
-        $mimeType   = mime_content_type($tmpPath);
-        $uniqueName = $rewriteFileExtension ? uniqid('', true) : (uniqid('', true) . ".$extension");
-        $uploadDir  = get_upload_path();
-        if (!is_dir($uploadDir)) {
-            @mkdir($uploadDir, 0755, true);
-        }
-        $destPath      = $uploadDir . $uniqueName;
-        move_uploaded_file($tmpPath, $destPath);
+        $mimeType = mime_content_type($tmpPath);
+        $checksumMd5 = hash_file('md5', $tmpPath);
+        $checksumSha = hash_file('sha256', $tmpPath);
 
-        $checksumMd5   = hash_file('md5', $destPath);
-        $checksumSha   = hash_file('sha256', $destPath);
+        $partitionId = datadock_resolve_user_partition_id($pdo, $currentUserId);
+        datadock_ensure_partition_dirs($pdo, $partitionId);
+        $uploadDir = datadock_upload_dir($pdo, $partitionId);
+        $thumbDir = datadock_thumbnails_dir($pdo, $partitionId);
+
+        $folderId = null;
+        if ($currentUserId && !empty($_POST['folder_id']) && is_numeric($_POST['folder_id'])) {
+            $fid = (int) $_POST['folder_id'];
+            if ($fid > 0) {
+                $chk = $pdo->prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?');
+                $chk->execute([$fid, $currentUserId]);
+                if ($chk->fetch()) {
+                    $folderId = $fid;
+                }
+            }
+        }
+
+        $dedupEnabled = !empty($settings['deduplicate_storage'] ?? true);
+        $dupRow = ($dedupEnabled && $checksumSha !== '')
+            ? datadock_find_duplicate_object($pdo, $partitionId, $checksumSha)
+            : null;
+
+        $storageObjectId = null;
+        $uniqueName = null;
+        $destPath = null;
+
+        if ($dupRow !== null) {
+            datadock_increment_object_ref($pdo, (int) $dupRow['id']);
+            $storageObjectId = (int) $dupRow['id'];
+            $uniqueName = $dupRow['stored_filename'];
+            $destPath = $uploadDir . $uniqueName;
+        } else {
+            $uniqueName = $rewriteFileExtension ? uniqid('', true) : (uniqid('', true) . ".$extension");
+            $destPath = $uploadDir . $uniqueName;
+            if (!move_uploaded_file($tmpPath, $destPath)) {
+                $_SESSION['flash_error'][] = "❌ Failed to store {$originalName}.";
+                continue;
+            }
+            $storageObjectId = datadock_create_storage_object($pdo, $partitionId, $checksumSha, $uniqueName, $fileSize);
+        }
 
         // MIME anomaly: extension vs detected MIME mismatch (for admin review)
         $mimeAnomaly = (int) mime_extension_mismatch($extension, $mimeType);
@@ -250,49 +282,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
             $thumbBase = pathinfo($uniqueName, PATHINFO_FILENAME) ?: $uniqueName;
             $thumbnailName = 'thumb_' . $thumbBase . '.jpg';
-            $thumbDir      = get_thumbnails_path();
-            if (!is_dir($thumbDir)) {
-                @mkdir($thumbDir, 0755, true);
-            }
-            $thumbPath     = $thumbDir . $thumbnailName;
-            if ($img = @imagecreatefromstring(file_get_contents($destPath))) {
-                $thumb = imagescale($img, 100);
-                imagejpeg($thumb, $thumbPath);
-                imagedestroy($img);
-                imagedestroy($thumb);
-            } else {
-                $thumbnailName = null;
+            $thumbPath = $thumbDir . $thumbnailName;
+            if (!file_exists($thumbPath) && is_readable($destPath)) {
+                if ($img = @imagecreatefromstring(file_get_contents($destPath))) {
+                    $thumb = imagescale($img, 100);
+                    imagejpeg($thumb, $thumbPath);
+                    imagedestroy($img);
+                    imagedestroy($thumb);
+                } else {
+                    $thumbnailName = null;
+                }
             }
         }
 
         // timestamps
-        $nowUTC         = new DateTime('now', new DateTimeZone('UTC'));
-        $uploadTs       = $nowUTC->format('Y-m-d H:i:s');
-        $expiryTs       = null;
+        $nowUTC = new DateTime('now', new DateTimeZone('UTC'));
+        $uploadTs = $nowUTC->format('Y-m-d H:i:s');
+        $expiryTs = null;
         $chosenDuration = $_POST['duration'] ?? 'never';
         if ($autoDeleteDurations[$chosenDuration] !== null) {
             $expiryTs = (clone $nowUTC)
-                        ->modify($autoDeleteDurations[$chosenDuration])
-                        ->format('Y-m-d H:i:s');
+                ->modify($autoDeleteDurations[$chosenDuration])
+                ->format('Y-m-d H:i:s');
         }
 
         $isPublic = isset($_POST['is_public']) ? 1 : 0;
         $quarantineStatus = $uploadQuarantineEnabled ? 'pending' : 'approved';
 
-        // insert DB record
         $ins = $pdo->prepare("
             INSERT INTO files
-              (user_id, guest_id, is_public, filename, original_name,
+              (user_id, guest_id, storage_partition_id, folder_id, is_public, filename, storage_object_id, original_name,
                filetype, filesize, thumbnail_path,
                upload_date, expiry_date, checksum_md5, checksum_sha256,
                quarantine_status, mime_anomaly)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $ins->execute([
             $currentUserId,
             $isGuest ? $guestId : null,
+            $partitionId,
+            $folderId,
             $isPublic,
             $uniqueName,
+            $storageObjectId,
             $originalName,
             $mimeType,
             $fileSize,
@@ -353,6 +385,15 @@ require_once __DIR__ . '/includes/header.php';
       <?php endif; ?>
       <!-- application‐level max -->
       <input type="hidden" name="MAX_FILE_SIZE" value="<?= $appMaxFileSize ?>">
+      <?php
+        $uploadFolderId = '';
+        if (!empty($_SESSION['user_id']) && isset($_GET['folder']) && is_numeric($_GET['folder']) && (int) $_GET['folder'] > 0) {
+            $uploadFolderId = (string) (int) $_GET['folder'];
+        }
+      ?>
+      <?php if ($uploadFolderId !== ''): ?>
+      <input type="hidden" name="folder_id" value="<?= sanitize_data($uploadFolderId) ?>">
+      <?php endif; ?>
 
       <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="Drop zone for file uploads">
         <span class="drop-zone-icon"><?= icon_svg('folder') ?></span>
