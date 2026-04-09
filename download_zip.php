@@ -4,6 +4,8 @@ init_session();
 require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/hotlink_log.php';
 
 $ids = [];
 if (isset($_GET['ids'])) {
@@ -58,6 +60,7 @@ foreach ($files as $file) {
 }
 $zip->close();
 
+datadock_log_hotlink_if_external($pdo, $settings, 'download_zip');
 $zipName = 'datadock_files_' . date('Y-m-d_His') . '.zip';
 header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="' . $zipName . '"');

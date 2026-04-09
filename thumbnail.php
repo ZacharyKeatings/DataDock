@@ -7,6 +7,8 @@ require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/hotlink_log.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     http_response_code(400);
@@ -34,6 +36,7 @@ if (!file_exists($path) || !is_readable($path)) {
     exit;
 }
 
+datadock_log_hotlink_if_external($pdo, $settings, 'thumbnail', $fileId);
 header('Content-Type: image/jpeg');
 header('Content-Length: ' . filesize($path));
 header('Cache-Control: public, max-age=86400');

@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.0.1] - 2026-04-08
+### Hotlink awareness
+
+#### New Features
+- **Hotlink log** — Optional logging when downloads, ZIP downloads, thumbnails, or avatars are requested with a `Referer` from another hostname (Admin → **Hotlink log**). Same-site and empty referers are skipped. Site Settings: **Hotlink monitoring** (enable/disable, extra trusted hostnames for CDNs). Table `hotlink_log`; migrations and reset site clear it.
+
+---
+
 ## [v2.0.0] - 2026-04-08
 ### Organization & Storage Efficiency
 

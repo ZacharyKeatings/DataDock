@@ -54,6 +54,10 @@ $settings = [
 
     'public_browsing_enabled' => false,  // Allow anonymous browsing of public files
 
+    // Log requests with Referer from another host (Admin → Hotlink log)
+    'hotlink_logging_enabled' => true,
+    'hotlink_trusted_hosts' => '',         // Extra trusted hostnames (comma/space); HTTP_HOST always trusted
+
     'guest_uploads' => [
         'enabled' => false,
         'max_files' => 0,

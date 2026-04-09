@@ -315,7 +315,9 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'trash_retention_days' => 30,\n" .
         "    'deduplicate_storage' => true,\n" .
         "    'folders_enabled' => true,\n" .
-        "    'tags_enabled' => true\n" .
+        "    'tags_enabled' => true,\n" .
+        "    'hotlink_logging_enabled' => true,\n" .
+        "    'hotlink_trusted_hosts' => ''\n" .
         "];\n?>";
 
     file_put_contents(__DIR__ . '/../config/settings.php', $settings);

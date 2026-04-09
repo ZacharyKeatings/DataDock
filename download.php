@@ -4,6 +4,7 @@ init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/hotlink_log.php';
 
 /**
  * Send Content-Disposition header: attachment for risky types (prevent inline execution), attachment for others.
@@ -28,6 +29,7 @@ if (isset($_GET['token']) && !empty($_GET['token'])) {
         $pdo->prepare("DELETE FROM download_tokens WHERE token = ?")->execute([$token]);
         $path = datadock_file_main_path($pdo, $file);
         if (file_exists($path)) {
+            datadock_log_hotlink_if_external($pdo, $settings, 'onetime_download', (int) $file['id']);
             $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$file['id']]);
             header('Content-Description: File Transfer');
             header('Content-Type: ' . ($file['filetype'] ?? 'application/octet-stream'));
@@ -55,6 +57,7 @@ if (empty($userId) && isset($_GET['id']) && is_numeric($_GET['id']) && $publicBr
     if ($file) {
         $path = datadock_file_main_path($pdo, $file);
         if (file_exists($path)) {
+            datadock_log_hotlink_if_external($pdo, $settings, 'public_download', $fileId);
             $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$fileId]);
             header('Content-Description: File Transfer');
             header('Content-Type: ' . ($file['filetype'] ?? 'application/octet-stream'));
@@ -105,6 +108,7 @@ if (!file_exists($path)) {
     exit;
 }
 
+datadock_log_hotlink_if_external($pdo, $settings, 'download', $fileId);
 $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$fileId]);
 
 header('Content-Description: File Transfer');

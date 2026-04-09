@@ -298,4 +298,24 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    // v2.0.1: off-site referer logging (hotlink / embedding awareness)
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS hotlink_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                resource VARCHAR(32) NOT NULL,
+                file_id INT NULL,
+                target_user_id INT NULL,
+                referer VARCHAR(2048) NOT NULL DEFAULT '',
+                referer_host VARCHAR(255) NOT NULL DEFAULT '',
+                ip_address VARCHAR(45) NOT NULL DEFAULT '',
+                user_agent VARCHAR(512) NOT NULL DEFAULT '',
+                INDEX idx_hotlink_created (created_at),
+                INDEX idx_hotlink_file (file_id),
+                INDEX idx_hotlink_refhost (referer_host)
+            )
+        ");
+    } catch (PDOException $e) {}
 }

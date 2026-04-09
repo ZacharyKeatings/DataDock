@@ -7,6 +7,8 @@ require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/hotlink_log.php';
 
 $userId = null;
 if (isset($_GET['username']) && trim($_GET['username']) !== '') {
@@ -54,6 +56,7 @@ if (!file_exists($path) || !is_readable($path)) {
 $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 $mimes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
 $mime = $mimes[$ext] ?? 'application/octet-stream';
+datadock_log_hotlink_if_external($pdo, $settings, 'avatar', null, (int) $userId);
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . filesize($path));
 header('Cache-Control: public, max-age=86400');

@@ -286,6 +286,24 @@
         </div>
 
         <div class="settings-card">
+            <h4 class="settings-card-title">Hotlink monitoring</h4>
+            <div class="settings-card-body">
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="hotlink_logging_enabled" <?= $hotlinkLoggingEnabled ? 'checked' : '' ?>>
+                        Log off-site referers (downloads, thumbnails, avatars)
+                    </label>
+                </div>
+                <p class="settings-hint">When enabled, requests that include a <code>Referer</code> from another hostname are stored in <a href="admin.php?section=hotlinks">Admin → Hotlink log</a>. Empty or same-site referers are ignored.</p>
+                <div class="settings-row">
+                    <label for="hotlink_trusted_hosts">Extra trusted hostnames</label>
+                    <input type="text" name="hotlink_trusted_hosts" id="hotlink_trusted_hosts" value="<?= sanitize_data($hotlinkTrustedHosts) ?>" placeholder="e.g. cdn.example.com, app.example.com">
+                </div>
+                <p class="settings-hint">Comma- or space-separated. The current site host is always trusted. Use this if assets are legitimately loaded from a CDN or second domain.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
             <h4 class="settings-card-title">Upload & Session</h4>
             <div class="settings-card-body">
                 <div class="settings-row">

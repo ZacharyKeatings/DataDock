@@ -66,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deduplicateStorage = !empty($_POST['deduplicate_storage']);
         $foldersEnabledSetting = !empty($_POST['folders_enabled']);
         $tagsEnabledSetting = !empty($_POST['tags_enabled']);
+        $hotlinkLoggingEnabled = isset($_POST['hotlink_logging_enabled']);
+        $hotlinkTrustedHosts = trim((string) ($_POST['hotlink_trusted_hosts'] ?? ''));
 
         $guestUploadsEnabled = isset($_POST['guest_uploads_enabled']);
         $guestMaxFiles = (int) ($_POST['guest_max_files'] ?? 0);
@@ -174,6 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'deduplicate_storage' => " . ($deduplicateStorage ? 'true' : 'false') . ",\n" .
                 "    'folders_enabled' => " . ($foldersEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'tags_enabled' => " . ($tagsEnabledSetting ? 'true' : 'false') . ",\n" .
+                "    'hotlink_logging_enabled' => " . ($hotlinkLoggingEnabled ? 'true' : 'false') . ",\n" .
+                "    'hotlink_trusted_hosts' => " . var_export($hotlinkTrustedHosts, true) . ",\n" .
                 "    'guest_uploads' => [\n" .
                 "        'enabled' => " . ($guestUploadsEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_files' => $guestMaxFiles,\n" .
@@ -331,6 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->exec('DELETE FROM tags');
             $pdo->exec('DELETE FROM login_attempts');
             $pdo->exec('DELETE FROM upload_rate_log');
+            $pdo->exec('DELETE FROM hotlink_log');
 
             datadock_clear_all_partition_files_on_disk($pdo);
 
@@ -341,6 +346,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         header("Location: admin.php?section=reset");
+        exit;
+    }
+
+    if (isset($_POST['hotlink_purge_all'])) {
+        try {
+            $pdo->exec('DELETE FROM hotlink_log');
+            $_SESSION['flash_success'][] = '✅ Hotlink log cleared.';
+        } catch (PDOException $e) {
+            $_SESSION['flash_error'][] = '❌ Could not clear hotlink log.';
+        }
+        header('Location: admin.php?section=hotlinks');
+        exit;
+    }
+
+    if (isset($_POST['hotlink_purge_old'])) {
+        $days = (int) ($_POST['purge_days'] ?? 90);
+        if ($days < 1) {
+            $days = 1;
+        }
+        if ($days > 3650) {
+            $days = 3650;
+        }
+        try {
+            $stmt = $pdo->prepare('DELETE FROM hotlink_log WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)');
+            $stmt->execute([$days]);
+            $removed = $stmt->rowCount();
+            $_SESSION['flash_success'][] = "✅ Removed {$removed} hotlink log entr" . ($removed === 1 ? 'y' : 'ies') . " older than {$days} day(s).";
+        } catch (PDOException $e) {
+            $_SESSION['flash_error'][] = '❌ Could not purge hotlink log.';
+        }
+        header('Location: admin.php?section=hotlinks');
         exit;
     }
 }
@@ -362,6 +398,7 @@ require_once __DIR__ . '/includes/header.php';
                     <li><a href="?section=storage"<?= $section === 'storage' ? ' class="active"' : '' ?>>Storage partitions</a></li>
                     <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
                     <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
+                    <li><a href="?section=hotlinks"<?= $section === 'hotlinks' ? ' class="active"' : '' ?>>Hotlink log</a></li>
                     <li><a href="?section=updater"<?= $section === 'updater' ? ' class="active"' : '' ?>>Updater & Changelog</a></li>
                     <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
                 </ul>
@@ -450,6 +487,8 @@ require_once __DIR__ . '/includes/header.php';
                 $deduplicateStorage = !empty($settings['deduplicate_storage'] ?? true);
                 $foldersEnabledSetting = !isset($settings['folders_enabled']) || !empty($settings['folders_enabled']);
                 $tagsEnabledSetting = !isset($settings['tags_enabled']) || !empty($settings['tags_enabled']);
+                $hotlinkLoggingEnabled = !isset($settings['hotlink_logging_enabled']) || !empty($settings['hotlink_logging_enabled']);
+                $hotlinkTrustedHosts = trim($settings['hotlink_trusted_hosts'] ?? '');
 
                 include __DIR__ . '/admin_sections/site_settings.php';
                 break;
@@ -481,6 +520,27 @@ require_once __DIR__ . '/includes/header.php';
                 ");
                 $storagePartitions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 include __DIR__ . '/admin_sections/storage_partitions.php';
+                break;
+
+            case 'hotlinks':
+                $perPage = 50;
+                $page = isset($_GET['p']) && is_numeric($_GET['p']) ? max(1, (int) $_GET['p']) : 1;
+                $offset = ($page - 1) * $perPage;
+                $hotlinkTotal = 0;
+                $hotlinkRows = [];
+                $hotlinkError = null;
+                try {
+                    $hotlinkTotal = (int) $pdo->query('SELECT COUNT(*) FROM hotlink_log')->fetchColumn();
+                    $lim = (int) $perPage;
+                    $off = (int) $offset;
+                    $hotlinkRows = $pdo->query(
+                        "SELECT * FROM hotlink_log ORDER BY id DESC LIMIT {$lim} OFFSET {$off}"
+                    )->fetchAll(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    $hotlinkError = $e->getMessage();
+                }
+                $hotlinkTotalPages = $hotlinkTotal > 0 ? (int) ceil($hotlinkTotal / $perPage) : 1;
+                include __DIR__ . '/admin_sections/hotlinks.php';
                 break;
 
             case 'files':
