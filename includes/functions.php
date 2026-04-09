@@ -405,6 +405,8 @@ function mime_extension_mismatch(string $extension, string $detectedMime): bool 
             'tif' => ['image/tiff'],
             'ico' => ['image/x-icon', 'image/vnd.microsoft.icon'],
             'svg' => ['image/svg+xml'],
+            'heic' => ['image/heic'],
+            'avif' => ['image/avif'],
             'pdf' => ['application/pdf'],
             'zip' => ['application/zip', 'application/x-zip-compressed'],
             'rar' => ['application/vnd.rar', 'application/x-rar-compressed'],
@@ -448,6 +450,140 @@ function mime_extension_mismatch(string $extension, string $detectedMime): bool 
         return false;
     }
     return !in_array($detectedMime, $map[$extension], true);
+}
+
+/**
+ * Executable / server-side extensions that must not appear as any dot segment in the basename
+ * (blocks evil.php.jpg, shell.php.png, etc.).
+ *
+ * @return string[]
+ */
+function get_forbidden_upload_extensions(): array {
+    static $list = null;
+    if ($list !== null) {
+        return $list;
+    }
+    $list = [
+        'php', 'php3', 'php4', 'php5', 'php7', 'php8',
+        'phtml', 'phar', 'phps', 'pht', 'pgif',
+        'exe', 'sh', 'bat', 'cmd', 'com', 'scr',
+        'js', 'mjs', 'cjs', 'pl', 'py', 'pyc', 'pyo', 'cgi',
+        'asp', 'aspx', 'ashx', 'cer', 'jsp', 'jspf', 'jspx',
+        'vbs', 'vbe', 'wsf', 'dll', 'msi', 'hta', 'htc',
+    ];
+    return $list;
+}
+
+/**
+ * True if any segment of the filename (split on ".") is a forbidden extension.
+ */
+function upload_basename_has_dangerous_extension_segment(string $filename): bool {
+    $base = basename(str_replace('\\', '/', $filename));
+    $base = rtrim($base, '.');
+    if ($base === '' || strpos($base, '.') === false) {
+        return false;
+    }
+    $parts = explode('.', strtolower($base));
+    $forbidden = array_flip(get_forbidden_upload_extensions());
+    foreach ($parts as $part) {
+        if ($part === '') {
+            continue;
+        }
+        if (isset($forbidden[$part])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * For common image extensions, require MIME and magic bytes to match the extension.
+ * Rejects polyglots such as a GIF body saved as .jpg (mime_content_type is usually still correct).
+ *
+ * @return bool True if OK to accept, false if upload should be rejected
+ */
+function upload_strict_image_format_ok(string $tmpPath, string $extensionLower, string $mimeType): bool {
+    $mimeType = strtolower(trim($mimeType));
+    $head = @file_get_contents($tmpPath, false, null, 0, 32);
+    if ($head === false || $head === '') {
+        return false;
+    }
+    switch ($extensionLower) {
+        case 'jpg':
+        case 'jpeg':
+            if (!in_array($mimeType, ['image/jpeg'], true)) {
+                return false;
+            }
+            return strlen($head) >= 3 && $head[0] === "\xFF" && $head[1] === "\xD8" && $head[2] === "\xFF";
+        case 'png':
+            if (!in_array($mimeType, ['image/png'], true)) {
+                return false;
+            }
+            return strncmp($head, "\x89PNG\r\n\x1a\n", 8) === 0;
+        case 'gif':
+            if (!in_array($mimeType, ['image/gif'], true)) {
+                return false;
+            }
+            return strncmp($head, 'GIF87a', 6) === 0 || strncmp($head, 'GIF89a', 6) === 0;
+        case 'webp':
+            if (!in_array($mimeType, ['image/webp'], true)) {
+                return false;
+            }
+            return strlen($head) >= 12 && substr($head, 0, 4) === 'RIFF' && substr($head, 8, 4) === 'WEBP';
+        case 'bmp':
+            if (!in_array($mimeType, ['image/bmp', 'image/x-ms-bmp'], true)) {
+                return false;
+            }
+            return strlen($head) >= 2 && strncmp($head, 'BM', 2) === 0;
+        case 'tif':
+        case 'tiff':
+            if (!in_array($mimeType, ['image/tiff'], true)) {
+                return false;
+            }
+            return strlen($head) >= 4 && (strncmp($head, "II*\x00", 4) === 0 || strncmp($head, "MM\x00*", 4) === 0);
+        case 'ico':
+            if (!in_array($mimeType, ['image/x-icon', 'image/vnd.microsoft.icon'], true)) {
+                return false;
+            }
+            return strlen($head) >= 4
+                && (strncmp($head, "\0\0\1\0", 4) === 0 || strncmp($head, "\0\0\2\0", 4) === 0);
+        case 'svg':
+            return in_array($mimeType, ['image/svg+xml'], true);
+        case 'heic':
+            return in_array($mimeType, ['image/heic'], true);
+        case 'avif':
+            return in_array($mimeType, ['image/avif'], true);
+        default:
+            return true;
+    }
+}
+
+/**
+ * True if a binary image appears to embed PHP / short-open tags (GIF/JPEG/WEBP polyglot webshells).
+ * Skips SVG (XML) and non-image MIME types.
+ */
+function upload_image_body_has_embedded_script_markers(string $tmpPath, string $mimeType, string $extensionLower): bool {
+    $mimeType = strtolower(trim($mimeType));
+    $isSvg = strpos($mimeType, 'svg') !== false || strtolower($extensionLower) === 'svg';
+    if (!str_starts_with($mimeType, 'image/') && !$isSvg) {
+        return false;
+    }
+    $size = @filesize($tmpPath);
+    if ($size === false || $size < 1) {
+        return false;
+    }
+    $max = $isSvg ? (int) min(1048576, $size) : (int) min(524288, $size);
+    $chunk = @file_get_contents($tmpPath, false, null, 0, $max);
+    if ($chunk === false) {
+        return true;
+    }
+    if (stripos($chunk, '<?php') !== false || stripos($chunk, '<?=') !== false) {
+        return true;
+    }
+    if (preg_match('/<\?(?!xml[\s=])/i', $chunk)) {
+        return true;
+    }
+    return false;
 }
 
 function get_friendly_filetype($mime) {

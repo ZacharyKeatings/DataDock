@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Delete user** (admin) releases on-disk storage for that user’s files before removing the account.
 - Dashboard folder create and file move use **same-page POST** (`includes/dashboard_actions.php`) so subdirectories and servers with odd `SCRIPT_NAME` / rewrites do not 404 on separate endpoints.
 
+### Security
+- **Upload hardening** — Rejects filenames where **any** dotted segment is an executable/server extension (e.g. `evil.php.jpg`). For common image extensions, requires **MIME + magic bytes** to match the extension, and scans image/SVG bodies (first 512KB–1MB) for embedded **`<?php` / `<?=` / short open tags** (blocks GIF/JPEG polyglot webshells). Expanded forbidden extension list (e.g. `phps`, `pht`, `ashx`, `jspf`). Client-side upload UI mirrors segment checks.
+
 ---
 
 ## [v1.9.0] - 2026-02-23

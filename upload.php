@@ -33,11 +33,7 @@ if ($isGuest) {
 // page settings
 $pageTitle            = "Upload File";
 $appMaxFileSize       = return_bytes($settings['max_file_size'] ?? '0');
-$forbiddenExtensions  = [
-    'php','php3','php4','php5','phtml','phar',
-    'exe','sh','bat','cmd','js','pl','py','cgi',
-    'asp','aspx','jsp','vbs','wsf','dll'
-];
+$forbiddenExtensions = get_forbidden_upload_extensions();
 $autoDeleteDurations  = [
     '1_minute'   => '+1 minute',
     '30_minutes' => '+30 minutes',
@@ -217,9 +213,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             continue;
         }
 
-        // forbidden extension?
+        // forbidden final extension?
         if (in_array($extension, $forbiddenExtensions, true)) {
             $_SESSION['flash_error'][] = "❌ {$originalName} has a forbidden file type.";
+            continue;
+        }
+
+        // any dot segment (blocks evil.php.jpg, shell.asp.png, …)
+        if (upload_basename_has_dangerous_extension_segment($originalName)) {
+            $_SESSION['flash_error'][] = "❌ {$originalName}: disallowed extension in the filename (including hidden segments before the last dot).";
             continue;
         }
 
@@ -230,6 +232,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $mimeType = mime_content_type($tmpPath);
+
+        if (!upload_strict_image_format_ok($tmpPath, $extension, $mimeType)) {
+            $_SESSION['flash_error'][] = "❌ {$originalName}: file content does not match the image type implied by the extension.";
+            continue;
+        }
+
+        if (upload_image_body_has_embedded_script_markers($tmpPath, $mimeType, $extension)) {
+            $_SESSION['flash_error'][] = "❌ {$originalName}: blocked (executable/script content inside a binary image).";
+            continue;
+        }
+
         $checksumMd5 = hash_file('md5', $tmpPath);
         $checksumSha = hash_file('sha256', $tmpPath);
 
@@ -420,7 +433,7 @@ require_once __DIR__ . '/includes/header.php';
               </div>
             <?php endforeach; ?>
           </div>
-          <p class="upload-accepted-types-note"><strong>Not allowed:</strong> <?= implode(', ', $forbiddenExtensions) ?></p>
+          <p class="upload-accepted-types-note"><strong>Not allowed:</strong> <?= implode(', ', $forbiddenExtensions) ?> — including as any dotted segment in the name (e.g. <code>.php.jpg</code> is rejected).</p>
         </div>
       </details>
 
@@ -509,6 +522,13 @@ require_once __DIR__ . '/includes/header.php';
       return filename.split('.').pop().toLowerCase();
     }
 
+    function basenameHasDangerousSegment(filename) {
+      const base = filename.replace(/^.*[/\\]/, '').replace(/\.+$/g, '');
+      if (!base.includes('.')) return false;
+      const parts = base.split('.').map(s => s.toLowerCase());
+      return parts.some(p => p !== '' && forbiddenExts.includes(p));
+    }
+
     function showUploadResult(errors, success) {
       const resultDiv = document.getElementById("uploadResult");
       resultDiv.innerHTML = "";
@@ -536,6 +556,7 @@ require_once __DIR__ . '/includes/header.php';
       for (const file of fileInput.files) {
         if (
           forbiddenExts.includes(getExtension(file.name)) ||
+          basenameHasDangerousSegment(file.name) ||
           (maxSize > 0 && file.size > maxSize)
         ) {
           continue;
@@ -560,6 +581,15 @@ require_once __DIR__ . '/includes/header.php';
 
     uploadForm.addEventListener("submit", function(event) {
       event.preventDefault();
+      const bad = Array.from(fileInput.files).filter(f =>
+        forbiddenExts.includes(getExtension(f.name)) ||
+        basenameHasDangerousSegment(f.name) ||
+        (maxSize > 0 && f.size > maxSize)
+      );
+      if (bad.length) {
+        showUploadResult(["❌ Remove blocked or oversize files before uploading: " + bad.map(f => f.name).join(", ")], []);
+        return;
+      }
       uploadButton.disabled    = true;
       uploadButton.textContent = "Uploading…";
       progressContainer.style.display = "block";
