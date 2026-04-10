@@ -419,6 +419,7 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
                         <summary class="btn btn-small">Actions <span class="dropdown-arrow" aria-hidden="true">▾</span></summary>
                         <div class="dropdown-menu">
                             <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
+                            <a href="report_file.php?id=<?= (int) $file['id'] ?>&amp;return_to=dashboard.php" class="dropdown-item">Report</a>
                         </div>
                     </details>
                 </div>

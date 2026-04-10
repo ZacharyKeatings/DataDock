@@ -346,6 +346,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->exec('DELETE FROM activity_log');
             } catch (PDOException $e) {
             }
+            try {
+                $pdo->exec('DELETE FROM file_reports');
+            } catch (PDOException $e) {
+            }
 
             datadock_clear_all_partition_files_on_disk($pdo);
 
@@ -407,6 +411,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_error'][] = '❌ Could not purge activity log.';
         }
         header('Location: admin.php?section=audit');
+        exit;
+    }
+
+    if (isset($_POST['moderation_report_action'])) {
+        $reportId = (int) ($_POST['report_id'] ?? 0);
+        $action = trim((string) ($_POST['moderation_report_action'] ?? ''));
+        $reviewNote = trim((string) ($_POST['review_note'] ?? ''));
+        if (strlen($reviewNote) > 1000) {
+            $reviewNote = substr($reviewNote, 0, 1000);
+        }
+        $adminUid = (int) ($_SESSION['user_id'] ?? 0);
+
+        if ($reportId <= 0 || !in_array($action, ['dismiss', 'quarantine', 'delete'], true)) {
+            $_SESSION['flash_error'][] = '❌ Invalid moderation action.';
+            header('Location: admin.php?section=reports');
+            exit;
+        }
+
+        $st = $pdo->prepare("
+            SELECT r.*, f.deleted_at, f.quarantine_status, f.original_name, f.filename
+            FROM file_reports r
+            LEFT JOIN files f ON r.file_id = f.id
+            WHERE r.id = ?
+            LIMIT 1
+        ");
+        $st->execute([$reportId]);
+        $report = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$report) {
+            $_SESSION['flash_error'][] = '❌ Report not found.';
+            header('Location: admin.php?section=reports');
+            exit;
+        }
+        if (($report['status'] ?? 'open') !== 'open') {
+            $_SESSION['flash_warning'][] = '⚠️ This report is already closed.';
+            header('Location: admin.php?section=reports');
+            exit;
+        }
+
+        $fileId = (int) ($report['file_id'] ?? 0);
+        $fileName = (string) ($report['original_name'] ?? $report['filename'] ?? ('#' . $fileId));
+        $actionTaken = null;
+
+        if ($action === 'dismiss') {
+            $actionTaken = 'dismissed';
+            $up = $pdo->prepare("
+                UPDATE file_reports
+                SET status = 'dismissed',
+                    reviewed_by_user_id = ?,
+                    reviewed_at = UTC_TIMESTAMP(),
+                    action_taken = ?,
+                    review_note = ?
+                WHERE id = ? AND status = 'open'
+            ");
+            $up->execute([$adminUid > 0 ? $adminUid : null, $actionTaken, $reviewNote !== '' ? $reviewNote : null, $reportId]);
+            datadock_log_activity($pdo, 'admin_report_dismiss', [
+                'actor_user_id' => $adminUid > 0 ? $adminUid : null,
+                'file_id' => $fileId > 0 ? $fileId : null,
+                'related_user_id' => (int) ($report['reporter_user_id'] ?? 0),
+                'detail' => ['report_id' => $reportId, 'name' => $fileName],
+            ]);
+            $_SESSION['flash_success'][] = '✅ Report dismissed.';
+            header('Location: admin.php?section=reports');
+            exit;
+        }
+
+        if ($action === 'quarantine' && $fileId > 0) {
+            $pdo->prepare("UPDATE files SET quarantine_status = 'pending' WHERE id = ? AND deleted_at IS NULL")->execute([$fileId]);
+            $actionTaken = 'quarantine';
+        } elseif ($action === 'delete' && $fileId > 0) {
+            $pdo->prepare('UPDATE files SET deleted_at = UTC_TIMESTAMP() WHERE id = ? AND deleted_at IS NULL')->execute([$fileId]);
+            $actionTaken = 'delete_to_trash';
+        }
+
+        $up = $pdo->prepare("
+            UPDATE file_reports
+            SET status = 'actioned',
+                reviewed_by_user_id = ?,
+                reviewed_at = UTC_TIMESTAMP(),
+                action_taken = ?,
+                review_note = ?
+            WHERE id = ? AND status = 'open'
+        ");
+        $up->execute([$adminUid > 0 ? $adminUid : null, $actionTaken, $reviewNote !== '' ? $reviewNote : null, $reportId]);
+        datadock_log_activity($pdo, 'admin_report_action', [
+            'actor_user_id' => $adminUid > 0 ? $adminUid : null,
+            'file_id' => $fileId > 0 ? $fileId : null,
+            'related_user_id' => (int) ($report['reporter_user_id'] ?? 0),
+            'detail' => ['report_id' => $reportId, 'action' => $actionTaken, 'name' => $fileName],
+        ]);
+        $_SESSION['flash_success'][] = '✅ Report action applied.';
+        header('Location: admin.php?section=reports');
         exit;
     }
 
@@ -474,6 +569,7 @@ require_once __DIR__ . '/includes/header.php';
                     <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
                     <li><a href="?section=hotlinks"<?= $section === 'hotlinks' ? ' class="active"' : '' ?>>Hotlink log</a></li>
                     <li><a href="?section=audit"<?= $section === 'audit' ? ' class="active"' : '' ?>>Activity log</a></li>
+                    <li><a href="?section=reports"<?= $section === 'reports' ? ' class="active"' : '' ?>>Reports &amp; moderation</a></li>
                     <li><a href="?section=ops"<?= $section === 'ops' ? ' class="active"' : '' ?>>Backup &amp; integrity</a></li>
                     <li><a href="?section=updater"<?= $section === 'updater' ? ' class="active"' : '' ?>>Updater & Changelog</a></li>
                     <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
@@ -626,6 +722,45 @@ require_once __DIR__ . '/includes/header.php';
                 }
                 $activityTotalPages = $activityTotal > 0 ? (int) ceil($activityTotal / $perPage) : 1;
                 include __DIR__ . '/admin_sections/activity_log.php';
+                break;
+
+            case 'reports':
+                $perPage = 50;
+                $page = isset($_GET['p']) && is_numeric($_GET['p']) ? max(1, (int) $_GET['p']) : 1;
+                $offset = ($page - 1) * $perPage;
+                $reportStatus = isset($_GET['status']) && in_array($_GET['status'], ['open', 'dismissed', 'actioned'], true) ? $_GET['status'] : 'open';
+                $reportsTotal = 0;
+                $reportsRows = [];
+                $reportsError = null;
+                try {
+                    $stTotal = $pdo->prepare('SELECT COUNT(*) FROM file_reports WHERE status = ?');
+                    $stTotal->execute([$reportStatus]);
+                    $reportsTotal = (int) $stTotal->fetchColumn();
+                    $lim = (int) $perPage;
+                    $off = (int) $offset;
+                    $stRows = $pdo->prepare(
+                        "SELECT r.*,
+                                ru.username AS reporter_username,
+                                au.username AS reviewer_username,
+                                f.original_name,
+                                f.filename,
+                                f.deleted_at,
+                                f.quarantine_status
+                         FROM file_reports r
+                         LEFT JOIN users ru ON r.reporter_user_id = ru.id
+                         LEFT JOIN users au ON r.reviewed_by_user_id = au.id
+                         LEFT JOIN files f ON r.file_id = f.id
+                         WHERE r.status = ?
+                         ORDER BY r.id DESC
+                         LIMIT {$lim} OFFSET {$off}"
+                    );
+                    $stRows->execute([$reportStatus]);
+                    $reportsRows = $stRows->fetchAll(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    $reportsError = $e->getMessage();
+                }
+                $reportsTotalPages = $reportsTotal > 0 ? (int) ceil($reportsTotal / $perPage) : 1;
+                include __DIR__ . '/admin_sections/reports.php';
                 break;
 
             case 'ops':

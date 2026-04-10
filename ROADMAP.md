@@ -16,6 +16,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [Security Settings](#-security-settings)
 - [Versioning & Updates](#-versioning--updates)
 - [Reporting & Abuse](#-reporting--abuse)
+- [Shipped in v2.0.0 through v2.1.0](#shipped-in-v200-through-v210)
 - [Access Control (Stronger, Still Simple)](#-access-control-stronger-still-simple)
 - [Operational Robustness](#-operational-robustness)
 - [Security Hardening (Minimal)](#-security-hardening-minimal)
@@ -75,8 +76,10 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | File search and filter | Search by filename, date, type; filter by visibility, expiry. |
 | ✓ | File metadata editing | Rename, change expiry, add description without re-upload. |
 | ✓ | Soft delete / trash | Deleted files in trash, restorable for a period. |
-| — | Folders or tags | Organize files (folders or flat tags). |
-| — | Duplicate detection | Deduplicate by file hash to save storage. |
+| ✓ | Folders | Nested folders per user; breadcrumb, create, move; uploads can target a folder (`upload.php?folder=`). |
+| ✓ | Tags | Comma-separated tags on edit file; optional tag filter on dashboard; can disable in settings. |
+| ✓ | SHA-256 deduplication | Optional per storage partition (`storage_objects`); identical content shares one blob; refs decremented on delete/purge. |
+| ✓ | Partition-aware storage paths | `includes/storage.php` resolves paths for downloads, thumbnails, ZIP, one-time links, uploads, delete/purge across partitions. |
 
 ---
 
@@ -97,9 +100,11 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Debug mode toggle | Control PHP error display (disable in production). |
 | ✓ | Log file path and verbosity setting | File-based logging with level. |
 | ✓ | Site stats overview | Uploads, storage, user count, file types, expiring soon. |
-| — | Activity / audit log | Who uploaded, downloaded, shared, or deleted what and when. |
-| — | Storage / quota alerts | Notify admin when storage or quotas approach limits. |
-| — | Backup / export | Export database and optionally file metadata for disaster recovery. |
+| ✓ | Activity / audit log | `activity_log` + Admin → Activity log; actor, file, detail JSON, IP; optional purge of entries older than *N* days. |
+| ✓ | Storage / quota alerts | Site Settings → Operational alerts; warnings on partition disk usage and user/guest quota approach; shown on Admin → Overview. |
+| ✓ | Backup / export | Admin → Backup & integrity: full SQL dump or JSON `files` metadata (`backup_download.php`). |
+| ✓ | Hotlink log | Optional referer logging for downloads, ZIP, thumbnails, avatars from other hostnames; Admin → Hotlink log; Site Settings → Hotlink monitoring. |
+| ✓ | Storage partitions | Admin UI: multiple roots, default partition, per-user assignment; usage listing. |
 
 ---
 
@@ -159,7 +164,38 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Users can report files | Report files for malicious or inappropriate content. |
+| ✓ | Users can report files | Report files for malicious or inappropriate content. |
+| ✓ | Admin handling of reports | Review, dismiss, and take moderation action. |
+
+---
+
+## Shipped in v2.0.0 through v2.1.0
+
+Snapshot of features delivered in **v2.0.0**, **v2.0.1**, and **v2.1.0** (see [CHANGELOG.md](CHANGELOG.md) for full notes).
+
+### v2.0.0 — Organization & storage efficiency
+
+- **Folders** — Nested folders per user; breadcrumb, create, move; filter scope; `upload.php?folder=`.
+- **Tags** — On edit file; dashboard tag filter; settings can disable folders and/or tags independently.
+- **Storage partitions** — Multiple storage roots; admin default partition and user assignment; same `uploads/` / `thumbnails/` layout per root.
+- **SHA-256 deduplication** — Optional; `storage_objects` + reference counts; site setting **Deduplicate by SHA-256**.
+- **Centralized paths** — `includes/storage.php` for partition-aware resolution across core flows.
+- **Improved** — Migrations for new tables/columns; reset clears partitions’ data; delete user releases on-disk storage for that user’s files; folder create / file move via same-page POST (`includes/dashboard_actions.php`).
+- **Security** — Stronger upload validation (filename segments, MIME + magic bytes, polyglot detection, expanded blocklist, client parity).
+
+### v2.0.1 — Hotlink awareness
+
+- **Hotlink log** — Optional logging when downloads, ZIP, thumbnails, or avatars are requested with an external-site `Referer`; Admin → **Hotlink log**; Site Settings for enable/disable and trusted hosts; reset clears log.
+
+### v2.1.0 — Admin observability & operational robustness
+
+- **Activity / audit log** — `activity_log`, broad event coverage; Admin → **Activity log**; purge old entries by age.
+- **Storage & quota alerts** — `ops_alerts` in settings; warnings on Admin **Overview** for partition disk usage and approaching quotas.
+- **Backup / export** — SQL dump or JSON files metadata from **Backup & integrity**.
+- **Cron purge** — `scripts/datadock-cron-purge.php` aligned with admin purge helpers.
+- **Disk integrity scan** — Uploads vs DB per partition.
+- **Checksum verify & re-hash** — Optional limits; activity logging for re-hash runs.
+- **Improved** — Reset clears `activity_log`; default settings include `ops_alerts`.
 
 ---
 
@@ -182,10 +218,10 @@ Admin and ops tools without introducing daemons or heavy infrastructure.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Background purge via cron | CLI script runnable via cron; no daemon or worker. |
-| — | Disk usage integrity checker | Admin tool: scan uploads dir vs DB; find orphaned or missing files. |
-| — | File integrity verification | Admin re-hash and verify checksums (e.g. after storage issues). |
-| — | Storage partition support | Multiple storage roots; assign users/roles to specific paths (no cloud layer). |
+| ✓ | Background purge via cron | `scripts/datadock-cron-purge.php`; purges expired files and trash past retention; flags `--no-trash` / `--no-expired`; shared logic with Admin purge (`includes/purge_ops.php`). |
+| ✓ | Disk usage integrity checker | Admin → Backup & integrity: scan uploads vs database per partition (DB rows missing on disk; on-disk blobs not in DB). |
+| ✓ | File integrity verification | Verify MD5/SHA256 vs bytes on disk (optional row limit); re-hash from disk to update DB (optional limit). |
+| ✓ | Storage partition support | Multiple roots (`storage_partitions`); user assignment; default partition; empty root inherits custom storage base path. |
 
 ---
 
@@ -199,6 +235,7 @@ Additional hardening with minimal complexity.
 | ✓ | Optional file extension rewriting | Store files without original extension; restore on download. |
 | ✓ | Upload quarantine mode | New uploads invisible until admin approval (for public instances). |
 | ✓ | Automatic MIME anomaly detection | Flag when extension and MIME type disagree for admin review. |
+| ✓ | Upload hardening (v2.0.0) | Reject dangerous filename segments; MIME + magic-byte checks for images; scan image/SVG bodies for embedded PHP; expanded forbidden extensions; upload UI mirrors checks. |
 
 ---
 

@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.2.0] - 2026-04-10
+### Reporting & moderation
+
+#### New Features
+- **User file reporting** — New `report_file.php` flow for logged-in users to report accessible non-owned files (shared or public) with reason + optional details. Reports are persisted in new table `file_reports` (`open`, `dismissed`, `actioned`) and duplicate open reports by the same user for the same file are prevented.
+- **Admin moderation queue** — New **Admin → Reports & moderation** section with status filters, pagination, reporter/file context, and review notes. Open reports can be **dismissed**, **quarantined**, or **deleted to trash**.
+- **Moderation actions logged** — Activity log now records `report_file`, `admin_report_dismiss`, and `admin_report_action` events for auditability.
+
+#### Improved
+- Public file list (`index.php`) and dashboard shared file actions now include **Report** entry points for signed-in users.
+- Site reset now clears `file_reports`.
+
+---
+
 ## [v2.1.0] - 2026-04-09
 ### Admin observability & operational robustness
 

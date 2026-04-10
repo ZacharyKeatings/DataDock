@@ -76,7 +76,12 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <?php endif; ?>
                     </div>
                     <?php if ($publicBrowsingEnabled): ?>
-                    <div><a href="download.php?id=<?= (int)$file['id'] ?>" class="btn btn-small">Download</a></div>
+                    <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+                        <a href="download.php?id=<?= (int) $file['id'] ?>" class="btn btn-small">Download</a>
+                        <?php if (!empty($userId) && (int) ($file['user_id'] ?? 0) !== (int) $userId): ?>
+                            <a href="report_file.php?id=<?= (int) $file['id'] ?>&amp;return_to=index.php" class="btn btn-small">Report</a>
+                        <?php endif; ?>
+                    </div>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>

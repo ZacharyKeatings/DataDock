@@ -339,4 +339,31 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    // v2.2.0: file_reports for user reporting and moderation
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS file_reports (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                file_id INT NOT NULL,
+                reporter_user_id INT NOT NULL,
+                reason VARCHAR(32) NOT NULL,
+                details VARCHAR(1000) DEFAULT NULL,
+                status ENUM('open','dismissed','actioned') NOT NULL DEFAULT 'open',
+                reviewed_by_user_id INT DEFAULT NULL,
+                reviewed_at DATETIME DEFAULT NULL,
+                action_taken VARCHAR(64) DEFAULT NULL,
+                review_note VARCHAR(1000) DEFAULT NULL,
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+                FOREIGN KEY (reporter_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+                INDEX idx_reports_created (created_at),
+                INDEX idx_reports_file (file_id),
+                INDEX idx_reports_reporter (reporter_user_id),
+                INDEX idx_reports_status (status)
+            )
+        ");
+    } catch (PDOException $e) {}
 }
