@@ -122,6 +122,15 @@ a:hover {
     color: #dfe6e9;
 }
 
+.release-notes pre,
+.release-notes code {
+    background: rgba(0, 0, 0, 0.28);
+}
+
+.release-notes pre code {
+    background: none;
+}
+
 .file-row,
 .file-row-dashboard,
 .file-row-user-management,

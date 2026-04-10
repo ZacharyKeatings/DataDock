@@ -820,7 +820,7 @@ function render_file_icon($icon, $class = 'file-icon') {
  * Converts a subset of Markdown syntax to basic HTML for safe rendering.
  *
  * Supported Markdown features:
- * - Headings:     # H1, ## H2, ### H3
+ * - Headings:     # H1, ## H2, ### H3, #### H4
  * - Bold:         **text**
  * - Italic:       *text*
  * - Inline code:  `code`
@@ -863,7 +863,8 @@ function basic_markdown($text) {
     // Horizontal rules
     $text = preg_replace('/^\s*(---|\*\*\*|___)\s*$/m', '<hr>', $text);
 
-    // Headings (###, ##, #)
+    // Headings (####, ###, ##, #) — longest prefix first
+    $text = preg_replace('/^#### (.*?)$/m', '<h4>$1</h4>', $text);
     $text = preg_replace('/^### (.*?)$/m', '<h3>$1</h3>', $text);
     $text = preg_replace('/^## (.*?)$/m', '<h2>$1</h2>', $text);
     $text = preg_replace('/^# (.*?)$/m', '<h1>$1</h1>', $text);
@@ -883,7 +884,7 @@ function basic_markdown($text) {
     // Paragraphs (convert remaining lines into <p>)
     $lines = preg_split('/\n{2,}/', $text);
     foreach ($lines as &$line) {
-        if (!preg_match('/^<(h[1-3]|ul|ol|li|pre|p|blockquote)/', $line)) {
+        if (!preg_match('/^<(h[1-4]|ul|ol|li|pre|p|blockquote)/', $line)) {
             $line = '<p>' . nl2br(trim($line)) . '</p>';
         }
     }
