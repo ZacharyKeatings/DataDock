@@ -317,7 +317,13 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'folders_enabled' => true,\n" .
         "    'tags_enabled' => true,\n" .
         "    'hotlink_logging_enabled' => true,\n" .
-        "    'hotlink_trusted_hosts' => ''\n" .
+        "    'hotlink_trusted_hosts' => '',\n" .
+        "    'ops_alerts' => [\n" .
+        "        'storage_partition_percent_enabled' => false,\n" .
+        "        'storage_partition_percent_threshold' => 85,\n" .
+        "        'user_quota_percent_enabled' => false,\n" .
+        "        'user_quota_percent_threshold' => 90\n" .
+        "    ]\n" .
         "];\n?>";
 
     file_put_contents(__DIR__ . '/../config/settings.php', $settings);

@@ -318,4 +318,25 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    // v2.1.0: activity_log for admin audit trail
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                action VARCHAR(64) NOT NULL,
+                actor_user_id INT DEFAULT NULL,
+                actor_guest_id VARCHAR(64) DEFAULT NULL,
+                file_id INT DEFAULT NULL,
+                related_user_id INT DEFAULT NULL,
+                detail_json TEXT DEFAULT NULL,
+                ip_address VARCHAR(45) DEFAULT NULL,
+                INDEX idx_activity_created (created_at),
+                INDEX idx_activity_action (action),
+                INDEX idx_activity_actor (actor_user_id),
+                INDEX idx_activity_file (file_id)
+            )
+        ");
+    } catch (PDOException $e) {}
 }

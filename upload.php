@@ -4,6 +4,7 @@ init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/rate_limit.php';
+require_once __DIR__ . '/includes/audit_log.php';
 require_once __DIR__ . '/config/settings.php';
 
 // feature flags & limits
@@ -348,6 +349,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $checksumSha,
             $quarantineStatus,
             $mimeAnomaly,
+        ]);
+        $newFileId = (int) $pdo->lastInsertId();
+        datadock_log_activity($pdo, 'upload', [
+            'actor_user_id' => $currentUserId,
+            'actor_guest_id' => $isGuest ? ($guestId ?? null) : null,
+            'file_id' => $newFileId,
+            'detail' => [
+                'name' => $originalName,
+                'size' => $fileSize,
+                'public' => (bool) $isPublic,
+            ],
         ]);
     }
 

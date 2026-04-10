@@ -5,6 +5,7 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/audit_log.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     $_SESSION['flash_error'][] = "❌ Invalid request.";
@@ -26,6 +27,12 @@ if (!$file) {
 }
 
 $pdo->prepare("UPDATE files SET deleted_at = NULL WHERE id = ? AND user_id = ?")->execute([$fileId, $userId]);
+
+datadock_log_activity($pdo, 'restore', [
+    'actor_user_id' => $userId,
+    'file_id' => $fileId,
+    'detail' => ['name' => $file['original_name'] ?? ''],
+]);
 
 $_SESSION['flash_success'][] = [
     'html' => true,

@@ -5,6 +5,8 @@ require_admin();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/audit_log.php';
+require_once __DIR__ . '/includes/purge_ops.php';
 
 $pageTitle = "Admin Panel";
 
@@ -68,6 +70,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tagsEnabledSetting = !empty($_POST['tags_enabled']);
         $hotlinkLoggingEnabled = isset($_POST['hotlink_logging_enabled']);
         $hotlinkTrustedHosts = trim((string) ($_POST['hotlink_trusted_hosts'] ?? ''));
+
+        $opsStoragePartitionPercentEnabled = isset($_POST['ops_storage_partition_percent_enabled']);
+        $opsStoragePartitionPercentThreshold = (int) ($_POST['ops_storage_partition_percent_threshold'] ?? 85);
+        if ($opsStoragePartitionPercentThreshold < 1) {
+            $opsStoragePartitionPercentThreshold = 1;
+        }
+        if ($opsStoragePartitionPercentThreshold > 100) {
+            $opsStoragePartitionPercentThreshold = 100;
+        }
+        $opsUserQuotaPercentEnabled = isset($_POST['ops_user_quota_percent_enabled']);
+        $opsUserQuotaPercentThreshold = (int) ($_POST['ops_user_quota_percent_threshold'] ?? 90);
+        if ($opsUserQuotaPercentThreshold < 1) {
+            $opsUserQuotaPercentThreshold = 1;
+        }
+        if ($opsUserQuotaPercentThreshold > 100) {
+            $opsUserQuotaPercentThreshold = 100;
+        }
 
         $guestUploadsEnabled = isset($_POST['guest_uploads_enabled']);
         $guestMaxFiles = (int) ($_POST['guest_max_files'] ?? 0);
@@ -178,6 +197,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'tags_enabled' => " . ($tagsEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'hotlink_logging_enabled' => " . ($hotlinkLoggingEnabled ? 'true' : 'false') . ",\n" .
                 "    'hotlink_trusted_hosts' => " . var_export($hotlinkTrustedHosts, true) . ",\n" .
+                "    'ops_alerts' => [\n" .
+                "        'storage_partition_percent_enabled' => " . ($opsStoragePartitionPercentEnabled ? 'true' : 'false') . ",\n" .
+                "        'storage_partition_percent_threshold' => $opsStoragePartitionPercentThreshold,\n" .
+                "        'user_quota_percent_enabled' => " . ($opsUserQuotaPercentEnabled ? 'true' : 'false') . ",\n" .
+                "        'user_quota_percent_threshold' => $opsUserQuotaPercentThreshold\n" .
+                "    ],\n" .
                 "    'guest_uploads' => [\n" .
                 "        'enabled' => " . ($guestUploadsEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_files' => $guestMaxFiles,\n" .
@@ -252,25 +277,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['purge'])) {
-        // --- PURGE EXPIRED FILES ---
-        $now = date('Y-m-d H:i:s');
-        $stmt = $pdo->prepare("SELECT * FROM files WHERE deleted_at IS NULL AND expiry_date IS NOT NULL AND expiry_date < ?");
-        $stmt->execute([$now]);
-        $expiredFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $deletedCount = 0;
-        $freedBytes = 0;
-        $filetypeBreakdown = [];
-
-        foreach ($expiredFiles as $file) {
-            $freedBytes += (int) ($file['filesize'] ?? 0);
-            $type = $file['filetype'] ?? 'unknown';
-            $filetypeBreakdown[$type] = ($filetypeBreakdown[$type] ?? 0) + 1;
-
-            datadock_release_file_storage($pdo, $file);
-            $pdo->prepare('DELETE FROM files WHERE id = ?')->execute([$file['id']]);
-            $deletedCount++;
-        }
+        $result = datadock_purge_expired_files($pdo);
+        $deletedCount = $result['deleted'];
+        $freedBytes = $result['freed_bytes'];
+        $filetypeBreakdown = $result['filetype_breakdown'];
+        $adminUid = (int) ($_SESSION['user_id'] ?? 0);
+        datadock_log_activity($pdo, 'admin_purge_expired', [
+            'actor_user_id' => $adminUid > 0 ? $adminUid : null,
+            'detail' => ['deleted' => $deletedCount, 'freed_bytes' => $freedBytes],
+        ]);
 
         if ($deletedCount > 0) {
             $_SESSION['flash_success'][] = "✅ Purged $deletedCount expired file(s).";
@@ -291,29 +306,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['purge_trash'])) {
-        // --- PURGE TRASH (files past retention or all if retention 0) ---
         if (file_exists($settingsFile)) {
             require $settingsFile;
         }
         $settings = $settings ?? [];
         $retentionDays = (int) ($settings['trash_retention_days'] ?? 30);
 
-        if ($retentionDays > 0) {
-            $stmt = $pdo->prepare("SELECT * FROM files WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)");
-            $stmt->execute([$retentionDays]);
-        } else {
-            $stmt = $pdo->query("SELECT * FROM files WHERE deleted_at IS NOT NULL");
-        }
-        $trashedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $deletedCount = 0;
-        $freedBytes = 0;
-        foreach ($trashedFiles as $file) {
-            $freedBytes += (int) ($file['filesize'] ?? 0);
-            datadock_release_file_storage($pdo, $file);
-            $pdo->prepare('DELETE FROM files WHERE id = ?')->execute([$file['id']]);
-            $deletedCount++;
-        }
+        $result = datadock_purge_trash_by_retention($pdo, $retentionDays);
+        $deletedCount = $result['deleted'];
+        $freedBytes = $result['freed_bytes'];
+        $adminUid = (int) ($_SESSION['user_id'] ?? 0);
+        datadock_log_activity($pdo, 'admin_purge_trash', [
+            'actor_user_id' => $adminUid > 0 ? $adminUid : null,
+            'detail' => ['deleted' => $deletedCount, 'freed_bytes' => $freedBytes, 'retention_days' => $retentionDays],
+        ]);
 
         if ($deletedCount > 0) {
             $_SESSION['flash_success'][] = "✅ Purged $deletedCount file(s) from trash.";
@@ -336,6 +342,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->exec('DELETE FROM login_attempts');
             $pdo->exec('DELETE FROM upload_rate_log');
             $pdo->exec('DELETE FROM hotlink_log');
+            try {
+                $pdo->exec('DELETE FROM activity_log');
+            } catch (PDOException $e) {
+            }
 
             datadock_clear_all_partition_files_on_disk($pdo);
 
@@ -379,6 +389,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: admin.php?section=hotlinks');
         exit;
     }
+
+    if (isset($_POST['activity_log_purge_days'])) {
+        $days = (int) ($_POST['activity_log_purge_days'] ?? 90);
+        if ($days < 1) {
+            $days = 1;
+        }
+        if ($days > 3650) {
+            $days = 3650;
+        }
+        try {
+            $stmt = $pdo->prepare('DELETE FROM activity_log WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)');
+            $stmt->execute([$days]);
+            $removed = $stmt->rowCount();
+            $_SESSION['flash_success'][] = "✅ Removed {$removed} activity log entr" . ($removed === 1 ? 'y' : 'ies') . " older than {$days} day(s).";
+        } catch (PDOException $e) {
+            $_SESSION['flash_error'][] = '❌ Could not purge activity log.';
+        }
+        header('Location: admin.php?section=audit');
+        exit;
+    }
+
+    if (isset($_POST['ops_run_disk_scan'])) {
+        require_once __DIR__ . '/includes/integrity.php';
+        $_SESSION['ops_disk_scan_result'] = datadock_scan_uploads_vs_database($pdo);
+        header('Location: admin.php?section=ops');
+        exit;
+    }
+
+    if (isset($_POST['ops_verify_checksums'])) {
+        require_once __DIR__ . '/includes/integrity.php';
+        $limit = (int) ($_POST['verify_limit'] ?? 0);
+        if ($limit < 0) {
+            $limit = 0;
+        }
+        if ($limit > 50000) {
+            $limit = 50000;
+        }
+        $_SESSION['ops_verify_result'] = datadock_verify_file_checksums($pdo, $limit);
+        header('Location: admin.php?section=ops');
+        exit;
+    }
+
+    if (isset($_POST['ops_rehash_from_disk'])) {
+        require_once __DIR__ . '/includes/integrity.php';
+        $limit = (int) ($_POST['rehash_limit'] ?? 0);
+        if ($limit < 0) {
+            $limit = 0;
+        }
+        if ($limit > 50000) {
+            $limit = 50000;
+        }
+        $_SESSION['ops_rehash_result'] = $rr = datadock_rehash_files_from_disk($pdo, $limit);
+        $adminUid = (int) ($_SESSION['user_id'] ?? 0);
+        datadock_log_activity($pdo, 'admin_rehash_checksums', [
+            'actor_user_id' => $adminUid > 0 ? $adminUid : null,
+            'detail' => [
+                'updated' => $rr['updated'] ?? 0,
+                'skipped' => $rr['skipped'] ?? 0,
+                'error_count' => count($rr['errors'] ?? []),
+            ],
+        ]);
+        header('Location: admin.php?section=ops');
+        exit;
+    }
 }
 clearstatcache(true, $settingsFile);
 require $settingsFile;
@@ -399,6 +473,8 @@ require_once __DIR__ . '/includes/header.php';
                     <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
                     <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
                     <li><a href="?section=hotlinks"<?= $section === 'hotlinks' ? ' class="active"' : '' ?>>Hotlink log</a></li>
+                    <li><a href="?section=audit"<?= $section === 'audit' ? ' class="active"' : '' ?>>Activity log</a></li>
+                    <li><a href="?section=ops"<?= $section === 'ops' ? ' class="active"' : '' ?>>Backup &amp; integrity</a></li>
                     <li><a href="?section=updater"<?= $section === 'updater' ? ' class="active"' : '' ?>>Updater & Changelog</a></li>
                     <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
                 </ul>
@@ -490,6 +566,12 @@ require_once __DIR__ . '/includes/header.php';
                 $hotlinkLoggingEnabled = !isset($settings['hotlink_logging_enabled']) || !empty($settings['hotlink_logging_enabled']);
                 $hotlinkTrustedHosts = trim($settings['hotlink_trusted_hosts'] ?? '');
 
+                $opsAl = $settings['ops_alerts'] ?? [];
+                $opsStoragePartitionPercentEnabled = !empty($opsAl['storage_partition_percent_enabled']);
+                $opsStoragePartitionPercentThreshold = (int) ($opsAl['storage_partition_percent_threshold'] ?? 85);
+                $opsUserQuotaPercentEnabled = !empty($opsAl['user_quota_percent_enabled']);
+                $opsUserQuotaPercentThreshold = (int) ($opsAl['user_quota_percent_threshold'] ?? 90);
+
                 include __DIR__ . '/admin_sections/site_settings.php';
                 break;
 
@@ -520,6 +602,34 @@ require_once __DIR__ . '/includes/header.php';
                 ");
                 $storagePartitions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 include __DIR__ . '/admin_sections/storage_partitions.php';
+                break;
+
+            case 'audit':
+                $perPage = 50;
+                $page = isset($_GET['p']) && is_numeric($_GET['p']) ? max(1, (int) $_GET['p']) : 1;
+                $offset = ($page - 1) * $perPage;
+                $activityTotal = 0;
+                $activityRows = [];
+                $activityError = null;
+                try {
+                    $activityTotal = (int) $pdo->query('SELECT COUNT(*) FROM activity_log')->fetchColumn();
+                    $lim = (int) $perPage;
+                    $off = (int) $offset;
+                    $activityRows = $pdo->query(
+                        "SELECT a.*, u.username AS actor_username
+                        FROM activity_log a
+                        LEFT JOIN users u ON a.actor_user_id = u.id
+                        ORDER BY a.id DESC LIMIT {$lim} OFFSET {$off}"
+                    )->fetchAll(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    $activityError = $e->getMessage();
+                }
+                $activityTotalPages = $activityTotal > 0 ? (int) ceil($activityTotal / $perPage) : 1;
+                include __DIR__ . '/admin_sections/activity_log.php';
+                break;
+
+            case 'ops':
+                include __DIR__ . '/admin_sections/ops_tools.php';
                 break;
 
             case 'hotlinks':

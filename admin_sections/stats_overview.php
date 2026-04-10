@@ -1,5 +1,8 @@
 <?php
 // Site stats overview
+require_once __DIR__ . '/../includes/ops_alerts.php';
+$opsAlerts = datadock_collect_ops_alerts($pdo, $settings);
+
 $stmt = $pdo->query("SELECT COUNT(*) FROM files WHERE deleted_at IS NULL");
 $totalUploads = (int) $stmt->fetchColumn();
 
@@ -62,6 +65,12 @@ $expiringSoon = (int) $stmt->fetchColumn();
         <a href="?section=files">View files</a>
     </div>
     <?php endif; ?>
+
+    <?php foreach ($opsAlerts as $oa): ?>
+    <div class="stats-alert" style="<?= ($oa['severity'] ?? '') === 'danger' ? 'border-color:#c0392b;' : '' ?>">
+        <?= icon_svg('warning') ?> <?= sanitize_data($oa['message'] ?? '') ?>
+    </div>
+    <?php endforeach; ?>
 
     <?php if (!empty($fileTypeBreakdown)): ?>
     <h4 class="stat-subtitle">File Types (Top 10)</h4>

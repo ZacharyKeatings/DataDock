@@ -5,6 +5,7 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/audit_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['ids']) || !is_array($_POST['ids'])) {
     $_SESSION['flash_error'][] = "❌ No files selected.";
@@ -41,6 +42,11 @@ foreach ($files as $file) {
     }
     $deleted++;
 }
+
+datadock_log_activity($pdo, 'bulk_delete_trash', [
+    'actor_user_id' => $userId,
+    'detail' => ['count' => $deleted, 'ids' => array_column($files, 'id'), 'admin' => $isAdmin],
+]);
 
 $_SESSION['flash_success'][] = "✅ $deleted file(s) moved to trash.";
 header("Location: dashboard.php");

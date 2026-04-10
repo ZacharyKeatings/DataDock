@@ -5,6 +5,7 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php'; // Needed for sanitize_data()
+require_once __DIR__ . '/includes/audit_log.php';
 
 // Validate file ID parameter
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -44,6 +45,11 @@ if ($permanent) {
         $stmt = $pdo->prepare("DELETE FROM files WHERE id = ? AND user_id = ?");
         $stmt->execute([$fileId, $userId]);
     }
+    datadock_log_activity($pdo, 'delete_permanent', [
+        'actor_user_id' => $userId,
+        'file_id' => $fileId,
+        'detail' => ['name' => $file['original_name'] ?? '', 'admin' => $isAdmin],
+    ]);
     $_SESSION['flash_success'][] = [
         'html' => true,
         'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> permanently deleted."
@@ -58,6 +64,11 @@ if ($permanent) {
         $stmt = $pdo->prepare("UPDATE files SET deleted_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ?");
         $stmt->execute([$fileId, $userId]);
     }
+    datadock_log_activity($pdo, 'delete_trash', [
+        'actor_user_id' => $userId,
+        'file_id' => $fileId,
+        'detail' => ['name' => $file['original_name'] ?? '', 'admin' => $isAdmin],
+    ]);
     $_SESSION['flash_success'][] = [
         'html' => true,
         'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> moved to trash."

@@ -286,6 +286,34 @@
         </div>
 
         <div class="settings-card">
+            <h4 class="settings-card-title">Operational alerts</h4>
+            <div class="settings-card-body">
+                <p class="settings-hint">Show warnings on the admin overview when disk usage or per-user quotas approach limits.</p>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="ops_storage_partition_percent_enabled" <?= !empty($opsStoragePartitionPercentEnabled) ? 'checked' : '' ?>>
+                        Alert when a storage partition’s disk is nearly full
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <label for="ops_storage_partition_percent_threshold">Disk usage threshold (%)</label>
+                    <input type="number" name="ops_storage_partition_percent_threshold" id="ops_storage_partition_percent_threshold" value="<?= (int) $opsStoragePartitionPercentThreshold ?>" min="1" max="100" style="width:5rem;">
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="ops_user_quota_percent_enabled" <?= !empty($opsUserQuotaPercentEnabled) ? 'checked' : '' ?>>
+                        Alert when a user (or guest) nears file count or storage quota
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <label for="ops_user_quota_percent_threshold">Quota usage threshold (%)</label>
+                    <input type="number" name="ops_user_quota_percent_threshold" id="ops_user_quota_percent_threshold" value="<?= (int) $opsUserQuotaPercentThreshold ?>" min="1" max="100" style="width:5rem;">
+                </div>
+                <p class="settings-hint">Requires per-user limits or guest limits to be enabled for quota alerts. Partition alerts use free space on the filesystem that contains each partition root.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
             <h4 class="settings-card-title">Hotlink monitoring</h4>
             <div class="settings-card-body">
                 <div class="settings-row settings-row-checkbox">

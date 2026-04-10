@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
 require_once __DIR__ . '/includes/hotlink_log.php';
+require_once __DIR__ . '/includes/audit_log.php';
 
 /**
  * Send Content-Disposition header: attachment for risky types (prevent inline execution), attachment for others.
@@ -30,6 +31,10 @@ if (isset($_GET['token']) && !empty($_GET['token'])) {
         $path = datadock_file_main_path($pdo, $file);
         if (file_exists($path)) {
             datadock_log_hotlink_if_external($pdo, $settings, 'onetime_download', (int) $file['id']);
+            datadock_log_activity($pdo, 'download_onetime', [
+                'file_id' => (int) $file['id'],
+                'detail' => ['name' => $file['original_name'] ?? $file['filename']],
+            ]);
             $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$file['id']]);
             header('Content-Description: File Transfer');
             header('Content-Type: ' . ($file['filetype'] ?? 'application/octet-stream'));
@@ -58,6 +63,10 @@ if (empty($userId) && isset($_GET['id']) && is_numeric($_GET['id']) && $publicBr
         $path = datadock_file_main_path($pdo, $file);
         if (file_exists($path)) {
             datadock_log_hotlink_if_external($pdo, $settings, 'public_download', $fileId);
+            datadock_log_activity($pdo, 'download_public', [
+                'file_id' => $fileId,
+                'detail' => ['name' => $file['original_name'] ?? $file['filename']],
+            ]);
             $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$fileId]);
             header('Content-Description: File Transfer');
             header('Content-Type: ' . ($file['filetype'] ?? 'application/octet-stream'));
@@ -109,6 +118,11 @@ if (!file_exists($path)) {
 }
 
 datadock_log_hotlink_if_external($pdo, $settings, 'download', $fileId);
+datadock_log_activity($pdo, 'download', [
+    'actor_user_id' => $userId,
+    'file_id' => $fileId,
+    'detail' => ['name' => $file['original_name'] ?? $file['filename']],
+]);
 $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$fileId]);
 
 header('Content-Description: File Transfer');

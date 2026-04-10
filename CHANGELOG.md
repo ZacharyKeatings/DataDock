@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.1.0] - 2026-04-09
+### Admin observability & operational robustness
+
+#### New Features
+- **Activity / audit log** — New `activity_log` table and `includes/audit_log.php`. Records uploads, downloads (including public and one-time links), ZIP downloads, one-time link creation, share add/remove, trash/permanent delete, bulk delete to trash, restore, admin purge actions, checksum re-hash runs, and quarantine approval. **Admin → Activity log** lists recent events with actor, file, detail JSON, and IP; optional purge of entries older than *N* days.
+- **Storage & quota alerts** — Site Settings → **Operational alerts**: enable warnings when a storage partition’s filesystem is above a usage threshold, or when users or guest sessions approach file-count or storage quotas. Shown on **Admin → Overview** alongside existing notices.
+- **Backup / export** — **Admin → Backup & integrity**: `backup_download.php` (admin-only) streams a full **SQL dump** (all tables, `FOREIGN_KEY_CHECKS` disabled for restore) or a **JSON export** of `files` metadata for DR planning.
+- **Background purge via cron** — `scripts/datadock-cron-purge.php` purges expired files and trash past retention (same logic as Admin → File Management). Optional flags `--no-trash` and `--no-expired`. Admin UI purge uses shared helpers in `includes/purge_ops.php`.
+- **Disk usage integrity checker** — **Backup & integrity** → scan uploads vs database: lists DB files missing on disk and on-disk blobs not referenced by the DB (per storage partition).
+- **File integrity verification** — Verify stored MD5/SHA256 against bytes on disk (optional row limit). **Re-hash from disk** recomputes checksums and updates the database (optional limit); intended after storage repair or corruption checks.
+
+#### Improved
+- **Reset site** clears `activity_log` when present.
+- Default `settings.php` template includes `ops_alerts` (new installs and `write_default_settings_file()`).
+
+---
+
 ## [v2.0.1] - 2026-04-08
 ### Hotlink awareness
 

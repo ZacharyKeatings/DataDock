@@ -4,6 +4,7 @@ init_session();
 require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/audit_log.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     $_SESSION['flash_error'][] = "❌ Invalid file.";
@@ -44,6 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
                     $ins = $pdo->prepare("INSERT INTO file_shares (file_id, shared_with_user_id, shared_by_user_id) VALUES (?, ?, ?)");
                     $ins->execute([$fileId, $targetUser['id'], $userId]);
+                    datadock_log_activity($pdo, 'share_add', [
+                        'actor_user_id' => $userId,
+                        'file_id' => $fileId,
+                        'related_user_id' => (int) $targetUser['id'],
+                        'detail' => ['with_username' => $username, 'filename' => $file['original_name'] ?? ''],
+                    ]);
                     $_SESSION['flash_success'][] = "✅ File shared with " . sanitize_data($username) . ".";
                 } catch (PDOException $e) {
                     if ($e->getCode() == 23000) { // duplicate
@@ -59,6 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("DELETE FROM file_shares WHERE file_id = ? AND shared_with_user_id = ? AND shared_by_user_id = ?");
         $stmt->execute([$fileId, $removeUserId, $userId]);
         if ($stmt->rowCount() > 0) {
+            datadock_log_activity($pdo, 'share_remove', [
+                'actor_user_id' => $userId,
+                'file_id' => $fileId,
+                'related_user_id' => $removeUserId,
+                'detail' => ['filename' => $file['original_name'] ?? ''],
+            ]);
             $_SESSION['flash_success'][] = "✅ Share removed.";
         }
     }

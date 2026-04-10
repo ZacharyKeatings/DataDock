@@ -4,6 +4,7 @@ init_session();
 require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/audit_log.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     $_SESSION['flash_error'][] = "❌ Invalid file.";
@@ -40,6 +41,12 @@ if (!file_exists($path)) {
 $token = bin2hex(random_bytes(32));
 $stmt = $pdo->prepare("INSERT INTO download_tokens (file_id, token) VALUES (?, ?)");
 $stmt->execute([$fileId, $token]);
+
+datadock_log_activity($pdo, 'onetime_link_created', [
+    'actor_user_id' => $userId,
+    'file_id' => $fileId,
+    'detail' => ['name' => $file['original_name'] ?? $file['filename']],
+]);
 
 $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
 $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
