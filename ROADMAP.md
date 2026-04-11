@@ -17,6 +17,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [Versioning & Updates](#-versioning--updates)
 - [Reporting & Abuse](#-reporting--abuse)
 - [Shipped in v2.0.0 through v2.1.0](#shipped-in-v200-through-v210)
+- [Shipped in v2.3.0](#shipped-in-v230)
 - [Access Control (Stronger, Still Simple)](#-access-control-stronger-still-simple)
 - [Operational Robustness](#-operational-robustness)
 - [Security Hardening (Minimal)](#-security-hardening-minimal)
@@ -199,16 +200,23 @@ Snapshot of features delivered in **v2.0.0**, **v2.0.1**, and **v2.1.0** (see [C
 
 ---
 
+## Shipped in v2.3.0
+
+- **Access control** — Per-file download password and IP allowlist; token links with max downloads + expiry; HMAC-signed temporary URLs; `thumbnail.php` aligned with anonymous access rules.
+- **User trust** — Activity page with storage chart and download event log; JSON data export for the signed-in user.
+
+---
+
 ## 🔐 Access Control (Stronger, Still Simple)
 
-Planned improvements that keep access control simple while adding stronger options.
+Improvements that keep access control simple while adding stronger options (v2.3.0).
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Per-file access passwords | Optional password gate before download; no full encryption. |
-| — | IP-restricted downloads | Restrict file access to specific IPs or ranges (e.g. internal use). |
-| — | Download expiration by count + time | Expire after N downloads and/or after a time window; extends one-time links. |
-| — | Signed URLs | Time-limited HMAC-signed URLs for public temp links; reduces DB lookup overhead. |
+| ✓ | Per-file access passwords | Optional password gate before download; no full encryption. **Edit file** + session unlock on `download.php` / thumbnails. |
+| ✓ | IP-restricted downloads | Restrict anonymous downloads to listed IPs/CIDR (JSON on `files.ip_allowlist`). Owners and logged-in shared access bypass. |
+| ✓ | Download expiration by count + time | `download_tokens`: `max_uses`, `use_count`, `expires_at`. **Share link (token)** flow (`create_onetime.php`). |
+| ✓ | Signed URLs | Time-limited HMAC (`download.php?id=&exp=&sig=`), secret in `app_secrets`. **Signed link** (`create_signed.php`). |
 
 ---
 
@@ -241,13 +249,13 @@ Additional hardening with minimal complexity.
 
 ## 👤 User Trust & Transparency
 
-Lightweight transparency and control for users.
+Lightweight transparency and control for users (v2.3.0).
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | User activity page | User sees own uploads, when/how often downloaded, approximate country. |
-| — | Storage usage graph | Simple usage-over-time per user. |
-| — | Data export | Export own file metadata, account info, and activity history (privacy-conscious). |
+| ✓ | User activity page | **Activity** nav: uploads list, `file_download_events` tail, IP / optional country (e.g. `CF-IPCountry`). |
+| ✓ | Storage usage graph | `user_storage_snapshots` (hourly cap), line chart on Activity page. |
+| ✓ | Data export | **`export_data.php`**: JSON with account, files metadata, own activity log rows, download events for owned files. |
 
 ---
 

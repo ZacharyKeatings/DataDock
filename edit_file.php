@@ -5,6 +5,7 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/access_control.php';
 require_once __DIR__ . '/config/settings.php';
 
 $autoDeleteDurations = [
@@ -45,6 +46,13 @@ if (!$file) {
 }
 
 $tagsEnabled = !isset($settings['tags_enabled']) || !empty($settings['tags_enabled']);
+$ipAllowDisplay = '';
+if (!empty($file['ip_allowlist'])) {
+    $decoded = json_decode((string) $file['ip_allowlist'], true);
+    if (is_array($decoded)) {
+        $ipAllowDisplay = implode("\n", $decoded);
+    }
+}
 $fileTagsStr = '';
 if ($tagsEnabled) {
     $stmt = $pdo->prepare('SELECT t.name FROM tags t INNER JOIN file_tags ft ON ft.tag_id = t.id WHERE ft.file_id = ? ORDER BY t.name');
@@ -82,13 +90,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $expiryDate = (clone $nowUTC)->modify($autoDeleteDurations[$duration])->format('Y-m-d H:i:s');
     }
 
+    $clearAccessPw = !empty($_POST['clear_access_password']);
+    $newAccessPw = (string) ($_POST['access_password_new'] ?? '');
+    $ipAllowText = (string) ($_POST['ip_allowlist'] ?? '');
+    $accessPasswordHash = $file['access_password_hash'] ?? null;
+    if ($clearAccessPw) {
+        $accessPasswordHash = null;
+    } elseif ($newAccessPw !== '') {
+        if (strlen($newAccessPw) < 4) {
+            $_SESSION['flash_error'][] = '❌ Download password must be at least 4 characters (or leave blank to keep unchanged).';
+        } else {
+            $accessPasswordHash = password_hash($newAccessPw, PASSWORD_DEFAULT);
+        }
+    }
+    $ipAllowJson = datadock_parse_ip_allowlist_text($ipAllowText);
+    if (strlen($ipAllowJson) > 8000) {
+        $_SESSION['flash_error'][] = '❌ IP allow list is too long.';
+    }
+
     if (empty($_SESSION['flash_error'])) {
         if ($isAdmin) {
-            $stmt = $pdo->prepare("UPDATE files SET original_name = ?, description = ?, expiry_date = ? WHERE id = ?");
-            $stmt->execute([$originalName, $description === '' ? null : $description, $expiryDate, $fileId]);
+            $stmt = $pdo->prepare("UPDATE files SET original_name = ?, description = ?, expiry_date = ?, access_password_hash = ?, ip_allowlist = ? WHERE id = ?");
+            $stmt->execute([$originalName, $description === '' ? null : $description, $expiryDate, $accessPasswordHash, $ipAllowJson === '[]' ? null : $ipAllowJson, $fileId]);
         } else {
-            $stmt = $pdo->prepare("UPDATE files SET original_name = ?, description = ?, expiry_date = ? WHERE id = ? AND user_id = ?");
-            $stmt->execute([$originalName, $description === '' ? null : $description, $expiryDate, $fileId, $userId]);
+            $stmt = $pdo->prepare("UPDATE files SET original_name = ?, description = ?, expiry_date = ?, access_password_hash = ?, ip_allowlist = ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([$originalName, $description === '' ? null : $description, $expiryDate, $accessPasswordHash, $ipAllowJson === '[]' ? null : $ipAllowJson, $fileId, $userId]);
         }
         if ($tagsEnabled) {
             $tagOwner = (int) ($file['user_id'] ?? $userId);
@@ -126,6 +152,24 @@ require_once __DIR__ . '/includes/header.php';
                 <input type="text" name="tags" id="tags" value="<?= sanitize_data($fileTagsStr) ?>" maxlength="2000" placeholder="e.g. work, reference">
             </div>
             <?php endif; ?>
+            <div class="form-group">
+                <label>Download password <span class="label-optional">(optional gate for public / shared links)</span></label>
+                <?php if (!empty($file['access_password_hash'])): ?>
+                    <p class="form-hint">A password is set. Enter a new password below to replace it, or check &quot;Remove download password&quot;.</p>
+                <?php endif; ?>
+                <input type="password" name="access_password_new" id="access_password_new" autocomplete="new-password" maxlength="128" placeholder="<?= !empty($file['access_password_hash']) ? 'New password (optional)' : 'Leave empty to keep unchanged' ?>">
+                <div class="settings-row-checkbox" style="margin-top:0.5rem;">
+                    <label>
+                        <input type="checkbox" name="clear_access_password" value="1" id="clear_access_password">
+                        Remove download password
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="ip_allowlist">Restrict download by IP <span class="label-optional">(optional, one IPv4/IPv6 or CIDR per line)</span></label>
+                <textarea name="ip_allowlist" id="ip_allowlist" rows="4" maxlength="8000" placeholder="e.g. 203.0.113.10&#10;192.168.0.0/24"><?= sanitize_data($ipAllowDisplay) ?></textarea>
+                <small class="form-hint">Applies to anonymous downloads (public listing, token links, signed links). Logged-in owners are not restricted. Empty = no IP restriction.</small>
+            </div>
             <div class="form-group">
                 <label for="duration">Expires</label>
                 <select name="duration" id="duration">

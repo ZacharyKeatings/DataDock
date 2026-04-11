@@ -366,4 +366,65 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    // v2.3.0: stronger access control & user trust
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'access_password_hash'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE files ADD COLUMN access_password_hash VARCHAR(255) DEFAULT NULL AFTER description");
+        }
+    } catch (PDOException $e) {}
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'ip_allowlist'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE files ADD COLUMN ip_allowlist TEXT DEFAULT NULL AFTER access_password_hash");
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM download_tokens LIKE 'expires_at'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE download_tokens ADD COLUMN expires_at DATETIME DEFAULT NULL AFTER created_at");
+            $pdo->exec("ALTER TABLE download_tokens ADD COLUMN max_uses INT NOT NULL DEFAULT 1 AFTER expires_at");
+            $pdo->exec("ALTER TABLE download_tokens ADD COLUMN use_count INT NOT NULL DEFAULT 0 AFTER max_uses");
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS app_secrets (
+                secret_key VARCHAR(64) NOT NULL PRIMARY KEY,
+                secret_value VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS file_download_events (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                file_id INT NOT NULL,
+                downloaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ip_address VARCHAR(45) NOT NULL DEFAULT '',
+                country_code CHAR(2) DEFAULT NULL,
+                INDEX idx_fde_file (file_id),
+                INDEX idx_fde_time (downloaded_at),
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS user_storage_snapshots (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                bytes_total BIGINT NOT NULL DEFAULT 0,
+                recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_uss_user_time (user_id, recorded_at),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ");
+    } catch (PDOException $e) {}
 }

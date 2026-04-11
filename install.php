@@ -33,6 +33,8 @@ function install_database($host, $user, $pass, $dbname) {
                 filename VARCHAR(255) NOT NULL,
                 original_name VARCHAR(255),
                 description VARCHAR(500) DEFAULT NULL,
+                access_password_hash VARCHAR(255) DEFAULT NULL,
+                ip_allowlist TEXT DEFAULT NULL,
                 filetype VARCHAR(100),
                 filesize INT,
                 thumbnail_path VARCHAR(255),
@@ -55,8 +57,43 @@ function install_database($host, $user, $pass, $dbname) {
                 file_id INT NOT NULL,
                 token VARCHAR(64) NOT NULL UNIQUE,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME DEFAULT NULL,
+                max_uses INT NOT NULL DEFAULT 1,
+                use_count INT NOT NULL DEFAULT 0,
                 FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
                 INDEX idx_token (token)
+            )
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS app_secrets (
+                secret_key VARCHAR(64) NOT NULL PRIMARY KEY,
+                secret_value VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS file_download_events (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                file_id INT NOT NULL,
+                downloaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ip_address VARCHAR(45) NOT NULL DEFAULT '',
+                country_code CHAR(2) DEFAULT NULL,
+                INDEX idx_fde_file (file_id),
+                INDEX idx_fde_time (downloaded_at),
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+            )
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS user_storage_snapshots (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                bytes_total BIGINT NOT NULL DEFAULT 0,
+                recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_uss_user_time (user_id, recorded_at),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ");
 

@@ -350,6 +350,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->exec('DELETE FROM file_reports');
             } catch (PDOException $e) {
             }
+            try {
+                $pdo->exec('DELETE FROM user_storage_snapshots');
+            } catch (PDOException $e) {
+            }
+            try {
+                $pdo->exec('DELETE FROM app_secrets');
+            } catch (PDOException $e) {
+            }
 
             datadock_clear_all_partition_files_on_disk($pdo);
 

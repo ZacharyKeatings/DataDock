@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.3.0] - 2026-04-11
+### Access control & user trust
+
+#### New Features
+- **Per-file download password & IP allowlist** — Optional `access_password_hash` and `ip_allowlist` on **Edit file**; anonymous downloads (public listing, token links, signed links) enforce IP rules; password gate with session unlock via `download.php` POST. Thumbnails respect the same rules for anonymous users.
+- **Share link (token)** — Replaces one-shot-only tokens: `download_tokens` gains `expires_at`, `max_uses`, and `use_count`. **Create share link** (`create_onetime.php`) configures time window and max downloads.
+- **Signed link (HMAC)** — `create_signed.php` builds time-limited `download.php?id=&exp=&sig=` URLs validated with a server secret in `app_secrets` (no extra token row). IP allowlist still applies; signed links bypass the optional file password (the URL is the capability).
+- **Per-download log** — `file_download_events` (IP, optional country from `CF-IPCountry` when present) for transparency on who fetched your files.
+- **Activity & storage** — `activity.php`: storage-over-time chart (`user_storage_snapshots`, at most one sample per user per hour), recent download events, uploads list. **`export_data.php`**: JSON export of account fields, file metadata, activity log rows where you are the actor, and download events for files you own.
+
+#### Database
+- Migrations add `files.access_password_hash`, `files.ip_allowlist`, extend `download_tokens`, new tables `app_secrets`, `file_download_events`, `user_storage_snapshots`. Site reset clears `app_secrets` and `user_storage_snapshots`.
+
+---
+
 ## [v2.2.0] - 2026-04-10
 ### Reporting & moderation
 

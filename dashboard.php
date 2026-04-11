@@ -7,8 +7,10 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/settings.php';
 require_once __DIR__ . '/includes/dashboard_actions.php';
+require_once __DIR__ . '/includes/user_trust.php';
 
 datadock_process_dashboard_post($pdo);
+datadock_maybe_record_storage_snapshot($pdo, (int) $_SESSION['user_id']);
 
 $pageTitle = "Your Files";
 require_once __DIR__ . '/includes/header.php';
@@ -351,7 +353,8 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
                                         <?php endif; ?>
                                         <a href="share.php?id=<?= $file['id'] ?>" class="dropdown-item">Share</a>
                                         <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
-                                        <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">One-time link</a>
+                                        <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">Share link (token)</a>
+                                        <a href="create_signed.php?id=<?= $file['id'] ?>" class="dropdown-item">Signed link (HMAC)</a>
                                     <?php endif; ?>
                                     <a href="delete.php?id=<?= $file['id'] ?>" class="dropdown-item dropdown-item-danger" onclick="return confirm('Delete this file?')">Delete</a>
                                 </div>
