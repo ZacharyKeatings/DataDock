@@ -61,14 +61,13 @@ $reportsListQuery = static function (array $parts): string {
             <p class="settings-hint"><?= $reportIdFilter > 0 ? 'Report not found.' : 'No reports in this status.' ?></p>
         <?php else: ?>
             <div class="file-list file-list-admin file-list-reports">
-                <div class="file-row-file-management file-header file-row-reports">
+                <div class="file-row-file-management file-header file-row-reports file-row-reports-primary">
+                    <div class="file-row-toggle-cell" aria-hidden="true"></div>
                     <div>Time (UTC)</div>
                     <div>Reason</div>
                     <div>Reporter</div>
                     <div>File</div>
                     <div>Status</div>
-                    <div>Details</div>
-                    <div>Moderation</div>
                 </div>
                 <?php foreach ($reportsRows as $row): ?>
                     <?php
@@ -79,50 +78,80 @@ $reportsListQuery = static function (array $parts): string {
                     $reasonLabel = ucfirst(str_replace('_', ' ', $reason));
                     $details = (string) ($row['details'] ?? '');
                     $review = (string) ($row['review_note'] ?? '');
-                    $detailsShort = strlen($details) > 120 ? substr($details, 0, 120) . '…' : $details;
-                    $reviewShort = strlen($review) > 120 ? substr($review, 0, 120) . '…' : $review;
                     $isOpen = ($row['status'] ?? '') === 'open';
+                    $statusRaw = (string) ($row['status'] ?? '');
+                    $statusBadgeClass = 'badge ';
+                    if ($statusRaw === 'open') {
+                        $statusBadgeClass .= 'badge-pending';
+                    } elseif ($statusRaw === 'dismissed') {
+                        $statusBadgeClass .= 'badge-warning';
+                    } else {
+                        $statusBadgeClass .= 'badge-ok';
+                    }
+                    $modActionQs = ['section' => 'reports', 'status' => $reportStatus];
+                    if ($reportsFileIdFilter > 0) {
+                        $modActionQs['file_id'] = $reportsFileIdFilter;
+                    }
+                    if ($reportIdFilter > 0) {
+                        $modActionQs['report_id'] = $reportIdFilter;
+                    }
+                    $expandReportDetails = $reportIdFilter > 0 && $reportId === $reportIdFilter;
                     ?>
-                    <div class="file-row-file-management file-row-reports">
-                        <div><span class="utc-datetime" data-utc="<?= sanitize_data($row['created_at'] ?? '') ?>"></span></div>
-                        <div><?= sanitize_data($reasonLabel) ?></div>
-                        <div><?= user_profile_link($row['reporter_username'] ?? null) ?></div>
-                        <div class="file-name-cell" title="<?= sanitize_data($fileName) ?>">
-                            <?php if ($fileId > 0): ?>
-                                <a href="download.php?id=<?= $fileId ?>">#<?= $fileId ?></a>
-                            <?php else: ?>
-                                —
-                            <?php endif; ?>
+                    <div class="file-row-expandable<?= $expandReportDetails ? ' is-expanded' : '' ?>">
+                        <div class="file-row-file-management file-row-reports file-row-reports-primary">
+                            <div class="file-row-toggle-cell">
+                                <button type="button" class="file-row-toggle" id="report-toggle-<?= $reportId ?>" aria-expanded="<?= $expandReportDetails ? 'true' : 'false' ?>" aria-controls="report-details-<?= $reportId ?>" aria-label="Show details for report #<?= $reportId ?>">
+                                    <span class="file-row-toggle-icon" aria-hidden="true">▸</span>
+                                </button>
+                            </div>
+                            <div class="file-row-reports-time"><span class="utc-datetime" data-utc="<?= sanitize_data($row['created_at'] ?? '') ?>"></span></div>
+                            <div><?= sanitize_data($reasonLabel) ?></div>
+                            <div class="file-row-reports-reporter"><?= user_profile_link($row['reporter_username'] ?? null) ?></div>
+                            <div class="file-name-cell file-row-reports-file" title="<?= sanitize_data($fileName) ?>">
+                                <?php if ($fileId > 0): ?>
+                                    <a href="download.php?id=<?= $fileId ?>">#<?= $fileId ?></a>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </div>
+                            <div class="file-row-reports-status">
+                                <span class="<?= htmlspecialchars($statusBadgeClass, ENT_QUOTES, 'UTF-8') ?>"><?= sanitize_data($statusRaw) ?></span>
+                            </div>
                         </div>
-                        <div><?= sanitize_data((string) ($row['status'] ?? '')) ?></div>
-                        <div class="file-name-cell" title="<?= sanitize_data($details) ?>"><?= $details !== '' ? sanitize_data($detailsShort) : '—' ?></div>
-                        <div>
-                            <?php if ($isOpen): ?>
-                                <?php
-                                $modActionQs = ['section' => 'reports', 'status' => $reportStatus];
-                                if ($reportsFileIdFilter > 0) {
-                                    $modActionQs['file_id'] = $reportsFileIdFilter;
-                                }
-                                if ($reportIdFilter > 0) {
-                                    $modActionQs['report_id'] = $reportIdFilter;
-                                }
-                                ?>
-                                <form method="post" action="<?= sanitize_data($reportsListQuery($modActionQs)) ?>" class="admin-reports-moderation-form">
-                                    <input type="hidden" name="report_id" value="<?= $reportId ?>">
-                                    <textarea name="review_note" rows="2" maxlength="1000" placeholder="Review note (optional)" class="admin-reports-review-note"></textarea>
-                                    <div class="admin-reports-actions">
-                                        <button type="submit" name="moderation_report_action" value="dismiss" class="btn btn-small">Dismiss</button>
-                                        <button type="submit" name="moderation_report_action" value="quarantine" class="btn btn-small">Quarantine</button>
-                                        <button type="submit" name="moderation_report_action" value="delete" class="btn btn-small btn-danger" onclick="return confirm('Move this file to trash?');">Delete</button>
-                                    </div>
-                                </form>
-                            <?php else: ?>
-                                <div class="settings-hint">
-                                    By <?= sanitize_data((string) ($row['reviewer_username'] ?? 'unknown')) ?><br>
-                                    <span class="utc-datetime" data-utc="<?= sanitize_data($row['reviewed_at'] ?? '') ?>"></span><br>
-                                    <?= $review !== '' ? sanitize_data($reviewShort) : '—' ?>
-                                </div>
-                            <?php endif; ?>
+                        <div class="file-row-details file-row-details-reports" id="report-details-<?= $reportId ?>" role="region" aria-labelledby="report-toggle-<?= $reportId ?>"<?= $expandReportDetails ? '' : ' hidden' ?>>
+                            <div class="file-row-details-inner admin-reports-details-inner">
+                                <p class="admin-reports-detail-meta">
+                                    <span class="admin-reports-detail-label">Report</span>
+                                    <a href="<?= sanitize_data($reportsListQuery(['section' => 'reports', 'report_id' => $reportId])) ?>">#<?= $reportId ?></a>
+                                    <?php if ($fileId > 0): ?>
+                                        · File <a href="<?= sanitize_data($reportsListQuery(['section' => 'reports', 'status' => $reportStatus, 'file_id' => $fileId])) ?>">#<?= $fileId ?></a>
+                                    <?php endif; ?>
+                                </p>
+                                <dl class="file-details-grid admin-reports-details-dl">
+                                    <dt>Details</dt>
+                                    <dd class="admin-reports-details-text"><?= $details !== '' ? nl2br(sanitize_data($details)) : '—' ?></dd>
+                                    <dt>Moderation</dt>
+                                    <dd class="admin-reports-moderation-dd">
+                                        <?php if ($isOpen): ?>
+                                            <form method="post" action="<?= sanitize_data($reportsListQuery($modActionQs)) ?>" class="admin-reports-moderation-form">
+                                                <input type="hidden" name="report_id" value="<?= $reportId ?>">
+                                                <textarea name="review_note" rows="3" maxlength="1000" placeholder="Review note (optional)" class="admin-reports-review-note"></textarea>
+                                                <div class="admin-reports-actions">
+                                                    <button type="submit" name="moderation_report_action" value="dismiss" class="btn btn-small">Dismiss</button>
+                                                    <button type="submit" name="moderation_report_action" value="quarantine" class="btn btn-small">Quarantine</button>
+                                                    <button type="submit" name="moderation_report_action" value="delete" class="btn btn-small btn-danger" onclick="return confirm('Move this file to trash?');">Delete</button>
+                                                </div>
+                                            </form>
+                                        <?php else: ?>
+                                            <div class="admin-reports-closed-review">
+                                                <p class="admin-reports-closed-line"><span class="admin-reports-detail-label">Reviewer</span> <?= sanitize_data((string) ($row['reviewer_username'] ?? 'unknown')) ?></p>
+                                                <p class="admin-reports-closed-line"><span class="admin-reports-detail-label">Reviewed</span> <span class="utc-datetime" data-utc="<?= sanitize_data($row['reviewed_at'] ?? '') ?>"></span></p>
+                                                <div class="admin-reports-details-text"><?= $review !== '' ? nl2br(sanitize_data($review)) : '—' ?></div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </dd>
+                                </dl>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
