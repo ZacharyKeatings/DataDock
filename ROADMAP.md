@@ -16,8 +16,6 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [Security Settings](#-security-settings)
 - [Versioning & Updates](#-versioning--updates)
 - [Reporting & Abuse](#-reporting--abuse)
-- [Shipped in v2.0.0 through v2.1.0](#shipped-in-v200-through-v210)
-- [Shipped in v2.3.0](#shipped-in-v230)
 - [Access Control (Stronger, Still Simple)](#-access-control-stronger-still-simple)
 - [Operational Robustness](#-operational-robustness)
 - [Security Hardening (Minimal)](#-security-hardening-minimal)
@@ -26,6 +24,10 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 - [System Maturity](#-system-maturity)
 - [Rate Limiting (Extended)](#-rate-limiting-extended)
 - [Archive / Read-Only Mode](#-archive--read-only-mode)
+- [Automation & Integrations](#-automation--integrations)
+- [Observability (Extended)](#-observability-extended)
+- [Account Security (Extended)](#-account-security-extended)
+- [HTTP & Deployment Security](#-http--deployment-security)
 
 ---
 
@@ -119,7 +121,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Install.php warning toggle | Turn warning off if needed. |
 | ✓ | Dark mode / light mode UI toggle | Theme switcher; preference via cookie. |
 | ✓ | Responsive layout | Sections and file tables scale; horizontal scroll on small screens. |
-| — | Localization/multilanguage support | Multiple languages. |
+| — | Localization/multilanguage support | Multiple languages; string extraction and locale selection. |
+| — | Mobile responsiveness refinements | Extra polish on small screens. |
 | ✓ | Accessibility (WCAG) improvements | Improve accessibility. |
 | ✓ | Custom file icons | Flat SVG icons per type; custom URLs in settings. |
 
@@ -167,43 +170,6 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 |--------|---------|-------------|
 | ✓ | Users can report files | Report files for malicious or inappropriate content. |
 | ✓ | Admin handling of reports | Review, dismiss, and take moderation action. |
-
----
-
-## Shipped in v2.0.0 through v2.1.0
-
-Snapshot of features delivered in **v2.0.0**, **v2.0.1**, and **v2.1.0** (see [CHANGELOG.md](CHANGELOG.md) for full notes).
-
-### v2.0.0 — Organization & storage efficiency
-
-- **Folders** — Nested folders per user; breadcrumb, create, move; filter scope; `upload.php?folder=`.
-- **Tags** — On edit file; dashboard tag filter; settings can disable folders and/or tags independently.
-- **Storage partitions** — Multiple storage roots; admin default partition and user assignment; same `uploads/` / `thumbnails/` layout per root.
-- **SHA-256 deduplication** — Optional; `storage_objects` + reference counts; site setting **Deduplicate by SHA-256**.
-- **Centralized paths** — `includes/storage.php` for partition-aware resolution across core flows.
-- **Improved** — Migrations for new tables/columns; reset clears partitions’ data; delete user releases on-disk storage for that user’s files; folder create / file move via same-page POST (`includes/dashboard_actions.php`).
-- **Security** — Stronger upload validation (filename segments, MIME + magic bytes, polyglot detection, expanded blocklist, client parity).
-
-### v2.0.1 — Hotlink awareness
-
-- **Hotlink log** — Optional logging when downloads, ZIP, thumbnails, or avatars are requested with an external-site `Referer`; Admin → **Hotlink log**; Site Settings for enable/disable and trusted hosts; reset clears log.
-
-### v2.1.0 — Admin observability & operational robustness
-
-- **Activity / audit log** — `activity_log`, broad event coverage; Admin → **Activity log**; purge old entries by age.
-- **Storage & quota alerts** — `ops_alerts` in settings; warnings on Admin **Overview** for partition disk usage and approaching quotas.
-- **Backup / export** — SQL dump or JSON files metadata from **Backup & integrity**.
-- **Cron purge** — `scripts/datadock-cron-purge.php` aligned with admin purge helpers.
-- **Disk integrity scan** — Uploads vs DB per partition.
-- **Checksum verify & re-hash** — Optional limits; activity logging for re-hash runs.
-- **Improved** — Reset clears `activity_log`; default settings include `ops_alerts`.
-
----
-
-## Shipped in v2.3.0
-
-- **Access control** — Per-file download password and IP allowlist; token links with max downloads + expiry; HMAC-signed temporary URLs; `thumbnail.php` aligned with anonymous access rules.
-- **User trust** — Activity page with storage chart and download event log; JSON data export for the signed-in user.
 
 ---
 
@@ -297,6 +263,46 @@ Makes DataDock easier to deploy and operate in production environments.
 | Status | Feature | Description |
 |--------|---------|-------------|
 | — | Read-only instance mode | Admin toggle: no uploads, no new accounts, downloads only (archival deployments). |
+
+---
+
+## 🔗 Automation & Integrations
+
+Scripting and external systems without requiring email.
+
+| Status | Feature | Description |
+|--------|---------|-------------|
+| — | HTTP webhooks | POST callbacks for selected events (e.g. upload, share created, expiry warning); optional signing secret. |
+| — | Scoped API tokens | Issued per user or admin; rate-limited access for automation. |
+| — | Minimal JSON API | Authenticated endpoints for common operations (e.g. list, upload) aligned with CLI and container use. |
+
+---
+
+## 📡 Observability (Extended)
+
+Beyond the health check planned in **System Maturity**.
+
+| Status | Feature | Description |
+|--------|---------|-------------|
+| — | Structured JSON logging | Optional machine-readable log lines for aggregation stacks (e.g. ELK, Loki). |
+| — | Metrics endpoint | Counters/gauges or Prometheus exposition; complements `/health` for monitoring. |
+
+---
+
+## 👤 Account Security (Extended)
+
+| Status | Feature | Description |
+|--------|---------|-------------|
+| — | TOTP two-factor authentication | Authenticator-app 2FA; typically admin-first, then optional for all users. |
+| — | Session / device management | e.g. list active sessions and revoke others (optional; schedule with 2FA or later). |
+
+---
+
+## 🌐 HTTP & Deployment Security
+
+| Status | Feature | Description |
+|--------|---------|-------------|
+| — | Documented security headers | Recommended CSP, HSTS, X-Frame-Options, etc. for reverse proxies and Docker. |
 
 ---
 
