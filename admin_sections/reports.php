@@ -6,6 +6,15 @@
 /** @var string $reportStatus */
 /** @var array<int, array<string, mixed>> $reportsRows */
 /** @var string|null $reportsError */
+/** @var int $reportIdFilter */
+/** @var int $reportsFileIdFilter */
+
+$reportIdFilter = $reportIdFilter ?? 0;
+$reportsFileIdFilter = $reportsFileIdFilter ?? 0;
+
+$reportsListQuery = static function (array $parts): string {
+    return 'admin.php?' . http_build_query($parts);
+};
 ?>
 <div class="admin-reports">
     <div class="file-mgmt-header">
@@ -18,21 +27,41 @@
     <?php if ($reportsError !== null): ?>
         <p class="message message-error">Could not load reports: <?= sanitize_data($reportsError) ?></p>
     <?php else: ?>
-        <div class="file-mgmt-toolbar" style="margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+        <?php if ($reportIdFilter > 0): ?>
+            <p class="settings-hint admin-reports-filter-banner">
+                Showing report <strong>#<?= (int) $reportIdFilter ?></strong>.
+                <a href="<?= sanitize_data($reportsListQuery(['section' => 'reports', 'status' => $reportStatus])) ?>">View full list</a>
+            </p>
+        <?php elseif ($reportsFileIdFilter > 0): ?>
+            <p class="settings-hint admin-reports-filter-banner">
+                Filtered to file <strong>#<?= (int) $reportsFileIdFilter ?></strong>.
+                <a href="<?= sanitize_data($reportsListQuery(['section' => 'reports', 'status' => $reportStatus])) ?>">Clear file filter</a>
+                ·
+                <a href="<?= sanitize_data($reportsListQuery(['section' => 'files'])) ?>">File management</a>
+            </p>
+        <?php endif; ?>
+
+        <div class="file-mgmt-toolbar admin-reports-toolbar">
             <span class="file-mgmt-stat"><strong><?= number_format($reportsTotal) ?></strong> report<?= $reportsTotal !== 1 ? 's' : '' ?></span>
             <div class="file-mgmt-filter">
                 <span class="file-mgmt-filter-label">Status:</span>
-                <a href="admin.php?section=reports&amp;status=open" class="btn btn-small<?= $reportStatus === 'open' ? ' btn-primary' : '' ?>">Open</a>
-                <a href="admin.php?section=reports&amp;status=actioned" class="btn btn-small<?= $reportStatus === 'actioned' ? ' btn-primary' : '' ?>">Actioned</a>
-                <a href="admin.php?section=reports&amp;status=dismissed" class="btn btn-small<?= $reportStatus === 'dismissed' ? ' btn-primary' : '' ?>">Dismissed</a>
+                <?php
+                $statusQs = ['section' => 'reports'];
+                if ($reportsFileIdFilter > 0) {
+                    $statusQs['file_id'] = $reportsFileIdFilter;
+                }
+                ?>
+                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'open']))) ?>" class="btn btn-small<?= $reportStatus === 'open' ? ' btn-primary' : '' ?>">Open</a>
+                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'actioned']))) ?>" class="btn btn-small<?= $reportStatus === 'actioned' ? ' btn-primary' : '' ?>">Actioned</a>
+                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'dismissed']))) ?>" class="btn btn-small<?= $reportStatus === 'dismissed' ? ' btn-primary' : '' ?>">Dismissed</a>
             </div>
         </div>
 
         <?php if (!$reportsRows): ?>
-            <p class="settings-hint">No reports in this status.</p>
+            <p class="settings-hint"><?= $reportIdFilter > 0 ? 'Report not found.' : 'No reports in this status.' ?></p>
         <?php else: ?>
-            <div class="file-list file-list-admin" style="overflow-x:auto;">
-                <div class="file-row-file-management file-header" style="grid-template-columns: 7rem 8rem 10rem 8rem 8rem 1fr 1fr;min-width:940px;">
+            <div class="file-list file-list-admin file-list-reports">
+                <div class="file-row-file-management file-header file-row-reports">
                     <div>Time (UTC)</div>
                     <div>Reason</div>
                     <div>Reporter</div>
@@ -54,7 +83,7 @@
                     $reviewShort = strlen($review) > 120 ? substr($review, 0, 120) . '…' : $review;
                     $isOpen = ($row['status'] ?? '') === 'open';
                     ?>
-                    <div class="file-row-file-management" style="grid-template-columns: 7rem 8rem 10rem 8rem 8rem 1fr 1fr;min-width:940px;font-size:0.9rem;">
+                    <div class="file-row-file-management file-row-reports">
                         <div><span class="utc-datetime" data-utc="<?= sanitize_data($row['created_at'] ?? '') ?>"></span></div>
                         <div><?= sanitize_data($reasonLabel) ?></div>
                         <div><?= user_profile_link($row['reporter_username'] ?? null) ?></div>
@@ -69,12 +98,23 @@
                         <div class="file-name-cell" title="<?= sanitize_data($details) ?>"><?= $details !== '' ? sanitize_data($detailsShort) : '—' ?></div>
                         <div>
                             <?php if ($isOpen): ?>
-                                <form method="post" action="admin.php?section=reports&amp;status=<?= sanitize_data($reportStatus) ?>" style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:flex-start;">
+                                <?php
+                                $modActionQs = ['section' => 'reports', 'status' => $reportStatus];
+                                if ($reportsFileIdFilter > 0) {
+                                    $modActionQs['file_id'] = $reportsFileIdFilter;
+                                }
+                                if ($reportIdFilter > 0) {
+                                    $modActionQs['report_id'] = $reportIdFilter;
+                                }
+                                ?>
+                                <form method="post" action="<?= sanitize_data($reportsListQuery($modActionQs)) ?>" class="admin-reports-moderation-form">
                                     <input type="hidden" name="report_id" value="<?= $reportId ?>">
-                                    <textarea name="review_note" rows="2" maxlength="1000" placeholder="Review note (optional)" style="width:100%;margin-bottom:0.25rem;"></textarea>
-                                    <button type="submit" name="moderation_report_action" value="dismiss" class="btn btn-small">Dismiss</button>
-                                    <button type="submit" name="moderation_report_action" value="quarantine" class="btn btn-small">Quarantine</button>
-                                    <button type="submit" name="moderation_report_action" value="delete" class="btn btn-small btn-danger" onclick="return confirm('Move this file to trash?');">Delete</button>
+                                    <textarea name="review_note" rows="2" maxlength="1000" placeholder="Review note (optional)" class="admin-reports-review-note"></textarea>
+                                    <div class="admin-reports-actions">
+                                        <button type="submit" name="moderation_report_action" value="dismiss" class="btn btn-small">Dismiss</button>
+                                        <button type="submit" name="moderation_report_action" value="quarantine" class="btn btn-small">Quarantine</button>
+                                        <button type="submit" name="moderation_report_action" value="delete" class="btn btn-small btn-danger" onclick="return confirm('Move this file to trash?');">Delete</button>
+                                    </div>
                                 </form>
                             <?php else: ?>
                                 <div class="settings-hint">
@@ -89,12 +129,18 @@
             </div>
 
             <?php if ($reportsTotalPages > 1): ?>
-                <nav class="file-mgmt-filter" style="margin-top:1rem;gap:0.35rem;">
+                <nav class="file-mgmt-filter admin-reports-pagination">
                     <?php for ($p = 1; $p <= $reportsTotalPages; $p++): ?>
                         <?php if ($p === $page): ?>
                             <span class="btn btn-small btn-primary"><?= $p ?></span>
                         <?php else: ?>
-                            <a href="admin.php?section=reports&amp;status=<?= sanitize_data($reportStatus) ?>&amp;p=<?= $p ?>" class="btn btn-small"><?= $p ?></a>
+                            <?php
+                            $pageQs = ['section' => 'reports', 'status' => $reportStatus, 'p' => $p];
+                            if ($reportsFileIdFilter > 0) {
+                                $pageQs['file_id'] = $reportsFileIdFilter;
+                            }
+                            ?>
+                            <a href="<?= sanitize_data($reportsListQuery($pageQs)) ?>" class="btn btn-small"><?= $p ?></a>
                         <?php endif; ?>
                     <?php endfor; ?>
                 </nav>

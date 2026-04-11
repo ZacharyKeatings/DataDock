@@ -136,6 +136,12 @@ a:hover {
     background: rgba(0, 0, 0, 0.15);
 }
 
+.admin-reports-review-note {
+    background: var(--color-secondary);
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
 .release-notes pre,
 .release-notes code {
     background: rgba(0, 0, 0, 0.28);

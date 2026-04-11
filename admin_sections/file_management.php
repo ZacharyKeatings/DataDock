@@ -42,6 +42,7 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
             <div>Filename</div>
             <div>Size</div>
             <div>Status</div>
+            <div>Reports</div>
             <div>Actions</div>
         </div>
 
@@ -79,6 +80,31 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
                         <?php else: ?>
                             <span class="badge badge-ok">Approved</span>
                         <?php endif; ?>
+                    </div>
+                    <div class="file-mgmt-reports-cell">
+                        <?php
+                        $repEntries = $file['report_entries'] ?? [];
+                        if (empty($repEntries)): ?>
+                            —
+                        <?php else:
+                            foreach ($repEntries as $rep):
+                                $rid = (int) ($rep['id'] ?? 0);
+                                $rstat = (string) ($rep['status'] ?? '');
+                                $badgeClass = 'badge ';
+                                if ($rstat === 'open') {
+                                    $badgeClass .= 'badge-pending';
+                                } elseif ($rstat === 'dismissed') {
+                                    $badgeClass .= 'badge-warning';
+                                } else {
+                                    $badgeClass .= 'badge-ok';
+                                }
+                                ?>
+                            <span class="file-mgmt-report-pill">
+                                <a href="admin.php?section=reports&amp;report_id=<?= $rid ?>">#<?= $rid ?></a>
+                                <span class="<?= htmlspecialchars($badgeClass, ENT_QUOTES, 'UTF-8') ?>" title="<?= sanitize_data($rstat) ?>"><?= sanitize_data($rstat) ?></span>
+                            </span>
+                            <?php endforeach;
+                        endif; ?>
                     </div>
                     <div class="file-actions">
                         <?php if (($file['quarantine_status'] ?? '') === 'pending'): ?>

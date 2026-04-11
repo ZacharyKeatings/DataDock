@@ -729,17 +729,16 @@ require_once __DIR__ . '/includes/header.php';
                 $page = isset($_GET['p']) && is_numeric($_GET['p']) ? max(1, (int) $_GET['p']) : 1;
                 $offset = ($page - 1) * $perPage;
                 $reportStatus = isset($_GET['status']) && in_array($_GET['status'], ['open', 'dismissed', 'actioned'], true) ? $_GET['status'] : 'open';
+                $reportIdFilter = isset($_GET['report_id']) && is_numeric($_GET['report_id']) ? max(0, (int) $_GET['report_id']) : 0;
+                $reportsFileIdFilter = isset($_GET['file_id']) && is_numeric($_GET['file_id']) ? max(0, (int) $_GET['file_id']) : 0;
                 $reportsTotal = 0;
                 $reportsRows = [];
                 $reportsError = null;
                 try {
-                    $stTotal = $pdo->prepare('SELECT COUNT(*) FROM file_reports WHERE status = ?');
-                    $stTotal->execute([$reportStatus]);
-                    $reportsTotal = (int) $stTotal->fetchColumn();
                     $lim = (int) $perPage;
                     $off = (int) $offset;
-                    $stRows = $pdo->prepare(
-                        "SELECT r.*,
+                    $reportSelect = "
+                        SELECT r.*,
                                 ru.username AS reporter_username,
                                 au.username AS reviewer_username,
                                 f.original_name,
@@ -750,16 +749,37 @@ require_once __DIR__ . '/includes/header.php';
                          LEFT JOIN users ru ON r.reporter_user_id = ru.id
                          LEFT JOIN users au ON r.reviewed_by_user_id = au.id
                          LEFT JOIN files f ON r.file_id = f.id
-                         WHERE r.status = ?
-                         ORDER BY r.id DESC
-                         LIMIT {$lim} OFFSET {$off}"
-                    );
-                    $stRows->execute([$reportStatus]);
-                    $reportsRows = $stRows->fetchAll(PDO::FETCH_ASSOC);
+                    ";
+
+                    if ($reportIdFilter > 0) {
+                        $stTotal = $pdo->prepare('SELECT COUNT(*) FROM file_reports WHERE id = ?');
+                        $stTotal->execute([$reportIdFilter]);
+                        $reportsTotal = (int) $stTotal->fetchColumn();
+                        $stRows = $pdo->prepare($reportSelect . ' WHERE r.id = ? ORDER BY r.id DESC LIMIT 1');
+                        $stRows->execute([$reportIdFilter]);
+                        $reportsRows = $stRows->fetchAll(PDO::FETCH_ASSOC);
+                    } else {
+                        $where = 'r.status = ?';
+                        $params = [$reportStatus];
+                        if ($reportsFileIdFilter > 0) {
+                            $where .= ' AND r.file_id = ?';
+                            $params[] = $reportsFileIdFilter;
+                        }
+                        $stTotal = $pdo->prepare("SELECT COUNT(*) FROM file_reports r WHERE {$where}");
+                        $stTotal->execute($params);
+                        $reportsTotal = (int) $stTotal->fetchColumn();
+                        $stRows = $pdo->prepare(
+                            $reportSelect . " WHERE {$where} ORDER BY r.id DESC LIMIT {$lim} OFFSET {$off}"
+                        );
+                        $stRows->execute($params);
+                        $reportsRows = $stRows->fetchAll(PDO::FETCH_ASSOC);
+                    }
                 } catch (PDOException $e) {
                     $reportsError = $e->getMessage();
                 }
-                $reportsTotalPages = $reportsTotal > 0 ? (int) ceil($reportsTotal / $perPage) : 1;
+                $reportsTotalPages = $reportIdFilter > 0
+                    ? 1
+                    : ($reportsTotal > 0 ? (int) ceil($reportsTotal / $perPage) : 1);
                 include __DIR__ . '/admin_sections/reports.php';
                 break;
 
@@ -792,7 +812,7 @@ require_once __DIR__ . '/includes/header.php';
                 // Filter by quarantine status (optional: pending only); exclude trashed by default
                 $fileStatusFilter = isset($_GET['status']) && $_GET['status'] === 'pending' ? 'pending' : 'all';
                 $filesSql = "
-                    SELECT f.*, u.username 
+                    SELECT f.*, u.username
                     FROM files f
                     LEFT JOIN users u ON f.user_id = u.id
                     WHERE f.deleted_at IS NULL
@@ -803,6 +823,24 @@ require_once __DIR__ . '/includes/header.php';
                 $filesSql .= " ORDER BY f.upload_date DESC";
                 $stmt = $pdo->query($filesSql);
                 $allFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $fileIds = array_values(array_filter(array_map('intval', array_column($allFiles, 'id'))));
+                $reportsByFileId = [];
+                if ($fileIds !== []) {
+                    $placeholders = implode(',', array_fill(0, count($fileIds), '?'));
+                    $stRep = $pdo->prepare("SELECT id, file_id, status FROM file_reports WHERE file_id IN ({$placeholders}) ORDER BY id DESC");
+                    $stRep->execute($fileIds);
+                    while ($row = $stRep->fetch(PDO::FETCH_ASSOC)) {
+                        $fid = (int) $row['file_id'];
+                        if (!isset($reportsByFileId[$fid])) {
+                            $reportsByFileId[$fid] = [];
+                        }
+                        $reportsByFileId[$fid][] = $row;
+                    }
+                }
+                foreach ($allFiles as $k => $f) {
+                    $allFiles[$k]['report_entries'] = $reportsByFileId[(int) $f['id']] ?? [];
+                }
 
                 include __DIR__ . '/admin_sections/file_management.php';
                 break;
