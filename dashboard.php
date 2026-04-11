@@ -279,48 +279,41 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
             <button type="button" class="btn btn-small" id="bulkApplyBtn" disabled>Apply</button>
         </div>
         <div class="file-list">
-            <div class="file-row-dashboard file-header">
+            <div class="file-row-dashboard file-header file-row-dashboard-primary">
+                <div class="file-row-toggle-cell" aria-hidden="true"></div>
                 <div><input type="checkbox" id="selectAll" title="Select all"></div>
+                <div class="file-preview-cell">Thumbnail</div>
                 <div>Filename</div>
-                <div>Type</div>
                 <div>Size</div>
-                <div>Downloads</div>
-                <div>Uploaded</div>
-                <div>Expires</div>
-                <div>Thumbnail</div>
                 <div>Actions</div>
             </div>
 
             <?php foreach ($files as $file):
                 $isPending = ($file['quarantine_status'] ?? 'approved') === 'pending';
+                $fid = (int) $file['id'];
             ?>
-                <div class="file-row-dashboard-wrapper">
-                    <div class="file-row-dashboard">
+                <div class="file-row-expandable">
+                    <div class="file-row-dashboard file-row-dashboard-primary">
+                        <div class="file-row-toggle-cell">
+                            <button type="button" class="file-row-toggle" id="dash-toggle-<?= $fid ?>" aria-expanded="false" aria-controls="dash-details-<?= $fid ?>" aria-label="Show details for <?= htmlspecialchars($file['original_name'] ?? 'file', ENT_QUOTES, 'UTF-8') ?>">
+                                <span class="file-row-toggle-icon" aria-hidden="true">▸</span>
+                            </button>
+                        </div>
                         <div><input type="checkbox" name="ids[]" value="<?= $file['id'] ?>" class="zip-checkbox"<?= $isPending ? ' disabled title="Available after approval"' : '' ?>></div>
+                        <div class="file-preview-cell">
+                            <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
+                                <img src="thumbnail.php?id=<?= $fid ?>" alt="Thumb" class="thumbnail-small">
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </div>
                         <div>
                             <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?>
                             <?php if ($isPending): ?>
                                 <span class="badge badge-pending" title="Hidden from public until an admin approves">Pending approval</span>
                             <?php endif; ?>
                         </div>
-                        <div title="<?= sanitize_data($file['filetype']) ?>">
-                            <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
-                        </div>
                         <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
-                        <div><?= (int) ($file['download_count'] ?? 0) ?></div>
-                        <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
-                        <div>
-                            <?= $file['expiry_date']
-                                ? '<span class="utc-datetime" data-utc="' . htmlspecialchars($file['expiry_date']) . '"></span>'
-                                : 'Never' ?>
-                        </div>
-                        <div>
-                            <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                                <img src="thumbnail.php?id=<?= (int)$file['id'] ?>" alt="Thumb" class="thumbnail-small">
-                            <?php else: ?>
-                                —
-                            <?php endif; ?>
-                        </div>
                         <div class="file-actions">
                             <details class="file-actions-dropdown">
                                 <summary class="btn btn-small">Actions <span class="dropdown-arrow" aria-hidden="true">▾</span></summary>
@@ -365,29 +358,45 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
                             </details>
                         </div>
                     </div>
-                    <div class="file-row-checksums">
-                        <?php if (!empty($file['checksum_md5']) || !empty($file['checksum_sha256'])): ?>
-                            <?php if (!empty($file['checksum_md5'])): ?>
-                            <div class="checksum-item">
-                                <span class="checksum-line">
-                                    <button type="button" class="hash-label" data-hash="<?= sanitize_data($file['checksum_md5']) ?>" data-algo="MD5">MD5</button>
-                                    <button type="button" class="btn-copy btn-copy-checksum" data-copy="<?= sanitize_data($file['checksum_md5']) ?>" title="Copy MD5"><?= icon_svg('copy') ?></button>
-                                </span>
-                                <code class="hash-value" aria-live="polite"></code>
+                    <div class="file-row-details" id="dash-details-<?= $fid ?>" role="region" aria-labelledby="dash-toggle-<?= $fid ?>" hidden>
+                        <div class="file-row-details-inner">
+                            <dl class="file-details-grid">
+                                <dt>Type</dt>
+                                <dd title="<?= sanitize_data($file['filetype']) ?>"><?= sanitize_data(get_friendly_filetype($file['filetype'])) ?></dd>
+                                <dt>Downloads</dt>
+                                <dd><?= (int) ($file['download_count'] ?? 0) ?></dd>
+                                <dt>Uploaded</dt>
+                                <dd><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></dd>
+                                <dt>Expires</dt>
+                                <dd><?= $file['expiry_date']
+                                    ? '<span class="utc-datetime" data-utc="' . htmlspecialchars($file['expiry_date']) . '"></span>'
+                                    : 'Never' ?></dd>
+                            </dl>
+                            <div class="file-row-checksums">
+                                <?php if (!empty($file['checksum_md5']) || !empty($file['checksum_sha256'])): ?>
+                                    <?php if (!empty($file['checksum_md5'])): ?>
+                                    <div class="checksum-item">
+                                        <span class="checksum-line">
+                                            <button type="button" class="hash-label" data-hash="<?= sanitize_data($file['checksum_md5']) ?>" data-algo="MD5">MD5</button>
+                                            <button type="button" class="btn-copy btn-copy-checksum" data-copy="<?= sanitize_data($file['checksum_md5']) ?>" title="Copy MD5"><?= icon_svg('copy') ?></button>
+                                        </span>
+                                        <code class="hash-value" aria-live="polite"></code>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($file['checksum_sha256'])): ?>
+                                    <div class="checksum-item">
+                                        <span class="checksum-line">
+                                            <button type="button" class="hash-label" data-hash="<?= sanitize_data($file['checksum_sha256']) ?>" data-algo="SHA256">SHA256</button>
+                                            <button type="button" class="btn-copy btn-copy-checksum" data-copy="<?= sanitize_data($file['checksum_sha256']) ?>" title="Copy SHA256"><?= icon_svg('copy') ?></button>
+                                        </span>
+                                        <code class="hash-value" aria-live="polite"></code>
+                                    </div>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="checksum-none">No checksums stored</span>
+                                <?php endif; ?>
                             </div>
-                            <?php endif; ?>
-                            <?php if (!empty($file['checksum_sha256'])): ?>
-                            <div class="checksum-item">
-                                <span class="checksum-line">
-                                    <button type="button" class="hash-label" data-hash="<?= sanitize_data($file['checksum_sha256']) ?>" data-algo="SHA256">SHA256</button>
-                                    <button type="button" class="btn-copy btn-copy-checksum" data-copy="<?= sanitize_data($file['checksum_sha256']) ?>" title="Copy SHA256"><?= icon_svg('copy') ?></button>
-                                </span>
-                                <code class="hash-value" aria-live="polite"></code>
-                            </div>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <span class="checksum-none">—</span>
-                        <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -401,27 +410,43 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
 <div class="page-section" style="margin-top:2rem;">
     <h2 class="page-title">Shared with You</h2>
     <div class="file-list">
-        <div class="file-row-dashboard file-header">
+        <div class="file-row-dashboard file-header file-row-dashboard-primary file-row-dashboard-shared">
+            <div class="file-row-toggle-cell" aria-hidden="true"></div>
             <div>Filename</div>
-            <div>Shared by</div>
-            <div>Type</div>
             <div>Size</div>
             <div>Actions</div>
         </div>
-        <?php foreach ($sharedFiles as $file): ?>
-            <div class="file-row-dashboard">
-                <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
-                <div><?= user_profile_link($file['shared_by_username'] ?? null) ?></div>
-                <div><?= sanitize_data(get_friendly_filetype($file['filetype'])) ?></div>
-                <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
-                <div class="file-actions">
-                    <details class="file-actions-dropdown">
-                        <summary class="btn btn-small">Actions <span class="dropdown-arrow" aria-hidden="true">▾</span></summary>
-                        <div class="dropdown-menu">
-                            <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
-                            <a href="report_file.php?id=<?= (int) $file['id'] ?>&amp;return_to=dashboard.php" class="dropdown-item">Report</a>
-                        </div>
-                    </details>
+        <?php foreach ($sharedFiles as $file):
+            $sfid = (int) $file['id'];
+        ?>
+            <div class="file-row-expandable">
+                <div class="file-row-dashboard file-row-dashboard-primary file-row-dashboard-shared">
+                    <div class="file-row-toggle-cell">
+                        <button type="button" class="file-row-toggle" id="shared-toggle-<?= $sfid ?>" aria-expanded="false" aria-controls="shared-details-<?= $sfid ?>" aria-label="Show details for <?= htmlspecialchars($file['original_name'] ?? 'file', ENT_QUOTES, 'UTF-8') ?>">
+                            <span class="file-row-toggle-icon" aria-hidden="true">▸</span>
+                        </button>
+                    </div>
+                    <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
+                    <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
+                    <div class="file-actions">
+                        <details class="file-actions-dropdown">
+                            <summary class="btn btn-small">Actions <span class="dropdown-arrow" aria-hidden="true">▾</span></summary>
+                            <div class="dropdown-menu">
+                                <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
+                                <a href="report_file.php?id=<?= (int) $file['id'] ?>&amp;return_to=dashboard.php" class="dropdown-item">Report</a>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                <div class="file-row-details" id="shared-details-<?= $sfid ?>" role="region" aria-labelledby="shared-toggle-<?= $sfid ?>" hidden>
+                    <div class="file-row-details-inner">
+                        <dl class="file-details-grid">
+                            <dt>Shared by</dt>
+                            <dd><?= user_profile_link($file['shared_by_username'] ?? null) ?></dd>
+                            <dt>Type</dt>
+                            <dd title="<?= sanitize_data($file['filetype']) ?>"><?= sanitize_data(get_friendly_filetype($file['filetype'])) ?></dd>
+                        </dl>
+                    </div>
                 </div>
             </div>
         <?php endforeach; ?>

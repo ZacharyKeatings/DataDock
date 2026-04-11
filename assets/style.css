@@ -259,25 +259,35 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
-.file-row {
-    grid-template-columns: 2.5fr 1fr 2fr 1fr minmax(4rem, 0.8fr) minmax(11rem, 1.5fr) 1fr;
+/* Index / profile: expandable rows — primary columns only in .file-row-primary */
+.file-list-expandable .file-row.file-header,
+.file-list-expandable .file-row.file-row-primary {
     display: grid;
     gap: clamp(0.35rem, 1.5vw, 0.75rem);
     align-items: center;
     padding: clamp(0.5rem, 1.5vw, 0.75rem);
-    border-bottom: 1px solid var(--color-border, #ddd);
     font-size: clamp(0.8rem, 1.5vw, 0.95rem);
     word-break: break-word;
-    min-width: min(100%, 720px);
-}
-.file-list .file-row:nth-child(even) {
-    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
+    min-width: min(100%, 560px);
+    grid-template-columns: minmax(2rem, 2.5rem) 1fr 2.5fr minmax(4.5rem, 1fr);
 }
 
-/* Index page: 8 columns when Download button present */
-.file-list-has-download .file-row {
-    grid-template-columns: 2.5fr 0.9fr 1.8fr 0.9fr minmax(4rem, 0.7fr) minmax(11rem, 1.4fr) 0.8fr minmax(6rem, 0.9fr);
-    min-width: min(100%, 820px);
+.file-list-expandable .file-row.file-header {
+    border-bottom: 1px solid var(--color-border, #ddd);
+}
+
+.file-list-expandable .file-row.file-row-primary {
+    border-bottom: none;
+}
+
+.file-list-expandable.file-list-has-download .file-row.file-header,
+.file-list-expandable.file-list-has-download .file-row.file-row-primary {
+    grid-template-columns: minmax(2rem, 2.5rem) 1fr 2.5fr minmax(4.5rem, 1fr) minmax(6rem, 1.1fr);
+    min-width: min(100%, 640px);
+}
+
+.file-list-expandable > .file-row-expandable:nth-child(even) .file-row-primary {
+    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
 }
 
 .file-header > div {
@@ -289,17 +299,37 @@ body {
     white-space: nowrap;
 }
 
-.file-row-dashboard > div:nth-child(4),
-.file-row-dashboard > div:nth-child(5),
-.file-row-file-management > div:nth-child(4),
-.file-row-file-management > div:nth-child(5) {
+/* Index / profile expandable: right-align size column */
+.file-list-expandable .file-row-primary > div:nth-child(4),
+.file-list-expandable .file-row.file-header > div:nth-child(4) {
     text-align: right;
 }
 
-.file-row-dashboard.file-header > div:nth-child(4),
-.file-row-dashboard.file-header > div:nth-child(5),
-.file-row-file-management.file-header > div:nth-child(4),
-.file-row-file-management.file-header > div:nth-child(5) {
+/* Dashboard “Your files” primary row: size column */
+.file-row-dashboard-primary.file-header:has(#selectAll) > div:nth-child(5),
+.file-row-expandable .file-row-dashboard-primary > div:nth-child(5) {
+    text-align: right;
+}
+
+/* 5-column file-row-dashboard (Shared with you, Trash, etc.) */
+.file-row-dashboard.file-header:not(:has(#selectAll)) > div:nth-child(4),
+.file-row-dashboard.file-header:not(:has(#selectAll)) > div:nth-child(5),
+.file-list > .file-row-dashboard:not(.file-header) > div:nth-child(4),
+.file-list > .file-row-dashboard:not(.file-header) > div:nth-child(5) {
+    text-align: right;
+}
+
+/* Admin file management primary: size & status */
+.file-row-file-management-primary.file-header > div:nth-child(5),
+.file-row-file-management-primary.file-header > div:nth-child(6),
+.file-row-expandable .file-row-file-management-primary > div:nth-child(5),
+.file-row-expandable .file-row-file-management-primary > div:nth-child(6) {
+    text-align: right;
+}
+
+/* Shared-with-you primary: size */
+.file-row-dashboard-shared.file-header > div:nth-child(3),
+.file-row-expandable .file-row-dashboard-shared > div:nth-child(3) {
     text-align: right;
 }
 
@@ -315,19 +345,14 @@ body {
     opacity: 0.9;
 }
 
-.file-row .utc-datetime,
-.file-row .datetime-wrap,
-.file-row > div:nth-child(5),
-.file-row > div:nth-child(6) {
+.file-row-details .utc-datetime,
+.file-row-details .datetime-wrap {
     min-width: 0;
 }
 
-.file-row > div:nth-child(6) {
-    min-width: 10ch;
-}
-
+/* Default dashboard grid (Trash, storage partitions, etc.) */
 .file-row-dashboard {
-    grid-template-columns: 0.4fr minmax(11rem, 2.5fr) minmax(8rem, 1.5fr) minmax(4rem, 0.8fr) minmax(2.5rem, 0.6fr) minmax(10rem, 1.25fr) minmax(10rem, 1.25fr) minmax(4rem, 0.9fr) minmax(6rem, 1.2fr);
+    grid-template-columns: 0.4fr minmax(4rem, 0.9fr) minmax(11rem, 2.5fr) minmax(8rem, 1.5fr) minmax(4rem, 0.8fr) minmax(2.5rem, 0.6fr) minmax(10rem, 1.25fr) minmax(10rem, 1.25fr) minmax(6rem, 1.2fr);
     display: grid;
     gap: clamp(0.35rem, 1.5vw, 0.5rem);
     align-items: center;
@@ -339,40 +364,170 @@ body {
 .file-row-dashboard.file-header {
     border-bottom: 1px solid var(--color-border, #ddd);
 }
-/* Alternating row background (dashboard: wrapper + checksums) */
-.file-row-dashboard-wrapper:nth-child(even) .file-row-dashboard,
-.file-row-dashboard-wrapper:nth-child(even) .file-row-checksums {
+
+/* Dashboard “Your files”: primary row (toggle + checkbox + thumb + name + size + actions) */
+.file-row-dashboard.file-row-dashboard-primary {
+    grid-template-columns: minmax(2rem, 2.5rem) 0.4fr minmax(4rem, 0.9fr) minmax(11rem, 2.5fr) minmax(4rem, 0.8fr) minmax(6rem, 1.2fr);
+    min-width: min(100%, 720px);
+}
+
+/* Shared with you: primary (toggle + filename + size + actions) */
+.file-row-dashboard.file-row-dashboard-primary.file-row-dashboard-shared {
+    grid-template-columns: minmax(2rem, 2.5rem) minmax(11rem, 2fr) minmax(4rem, 0.8fr) minmax(6rem, 1.2fr);
+    min-width: min(100%, 560px);
+}
+
+.file-list > .file-row-expandable:nth-child(even) .file-row-dashboard-primary {
     background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
 }
-/* Shared with you list: alternate data rows (skip header) */
-.file-list .file-row-dashboard:not(.file-header):nth-child(even) {
-    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
-}
-.file-row-dashboard-wrapper .file-row-dashboard {
+
+.file-list > .file-row-expandable .file-row-dashboard-primary {
     border-bottom: none;
 }
+
+/* Shared with you list: alternate data rows */
+.file-list > .file-row-expandable:nth-child(even) .file-row-dashboard-shared {
+    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
+}
+
+/* Non-expandable dashboard rows (Trash, storage partitions, etc.) */
+.file-list > .file-row-dashboard:not(.file-header):nth-child(even) {
+    background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
+}
+
 .file-row-checksums {
-    padding: 0.5rem clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.5rem, 1.5vw, 0.75rem);
-    border-bottom: 1px solid var(--color-border, #ddd);
+    padding: 0.5rem 0 0;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--color-border, #ddd);
     font-size: clamp(0.8rem, 1.5vw, 0.95rem);
     background: transparent;
 }
+.file-row-details .file-row-checksums {
+    padding: 0.5rem 0 0;
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--color-border, #ddd);
+    border-bottom: none;
+}
 .file-row-checksums .checksum-none {
     color: var(--color-border);
+}
+
+/* Expandable row UI */
+.file-row-expandable {
+    border-bottom: 1px solid var(--color-border, #ddd);
+}
+
+.file-row-expandable .file-row-file-management-primary {
+    border-bottom: none;
+}
+
+.file-row-toggle-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.file-row-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 4px;
+    background: var(--color-secondary, #e8e8e8);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.file-row-toggle:hover {
+    background: var(--color-background, #fff);
+}
+
+.file-row-toggle:focus-visible {
+    outline: var(--focus-ring, 2px solid var(--color-primary));
+    outline-offset: 2px;
+}
+
+.file-row-toggle-icon {
+    display: inline-block;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.file-row-expandable.is-expanded .file-row-toggle-icon {
+    transform: rotate(90deg);
+}
+
+.file-row-details {
+    padding: 0 clamp(0.5rem, 1.5vw, 0.75rem) 0.75rem;
+    padding-left: calc(clamp(0.5rem, 1.5vw, 0.75rem) + 2rem);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.file-row-details[hidden] {
+    display: none !important;
+}
+
+.file-row-details-inner {
+    max-width: 100%;
+}
+
+.file-details-grid {
+    display: grid;
+    grid-template-columns: minmax(5rem, auto) 1fr;
+    gap: 0.35rem 1rem;
+    margin: 0;
+    padding: 0.65rem 0 0;
+    font-size: clamp(0.8rem, 1.5vw, 0.92rem);
+    align-items: baseline;
+}
+
+.file-details-grid dt {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-text);
+    opacity: 0.85;
+}
+
+.file-details-grid dd {
+    margin: 0;
+    min-width: 0;
+}
+
+@media (max-width: 520px) {
+    .file-details-grid {
+        grid-template-columns: 1fr;
+    }
+    .file-details-grid dt {
+        margin-top: 0.35rem;
+    }
+    .file-details-grid dt:first-child {
+        margin-top: 0;
+    }
 }
 .file-list {
     min-width: min(100%, 960px);
 }
 
 @media (max-width: 640px) {
-    .file-row {
-        min-width: 600px;
+    .file-list-expandable .file-row.file-header,
+    .file-list-expandable .file-row.file-row-primary {
+        min-width: 480px;
     }
-    .file-list-has-download .file-row {
-        min-width: 700px;
+    .file-list-expandable.file-list-has-download .file-row.file-header,
+    .file-list-expandable.file-list-has-download .file-row.file-row-primary {
+        min-width: 540px;
     }
-    .file-row-dashboard {
-        min-width: 760px;
+    .file-row-dashboard-primary {
+        min-width: 560px;
+    }
+    .file-row-file-management-primary {
+        min-width: 520px;
     }
 }
 
@@ -396,7 +551,11 @@ body {
     font-size: 0.95rem;
     word-break: break-word;
     min-width: 0;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2.5fr) minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 0.5fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(9rem, 1fr);
+}
+
+/* Admin File Management: primary columns (expand for type, downloads, dates) */
+.file-row-file-management.file-row-file-management-primary {
+    grid-template-columns: minmax(2rem, 2.5rem) minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 2.5fr) minmax(0, 0.9fr) minmax(0, 0.5fr) minmax(9rem, 1fr);
 }
 
 .file-row-file-management .utc-datetime,
@@ -500,7 +659,7 @@ body {
     min-width: 0;
     width: 100%;
 }
-.file-list-admin .file-row-file-management:nth-child(even) {
+.file-list-admin > .file-row-expandable:nth-child(even) .file-row-file-management-primary {
     background: var(--color-file-row-alt, rgba(0, 0, 0, 0.04));
 }
 
@@ -528,7 +687,7 @@ body {
     overflow: visible;
 }
 .file-row-dashboard .file-actions,
-.file-row-dashboard-wrapper .file-actions {
+.file-row-expandable .file-row-dashboard .file-actions {
     overflow: visible;
 }
 .file-actions-dropdown summary {

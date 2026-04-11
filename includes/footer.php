@@ -43,5 +43,23 @@ $adminContactEmail = trim($settings['admin_contact_email'] ?? '');
         });
     });
     </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.file-row-expandable').forEach(function (wrap) {
+            var btn = wrap.querySelector('.file-row-toggle');
+            var panel = wrap.querySelector('.file-row-details');
+            if (!btn || !panel) return;
+            function setExpanded(on) {
+                wrap.classList.toggle('is-expanded', on);
+                btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+                panel.hidden = !on;
+            }
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                setExpanded(!wrap.classList.contains('is-expanded'));
+            });
+        });
+    });
+    </script>
 </body>
 </html>

@@ -132,35 +132,49 @@ require_once __DIR__ . '/includes/header.php';
     <?php if ($publicFileCount > 0): ?>
     <div class="page-section">
         <h3 class="page-title">Public files</h3>
-        <div class="file-list file-list-index<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
+        <div class="file-list file-list-index file-list-expandable<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
             <div class="file-row file-header">
+                <div class="file-row-toggle-cell" aria-hidden="true"></div>
+                <div class="file-preview-cell">Preview</div>
                 <div>Filename</div>
-                <div>Type</div>
                 <div>Size</div>
-                <div>Downloads</div>
-                <div>Uploaded</div>
-                <div>Preview</div>
                 <?php if ($publicBrowsingEnabled): ?><div>Download</div><?php endif; ?>
             </div>
-            <?php foreach ($publicFiles as $file): ?>
-                <div class="file-row">
-                    <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name'] ?? $file['id']) ?></div>
-                    <div title="<?= sanitize_data($file['filetype'] ?? '') ?>">
-                        <?= sanitize_data(get_friendly_filetype($file['filetype'] ?? '')) ?>
-                    </div>
-                    <div><?= format_filesize((int) ($file['filesize'] ?? 0)) ?></div>
-                    <div><?= (int) ($file['download_count'] ?? 0) ?></div>
-                    <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
-                    <div>
-                        <?php if (!empty($file['thumbnail_path']) && str_starts_with($file['filetype'] ?? '', 'image/')): ?>
-                            <img src="thumbnail.php?id=<?= (int) $file['id'] ?>" alt="Thumbnail" class="thumbnail-small">
-                        <?php else: ?>
-                            —
+            <?php foreach ($publicFiles as $file):
+                $pfid = (int) $file['id'];
+            ?>
+                <div class="file-row-expandable">
+                    <div class="file-row file-row-primary">
+                        <div class="file-row-toggle-cell">
+                            <button type="button" class="file-row-toggle" id="user-toggle-<?= $pfid ?>" aria-expanded="false" aria-controls="user-details-<?= $pfid ?>" aria-label="Show details for <?= htmlspecialchars($file['original_name'] ?? 'file', ENT_QUOTES, 'UTF-8') ?>">
+                                <span class="file-row-toggle-icon" aria-hidden="true">▸</span>
+                            </button>
+                        </div>
+                        <div class="file-preview-cell">
+                            <?php if (!empty($file['thumbnail_path']) && str_starts_with($file['filetype'] ?? '', 'image/')): ?>
+                                <img src="thumbnail.php?id=<?= $pfid ?>" alt="Thumbnail" class="thumbnail-small">
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </div>
+                        <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name'] ?? $file['id']) ?></div>
+                        <div><?= format_filesize((int) ($file['filesize'] ?? 0)) ?></div>
+                        <?php if ($publicBrowsingEnabled): ?>
+                        <div><a href="download.php?id=<?= $pfid ?>" class="btn btn-small">Download</a></div>
                         <?php endif; ?>
                     </div>
-                    <?php if ($publicBrowsingEnabled): ?>
-                    <div><a href="download.php?id=<?= (int) $file['id'] ?>" class="btn btn-small">Download</a></div>
-                    <?php endif; ?>
+                    <div class="file-row-details" id="user-details-<?= $pfid ?>" role="region" aria-labelledby="user-toggle-<?= $pfid ?>" hidden>
+                        <div class="file-row-details-inner">
+                            <dl class="file-details-grid">
+                                <dt>Type</dt>
+                                <dd title="<?= sanitize_data($file['filetype'] ?? '') ?>"><?= sanitize_data(get_friendly_filetype($file['filetype'] ?? '')) ?></dd>
+                                <dt>Downloads</dt>
+                                <dd><?= (int) ($file['download_count'] ?? 0) ?></dd>
+                                <dt>Uploaded</dt>
+                                <dd><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></dd>
+                            </dl>
+                        </div>
+                    </div>
                 </div>
             <?php endforeach; ?>
         </div>

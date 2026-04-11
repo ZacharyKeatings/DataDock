@@ -122,6 +122,20 @@ a:hover {
     color: #dfe6e9;
 }
 
+.file-row-toggle {
+    background: var(--color-secondary);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.file-row-toggle:hover {
+    background: var(--color-box-background);
+}
+
+.file-row-details {
+    background: rgba(0, 0, 0, 0.15);
+}
+
 .release-notes pre,
 .release-notes code {
     background: rgba(0, 0, 0, 0.28);

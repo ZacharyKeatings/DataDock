@@ -47,42 +47,56 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <p class="page-description">This site allows registered users to upload files and manage them securely.<?= $publicBrowsingEnabled ? ' Below are publicly shared files:' : ' Below are the most recent uploads:' ?></p>
 
     <?php if ($recentFiles): ?>
-        <div class="file-list file-list-index<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
+        <div class="file-list file-list-index file-list-expandable<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
             <div class="file-row file-header">
+                <div class="file-row-toggle-cell" aria-hidden="true"></div>
+                <div class="file-preview-cell">Preview</div>
                 <div>Filename</div>
-                <div>User</div>
-                <div>Type</div>
                 <div>Size</div>
-                <div>Downloads</div>
-                <div>Uploaded</div>
-                <div>Preview</div>
                 <?php if ($publicBrowsingEnabled): ?><div>Download</div><?php endif; ?>
             </div>
-            <?php foreach ($recentFiles as $file): ?>
-                <div class="file-row">
-                    <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
-                    <div><?= user_profile_link($file['username'] ?? null) ?></div>
-                    <div title="<?= sanitize_data($file['filetype']) ?>">
-                        <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
-                    </div>
-                    <div><?= format_filesize($file['filesize']) ?></div>
-                    <div><?= (int) ($file['download_count'] ?? 0) ?></div>
-                    <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></div>
-                    <div>
-                        <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                            <img src="thumbnail.php?id=<?= (int)$file['id'] ?>" alt="Thumbnail" class="thumbnail-small">
-                        <?php else: ?>
-                            —
+            <?php foreach ($recentFiles as $file):
+                $rid = (int) $file['id'];
+            ?>
+                <div class="file-row-expandable">
+                    <div class="file-row file-row-primary">
+                        <div class="file-row-toggle-cell">
+                            <button type="button" class="file-row-toggle" id="index-toggle-<?= $rid ?>" aria-expanded="false" aria-controls="index-details-<?= $rid ?>" aria-label="Show details for <?= htmlspecialchars($file['original_name'] ?? 'file', ENT_QUOTES, 'UTF-8') ?>">
+                                <span class="file-row-toggle-icon" aria-hidden="true">▸</span>
+                            </button>
+                        </div>
+                        <div class="file-preview-cell">
+                            <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
+                                <img src="thumbnail.php?id=<?= $rid ?>" alt="Thumbnail" class="thumbnail-small">
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </div>
+                        <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
+                        <div><?= format_filesize($file['filesize']) ?></div>
+                        <?php if ($publicBrowsingEnabled): ?>
+                        <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+                            <a href="download.php?id=<?= $rid ?>" class="btn btn-small">Download</a>
+                            <?php if (!empty($userId) && (int) ($file['user_id'] ?? 0) !== (int) $userId): ?>
+                                <a href="report_file.php?id=<?= $rid ?>&amp;return_to=index.php" class="btn btn-small">Report</a>
+                            <?php endif; ?>
+                        </div>
                         <?php endif; ?>
                     </div>
-                    <?php if ($publicBrowsingEnabled): ?>
-                    <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
-                        <a href="download.php?id=<?= (int) $file['id'] ?>" class="btn btn-small">Download</a>
-                        <?php if (!empty($userId) && (int) ($file['user_id'] ?? 0) !== (int) $userId): ?>
-                            <a href="report_file.php?id=<?= (int) $file['id'] ?>&amp;return_to=index.php" class="btn btn-small">Report</a>
-                        <?php endif; ?>
+                    <div class="file-row-details" id="index-details-<?= $rid ?>" role="region" aria-labelledby="index-toggle-<?= $rid ?>" hidden>
+                        <div class="file-row-details-inner">
+                            <dl class="file-details-grid">
+                                <dt>User</dt>
+                                <dd><?= user_profile_link($file['username'] ?? null) ?></dd>
+                                <dt>Type</dt>
+                                <dd title="<?= sanitize_data($file['filetype']) ?>"><?= sanitize_data(get_friendly_filetype($file['filetype'])) ?></dd>
+                                <dt>Downloads</dt>
+                                <dd><?= (int) ($file['download_count'] ?? 0) ?></dd>
+                                <dt>Uploaded</dt>
+                                <dd><span class="utc-datetime" data-utc="<?= sanitize_data($file['upload_date']) ?>"></span></dd>
+                            </dl>
+                        </div>
                     </div>
-                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
