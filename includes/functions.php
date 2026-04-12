@@ -44,8 +44,8 @@ function icon_svg($name, $class = '') {
 function _resolve_storage_base(): string {
     static $base = null;
     if ($base === null) {
-        $settingsPath = __DIR__ . '/../config/settings.php';
-        $settings = file_exists($settingsPath) ? require $settingsPath : [];
+        require_once __DIR__ . '/settings_loader.php';
+        $settings = datadock_load_settings();
         $cfg = trim($settings['storage_base_path'] ?? '');
         if (empty($cfg)) {
             $base = rtrim(str_replace('\\', '/', __DIR__ . '/..'), '/');
@@ -94,15 +94,8 @@ function get_avatars_path(): string {
  * @return string The configured site name or "DataDock" if not found.
  */
 function get_site_name(): string {
-    $settingsPath = __DIR__ . '/../config/settings.php';
-
-    if (!file_exists($settingsPath)) {
-        return 'DataDock';
-    }
-
-    // Load settings without polluting global scope
-    $settings = [];
-    include $settingsPath;
+    require_once __DIR__ . '/settings_loader.php';
+    $settings = datadock_load_settings();
 
     return isset($settings['site_name']) && is_string($settings['site_name'])
         ? $settings['site_name']
@@ -272,6 +265,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'session_timeout_minutes' => 60,\n" .
         "    'install_warning_enabled' => true,\n" .
         "    'maintenance_mode' => false,\n" .
+        "    'read_only_mode' => false,\n" .
         "    'debug_mode' => false,\n" .
         "    'log_path' => '',\n" .
         "    'log_level' => 'warning',\n" .
@@ -341,8 +335,8 @@ function write_default_settings_file($siteName = 'DataDock') {
 function log_message($level, $message) {
     static $settings = null;
     if ($settings === null) {
-        $path = __DIR__ . '/../config/settings.php';
-        $settings = file_exists($path) ? require $path : [];
+        require_once __DIR__ . '/settings_loader.php';
+        $settings = datadock_load_settings();
     }
     $logPath = trim($settings['log_path'] ?? '');
     $logLevel = strtolower($settings['log_level'] ?? 'warning');
@@ -672,8 +666,8 @@ function get_friendly_filetype($mime) {
 function get_file_icon($filetype, $filename = null) {
     static $customIcons = null;
     if ($customIcons === null) {
-        $path = __DIR__ . '/../config/settings.php';
-        $settings = file_exists($path) ? require $path : [];
+        require_once __DIR__ . '/settings_loader.php';
+        $settings = datadock_load_settings();
         $customIcons = $settings['file_icons'] ?? [];
     }
     $ext = $filename ? strtolower(pathinfo($filename, PATHINFO_EXTENSION)) : '';

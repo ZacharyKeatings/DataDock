@@ -1,8 +1,9 @@
 <?php
 // Load settings early for debug mode and maintenance check
+require_once __DIR__ . '/settings_loader.php';
 $settingsPath = __DIR__ . '/../config/settings.php';
 if (file_exists($settingsPath)) {
-    require $settingsPath;
+    $settings = datadock_load_settings();
     $debugMode = $settings['debug_mode'] ?? false;
     if ($debugMode) {
         error_reporting(E_ALL);
@@ -24,9 +25,8 @@ if (session_status() === PHP_SESSION_NONE) {
  */
 function init_session() {
     if (session_status() === PHP_SESSION_NONE) {
-        $settingsPath = __DIR__ . '/../config/settings.php';
-        if (file_exists($settingsPath)) {
-            require $settingsPath;
+        if (file_exists(__DIR__ . '/../config/settings.php')) {
+            $settings = datadock_load_settings();
             $timeoutMinutes = (int) ($settings['session_timeout_minutes'] ?? 60);
             if ($timeoutMinutes > 0) {
                 $lifetime = $timeoutMinutes * 60;
@@ -46,9 +46,8 @@ function init_session() {
     // Maintenance mode: block non-admins (except on login.php so admins can log in)
     $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
     if ($currentScript !== 'login.php' && $currentScript !== 'maintenance.php') {
-        $settingsPath = __DIR__ . '/../config/settings.php';
-        if (file_exists($settingsPath)) {
-            require $settingsPath;
+        if (file_exists(__DIR__ . '/../config/settings.php')) {
+            $settings = datadock_load_settings();
             $maintenanceMode = $settings['maintenance_mode'] ?? false;
             if ($maintenanceMode) {
                 $isAdmin = !empty($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'admin';

@@ -4,6 +4,8 @@ init_session();
 require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
 require_once __DIR__ . '/includes/audit_log.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -28,6 +30,11 @@ if (!$file) {
 
 // Handle POST - add or remove share
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (datadock_read_only_enabled($settings)) {
+        $_SESSION['flash_error'][] = '❌ Read-only mode: sharing changes are disabled.';
+        header('Location: share.php?id=' . $fileId);
+        exit;
+    }
     $action = $_POST['action'] ?? '';
     $username = trim($_POST['username'] ?? '');
 

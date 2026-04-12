@@ -5,7 +5,9 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
+require_once __DIR__ . '/includes/read_only.php';
 
 $userId = $_SESSION['user_id'];
 $stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at FROM users WHERE id = ?");
@@ -27,6 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'profile') {
+        if (datadock_read_only_enabled($settings)) {
+            $_SESSION['flash_error'][] = '❌ Read-only mode: profile details cannot be changed (password change below still works).';
+            header('Location: profile.php');
+            exit;
+        }
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $displayName = trim($_POST['display_name'] ?? '');

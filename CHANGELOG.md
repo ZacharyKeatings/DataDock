@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.4.0] - 2026-04-11
+### Collaboration, deployment & archive
+
+#### New Features
+- **Temporary share folders** — Select multiple files on the dashboard → bulk action **Create share folder link**; optional title, expiry, and **recipient note per file** (shown on the public page only). Public URL: `share_folder.php?t=…`; downloads use `download.php?sf=…&id=…`. Thumbnails honor the same `sf` token. Revoke links from the dashboard. Expired bundles are removed by the cron purge (or `--no-share-folders` to skip).
+- **Read-only / archive mode** — Admin → Site Settings (or `DATADOCK_READ_ONLY=1`): blocks uploads, registration, guest uploads, signup-token generation, and file mutations; downloads and viewing remain. Nav hides Upload/Register when appropriate.
+- **Environment-based config** — `includes/settings_loader.php` merges `DATADOCK_*` env vars over `config/settings.php` at runtime (see `config/settings.php.example`).
+- **CLI installer** — `scripts/datadock-install.php` for non-interactive installs (`--db-host=…`, `--admin-password=…`, or `DD_*` env vars). Web `install.php` uses shared `includes/install_lib.php`.
+- **Docker** — `Dockerfile` and `docker-compose.example.yml` (PHP 8.2 + Apache + MySQL example). **GitHub Actions** (`.github/workflows/docker-publish.yml`) builds and pushes to Docker Hub when a **Release** is published; set secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Optional variable `DOCKERHUB_IMAGE` overrides the default `USERNAME/datadock` image name.
+- **Health check** — `health.php` returns JSON: `status`, `version`, `database` (503 if DB unreachable).
+
+#### Database
+- New tables `share_folders`, `share_folder_files`. Site reset deletes `share_folders`.
+
+---
+
 ## [v2.3.0] - 2026-04-11
 ### Access control & user trust
 

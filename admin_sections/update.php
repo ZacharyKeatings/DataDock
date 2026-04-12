@@ -5,7 +5,8 @@ require_once __DIR__ . '/../includes/auth.php';
 init_session();
 require_admin();
 
-require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../includes/settings_loader.php';
+$settings = datadock_load_settings();
 
 $githubRepo   = 'ZacharyKeatings/DataDock';
 $latestUrl    = "https://api.github.com/repos/$githubRepo/releases/latest";

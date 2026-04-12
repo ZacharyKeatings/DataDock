@@ -39,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sessionTimeoutMinutes = (int) ($_POST['session_timeout_minutes'] ?? 60);
         $installWarningEnabled = isset($_POST['install_warning_enabled']);
         $maintenanceMode = isset($_POST['maintenance_mode']);
+        $readOnlyMode = isset($_POST['read_only_mode']);
         $debugMode = isset($_POST['debug_mode']);
         $logPath = trim($_POST['log_path'] ?? '');
         $logLevel = trim($_POST['log_level'] ?? 'warning');
@@ -163,6 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'session_timeout_minutes' => $sessionTimeoutMinutes,\n" .
                 "    'install_warning_enabled' => " . ($installWarningEnabled ? 'true' : 'false') . ",\n" .
                 "    'maintenance_mode' => " . ($maintenanceMode ? 'true' : 'false') . ",\n" .
+                "    'read_only_mode' => " . ($readOnlyMode ? 'true' : 'false') . ",\n" .
                 "    'debug_mode' => " . ($debugMode ? 'true' : 'false') . ",\n" .
                 "    'log_path' => " . var_export($logPath, true) . ",\n" .
                 "    'log_level' => " . var_export($logLevel, true) . ",\n" .
@@ -356,6 +358,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             try {
                 $pdo->exec('DELETE FROM app_secrets');
+            } catch (PDOException $e) {
+            }
+            try {
+                $pdo->exec('DELETE FROM share_folders');
             } catch (PDOException $e) {
             }
 
@@ -558,7 +564,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 clearstatcache(true, $settingsFile);
-require $settingsFile;
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -599,39 +606,40 @@ require_once __DIR__ . '/includes/header.php';
                 break;
 
             case 'site':
-                // Initialize site settings variables
-                $adminContactEmail = trim($settings['admin_contact_email'] ?? '');
-                $registrationEnabled = $settings['registration_enabled'] ?? true;
-                $inviteOnlyRegistration = !empty($settings['invite_only_registration']);
-                $enforceUniqueEmail = $settings['enforce_unique_email'] ?? true;
-                $maxFileSize = $settings['max_file_size'] ?? 5242880;
+                // Form reflects values stored in config/settings.php (not env-only overrides)
+                $fileSettings = datadock_load_settings_from_file();
+                $adminContactEmail = trim($fileSettings['admin_contact_email'] ?? '');
+                $registrationEnabled = $fileSettings['registration_enabled'] ?? true;
+                $inviteOnlyRegistration = !empty($fileSettings['invite_only_registration']);
+                $enforceUniqueEmail = $fileSettings['enforce_unique_email'] ?? true;
+                $maxFileSize = $fileSettings['max_file_size'] ?? 5242880;
                 $maxFileSizeDisplay = bytes_to_display($maxFileSize);
-                $defaultFileExpiry = $settings['default_file_expiry'] ?? 'never';
-                $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
-                $thumbnailsEnabled = $settings['thumbnails_enabled'] ?? true;
-                $sessionTimeoutMinutes = (int) ($settings['session_timeout_minutes'] ?? 60);
-                $installWarningEnabled = $settings['install_warning_enabled'] ?? true;
-                $userLimits = $settings['user_limits'] ?? [];
+                $defaultFileExpiry = $fileSettings['default_file_expiry'] ?? 'never';
+                $trashRetentionDays = (int) ($fileSettings['trash_retention_days'] ?? 30);
+                $thumbnailsEnabled = $fileSettings['thumbnails_enabled'] ?? true;
+                $sessionTimeoutMinutes = (int) ($fileSettings['session_timeout_minutes'] ?? 60);
+                $installWarningEnabled = $fileSettings['install_warning_enabled'] ?? true;
+                $userLimits = $fileSettings['user_limits'] ?? [];
                 $userMaxFilesEnabled = $userLimits['max_files_enabled'] ?? false;
                 $userMaxFiles = $userLimits['max_files'] ?? 100;
                 $userMaxStorageEnabled = $userLimits['max_storage_enabled'] ?? false;
                 $userMaxStorage = $userLimits['max_storage'] ?? 104857600;
                 $userMaxStorageDisplay = bytes_to_display($userMaxStorage);
-                $bruteForceEnabled = $settings['brute_force']['enabled'] ?? true;
-                $maxAttempts = $settings['brute_force']['max_attempts'] ?? 5;
-                $lockoutMinutes = $settings['brute_force']['lockout_minutes'] ?? 15;
-                $lockoutWindow = $settings['brute_force']['lockout_window'] ?? 10;
-                $adaptiveCooldownEnabled = !empty($settings['brute_force']['adaptive_cooldown_enabled']);
-                $adaptiveCooldownWindow = (int) ($settings['brute_force']['adaptive_cooldown_ip_window_minutes'] ?? 60);
-                $rateLimitUploadsEnabled = !empty($settings['rate_limit_uploads']['enabled']);
-                $rateLimitWindowMinutes = (int) ($settings['rate_limit_uploads']['window_minutes'] ?? 1);
-                $rateLimitMaxPerIp = (int) ($settings['rate_limit_uploads']['max_per_ip'] ?? 30);
-                $rateLimitMaxPerUser = (int) ($settings['rate_limit_uploads']['max_per_user'] ?? 60);
-                $rewriteFileExtension = !empty($settings['rewrite_file_extension']);
-                $uploadQuarantineEnabled = !empty($settings['upload_quarantine_enabled']);
-                $guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
-                $guestMaxFiles = $settings['guest_uploads']['max_files'] ?? 10;
-                $guestMaxStorage = $settings['guest_uploads']['max_storage'] ?? 5242880;
+                $bruteForceEnabled = $fileSettings['brute_force']['enabled'] ?? true;
+                $maxAttempts = $fileSettings['brute_force']['max_attempts'] ?? 5;
+                $lockoutMinutes = $fileSettings['brute_force']['lockout_minutes'] ?? 15;
+                $lockoutWindow = $fileSettings['brute_force']['lockout_window'] ?? 10;
+                $adaptiveCooldownEnabled = !empty($fileSettings['brute_force']['adaptive_cooldown_enabled']);
+                $adaptiveCooldownWindow = (int) ($fileSettings['brute_force']['adaptive_cooldown_ip_window_minutes'] ?? 60);
+                $rateLimitUploadsEnabled = !empty($fileSettings['rate_limit_uploads']['enabled']);
+                $rateLimitWindowMinutes = (int) ($fileSettings['rate_limit_uploads']['window_minutes'] ?? 1);
+                $rateLimitMaxPerIp = (int) ($fileSettings['rate_limit_uploads']['max_per_ip'] ?? 30);
+                $rateLimitMaxPerUser = (int) ($fileSettings['rate_limit_uploads']['max_per_user'] ?? 60);
+                $rewriteFileExtension = !empty($fileSettings['rewrite_file_extension']);
+                $uploadQuarantineEnabled = !empty($fileSettings['upload_quarantine_enabled']);
+                $guestUploadsEnabled = $fileSettings['guest_uploads']['enabled'] ?? false;
+                $guestMaxFiles = $fileSettings['guest_uploads']['max_files'] ?? 10;
+                $guestMaxStorage = $fileSettings['guest_uploads']['max_storage'] ?? 5242880;
                 $guestMaxStorageDisplay = bytes_to_display($guestMaxStorage);
                 $serverUploadMax = ini_get('upload_max_filesize');
                 $serverPostMax = ini_get('post_max_size');
@@ -649,28 +657,29 @@ require_once __DIR__ . '/includes/header.php';
                         $serverOverridePostDisplay = bytes_to_display(return_bytes($userIni['post_max_size']));
                     }
                 }
-                $maintenanceMode = $settings['maintenance_mode'] ?? false;
-                $debugMode = $settings['debug_mode'] ?? false;
-                $logPath = trim($settings['log_path'] ?? '');
-                $logLevel = $settings['log_level'] ?? 'warning';
-                $logoUrl = trim($settings['logo_url'] ?? '');
-                $faviconUrl = trim($settings['favicon_url'] ?? '');
-                $welcomeMessage = trim($settings['welcome_message'] ?? '');
-                $theme = $settings['theme'] ?? 'light';
-                $fileIcons = $settings['file_icons'] ?? [];
+                $maintenanceMode = $fileSettings['maintenance_mode'] ?? false;
+                $readOnlyMode = !empty($fileSettings['read_only_mode']);
+                $debugMode = $fileSettings['debug_mode'] ?? false;
+                $logPath = trim($fileSettings['log_path'] ?? '');
+                $logLevel = $fileSettings['log_level'] ?? 'warning';
+                $logoUrl = trim($fileSettings['logo_url'] ?? '');
+                $faviconUrl = trim($fileSettings['favicon_url'] ?? '');
+                $welcomeMessage = trim($fileSettings['welcome_message'] ?? '');
+                $theme = $fileSettings['theme'] ?? 'light';
+                $fileIcons = $fileSettings['file_icons'] ?? [];
                 $fileIconsJson = !empty($fileIcons) ? json_encode($fileIcons, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '';
-                $tosEnabled = $settings['tos_enabled'] ?? false;
-                $tosText = trim($settings['tos_text'] ?? '');
+                $tosEnabled = $fileSettings['tos_enabled'] ?? false;
+                $tosText = trim($fileSettings['tos_text'] ?? '');
 
-                $storageBasePath = trim($settings['storage_base_path'] ?? '');
-                $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
-                $deduplicateStorage = !empty($settings['deduplicate_storage'] ?? true);
-                $foldersEnabledSetting = !isset($settings['folders_enabled']) || !empty($settings['folders_enabled']);
-                $tagsEnabledSetting = !isset($settings['tags_enabled']) || !empty($settings['tags_enabled']);
-                $hotlinkLoggingEnabled = !isset($settings['hotlink_logging_enabled']) || !empty($settings['hotlink_logging_enabled']);
-                $hotlinkTrustedHosts = trim($settings['hotlink_trusted_hosts'] ?? '');
+                $storageBasePath = trim($fileSettings['storage_base_path'] ?? '');
+                $publicBrowsingEnabled = !empty($fileSettings['public_browsing_enabled']);
+                $deduplicateStorage = !empty($fileSettings['deduplicate_storage'] ?? true);
+                $foldersEnabledSetting = !isset($fileSettings['folders_enabled']) || !empty($fileSettings['folders_enabled']);
+                $tagsEnabledSetting = !isset($fileSettings['tags_enabled']) || !empty($fileSettings['tags_enabled']);
+                $hotlinkLoggingEnabled = !isset($fileSettings['hotlink_logging_enabled']) || !empty($fileSettings['hotlink_logging_enabled']);
+                $hotlinkTrustedHosts = trim($fileSettings['hotlink_trusted_hosts'] ?? '');
 
-                $opsAl = $settings['ops_alerts'] ?? [];
+                $opsAl = $fileSettings['ops_alerts'] ?? [];
                 $opsStoragePartitionPercentEnabled = !empty($opsAl['storage_partition_percent_enabled']);
                 $opsStoragePartitionPercentThreshold = (int) ($opsAl['storage_partition_percent_threshold'] ?? 85);
                 $opsUserQuotaPercentEnabled = !empty($opsAl['user_quota_percent_enabled']);

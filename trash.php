@@ -5,7 +5,9 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
+$readOnly = datadock_read_only_enabled($settings);
 
 $pageTitle = "Trash";
 require_once __DIR__ . '/includes/header.php';
@@ -49,8 +51,12 @@ $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
                     <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
                     <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['deleted_at']) ?>"></span></div>
                     <div class="file-actions">
+                        <?php if (!$readOnly): ?>
                         <a href="restore_file.php?id=<?= (int)$file['id'] ?>" class="btn btn-small">Restore</a>
                         <a href="delete.php?id=<?= (int)$file['id'] ?>&permanent=1&from=trash" class="btn btn-small btn-danger" onclick="return confirm('Permanently delete this file? This cannot be undone.')">Delete permanently</a>
+                        <?php else: ?>
+                        <span class="settings-hint">Read-only mode</span>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>

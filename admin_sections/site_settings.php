@@ -385,6 +385,13 @@
                 </div>
                 <div class="settings-row settings-row-checkbox">
                     <label>
+                        <input type="checkbox" name="read_only_mode" <?= !empty($readOnlyMode) ? 'checked' : '' ?>>
+                        Read-only / archive mode (no uploads, no new accounts; downloads only)
+                    </label>
+                </div>
+                <p class="settings-hint">Use for frozen archives. Overrides guest uploads and registration for all non-admin actions. Env: <code>DATADOCK_READ_ONLY=1</code>.</p>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
                         <input type="checkbox" name="debug_mode" <?= ($debugMode ?? false) ? 'checked' : '' ?>>
                         Debug Mode (show PHP errors)
                     </label>

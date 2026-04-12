@@ -5,7 +5,9 @@ require_login();
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
+$readOnly = datadock_read_only_enabled($settings);
 require_once __DIR__ . '/includes/dashboard_actions.php';
 require_once __DIR__ . '/includes/user_trust.php';
 
@@ -119,6 +121,15 @@ if ($tagsEnabled) {
     $userTags = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+$shareFoldersList = [];
+try {
+    $sfs = $pdo->prepare('SELECT id, title, token, expires_at, created_at FROM share_folders WHERE user_id = ? ORDER BY created_at DESC LIMIT 15');
+    $sfs->execute([$userId]);
+    $shareFoldersList = $sfs->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $shareFoldersList = [];
+}
+
 $dashQueryBase = [];
 if (!empty($_GET['q'])) {
     $dashQueryBase['q'] = $_GET['q'];
@@ -146,6 +157,40 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
 
 <div class="page-section">
     <h2 class="page-title">Your Uploaded Files</h2>
+    <?php if (!empty($readOnly)): ?>
+    <div class="flash warning persistent" role="status"><strong>Read-only mode:</strong> Uploads and file changes are disabled; downloads still work.</div>
+    <?php endif; ?>
+
+    <?php if (!empty($shareFoldersList)): ?>
+    <div style="margin-bottom:1.25rem;padding:0.75rem 1rem;border:1px solid var(--border-color,#ddd);border-radius:6px;">
+        <h3 class="page-title" style="font-size:1rem;margin:0 0 0.5rem 0;">Active share folder links</h3>
+        <ul style="margin:0;padding-left:1.25rem;font-size:0.9rem;">
+            <?php
+            $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+            $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+            $scriptDir = ($scriptDir === '/' || $scriptDir === '\\') ? '' : rtrim($scriptDir, '/');
+            foreach ($shareFoldersList as $sf) {
+                $t = $sf['token'] ?? '';
+                if (strlen($t) !== 64) {
+                    continue;
+                }
+                $url = $baseUrl . $scriptDir . '/share_folder.php?t=' . rawurlencode($t);
+                $title = trim((string) ($sf['title'] ?? ''));
+                $label = $title !== '' ? $title : ('Share #' . (int) ($sf['id'] ?? 0));
+                $exp = $sf['expires_at'] ?? null;
+                $expLabel = ($exp === null || $exp === '') ? 'no auto-expiry' : 'expires ' . sanitize_data($exp) . ' UTC';
+                echo '<li style="margin-bottom:0.35rem;">' . sanitize_data($label) . ' — ' . $expLabel;
+                echo ' <form method="post" action="revoke_share_folder.php" style="display:inline;margin-left:0.5rem;" onsubmit="return confirm(\'Revoke this link?\');">';
+                echo '<input type="hidden" name="id" value="' . (int) ($sf['id'] ?? 0) . '">';
+                echo '<button type="submit" class="btn btn-small">Revoke</button></form>';
+                echo '<br><input type="text" readonly value="' . sanitize_data($url) . '" style="margin-top:0.25rem;max-width:100%;width:min(100%,40rem);font-size:0.8rem;" onclick="this.select();">';
+                echo '</li>';
+            }
+            ?>
+        </ul>
+    </div>
+    <?php endif; ?>
+
     <?php if ($foldersEnabled): ?>
     <nav class="folder-breadcrumb" aria-label="Folder path" style="margin-bottom:0.75rem;font-size:0.95rem;">
         <?php
@@ -172,7 +217,9 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
         $uploadHere .= '?folder=' . (int) $currentFolderId;
     }
     ?>
+    <?php if (empty($readOnly)): ?>
     <p style="margin:0 0 0.75rem 0;"><a href="<?= sanitize_data($uploadHere) ?>" class="btn btn-small"><?= $currentFolderId > 0 ? 'Upload to this folder' : 'Upload files' ?></a></p>
+    <?php endif; ?>
     <?php if (!empty($subfolders)): ?>
     <ul style="list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:0.5rem;margin:0 0 1rem 0;">
         <?php
@@ -185,6 +232,7 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
         ?>
     </ul>
     <?php endif; ?>
+    <?php if (empty($readOnly)): ?>
     <form method="post" action="" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:flex-end;margin-bottom:1rem;">
         <input type="hidden" name="datadock_folder_create" value="1">
         <input type="hidden" name="redirect_folder" value="<?= (int) $currentFolderId ?>">
@@ -195,6 +243,7 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
         </div>
         <button type="submit" class="btn btn-small">Create folder</button>
     </form>
+    <?php endif; ?>
     <?php endif; ?>
 
     <form method="get" action="<?= sanitize_data($dashUrl) ?>" class="dashboard-filters" style="margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
@@ -272,11 +321,16 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
             <select id="bulkActionSelect" class="bulk-select">
                 <option value="">Choose action…</option>
                 <option value="zip">Download selected as ZIP</option>
-                <?php if ($publicBrowsingEnabled): ?>
+                <?php if (empty($readOnly)): ?>
+                <option value="share_bundle">Create share folder link…</option>
+                <?php endif; ?>
+                <?php if ($publicBrowsingEnabled && empty($readOnly)): ?>
                 <option value="public">Make selected public</option>
                 <option value="private">Make selected private</option>
                 <?php endif; ?>
+                <?php if (empty($readOnly)): ?>
                 <option value="delete">Delete selected</option>
+                <?php endif; ?>
             </select>
             <button type="button" class="btn btn-small" id="bulkApplyBtn" disabled>Apply</button>
         </div>
@@ -501,6 +555,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var action = bulkSelect.value;
             if (action === 'zip') {
                 window.location.href = 'download_zip.php?' + ids.map(function (id) { return 'ids[]=' + encodeURIComponent(id); }).join('&');
+            } else if (action === 'share_bundle') {
+                window.location.href = 'create_share_folder.php?' + ids.map(function (id) { return 'ids[]=' + encodeURIComponent(id); }).join('&');
             } else if (action === 'public' || action === 'private') {
                 var form = document.createElement('form');
                 form.method = 'post';

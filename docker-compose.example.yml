@@ -1,0 +1,34 @@
+# Example: DataDock + MySQL. Copy to docker-compose.yml and adjust secrets.
+# After containers are up, complete setup via install.php in a browser or scripts/datadock-install.php.
+#
+# Optional runtime overrides (see includes/settings_loader.php):
+#   DATADOCK_READ_ONLY=1
+#   DATADOCK_SITE_NAME=My Archive
+#   DATADOCK_STORAGE_BASE_PATH=/var/www/html
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      APACHE_RUN_USER: www-data
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: changeme_root
+      MYSQL_DATABASE: datadock
+      MYSQL_USER: datadock
+      MYSQL_PASSWORD: changeme_app
+    volumes:
+      - datadock_mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  datadock_mysql:

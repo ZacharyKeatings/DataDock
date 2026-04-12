@@ -7,7 +7,8 @@ require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
 require_once __DIR__ . '/includes/hotlink_log.php';
 
 $userId = null;

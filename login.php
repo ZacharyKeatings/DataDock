@@ -5,7 +5,8 @@ init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/rate_limit.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
 
 $input = '';
 $bruteForce      = $settings['brute_force'] ?? [];

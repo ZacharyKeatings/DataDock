@@ -4,7 +4,10 @@ init_session();
 require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
+require_once __DIR__ . '/includes/read_only.php';
+datadock_block_if_read_only($settings);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['id']) || !is_numeric($_POST['id'])) {
     header("Location: dashboard.php");

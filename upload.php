@@ -5,7 +5,9 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/audit_log.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
+require_once __DIR__ . '/includes/read_only.php';
 
 // feature flags & limits
 $guestUploadsEnabled       = $settings['guest_uploads']['enabled']         ?? false;
@@ -29,6 +31,12 @@ if ($isGuest) {
     } else {
         $guestId = $_COOKIE['guest_id'];
     }
+}
+
+if (datadock_read_only_enabled($settings)) {
+    $_SESSION['flash_error'][] = '❌ Uploads are disabled (read-only / archive mode).';
+    header('Location: ' . ($currentUserId ? 'dashboard.php' : 'index.php'));
+    exit;
 }
 
 // page settings

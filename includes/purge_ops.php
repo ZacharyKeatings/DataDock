@@ -57,3 +57,18 @@ function datadock_purge_trash_by_retention(PDO $pdo, int $retentionDays): array 
 
     return ['deleted' => $deletedCount, 'freed_bytes' => $freedBytes];
 }
+
+/**
+ * Remove expired temporary share folders (v2.4+).
+ *
+ * @return int Number of share_folders rows deleted
+ */
+function datadock_purge_expired_share_folders(PDO $pdo): int {
+    try {
+        $stmt = $pdo->prepare('DELETE FROM share_folders WHERE expires_at IS NOT NULL AND expires_at < UTC_TIMESTAMP()');
+        $stmt->execute();
+        return $stmt->rowCount();
+    } catch (PDOException $e) {
+        return 0;
+    }
+}

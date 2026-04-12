@@ -231,8 +231,8 @@ Light collaboration without a full folder/collab system.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Temporary share folders | One share container, multiple files, one link, expiry (no full folder system). |
-| — | Comment field per file | Optional description or note visible to recipients. |
+| ✓ | Temporary share folders | One share container, multiple files, one link, expiry (no full folder system). |
+| ✓ | Comment field per file | Optional recipient note per file on share-folder page (v2.4+). |
 
 ---
 
@@ -242,10 +242,10 @@ Makes DataDock easier to deploy and operate in production environments.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | CLI installer | Install via CLI for VPS/automation (alongside web install.php). |
-| — | Environment-based config override | Env vars override DB-stored config (containers, 12-factor). |
-| — | Docker support | Official Dockerfile and docker-compose example. |
-| — | Health check endpoint | e.g. `/health` returning JSON for uptime monitoring. |
+| ✓ | CLI installer | `scripts/datadock-install.php` (alongside web install.php). |
+| ✓ | Environment-based config override | `DATADOCK_*` env vars via `includes/settings_loader.php`. |
+| ✓ | Docker support | `Dockerfile` and `docker-compose.example.yml`. |
+| ✓ | Health check endpoint | `health.php` returns JSON for uptime monitoring. |
 
 ---
 
@@ -262,7 +262,7 @@ Makes DataDock easier to deploy and operate in production environments.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Read-only instance mode | Admin toggle: no uploads, no new accounts, downloads only (archival deployments). |
+| ✓ | Read-only instance mode | Admin toggle + `DATADOCK_READ_ONLY`; no uploads, no new accounts, downloads only. |
 
 ---
 

@@ -3,7 +3,8 @@ require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
 require_once __DIR__ . '/includes/hotlink_log.php';
 require_once __DIR__ . '/includes/audit_log.php';
 require_once __DIR__ . '/includes/access_control.php';
@@ -31,6 +32,7 @@ function datadock_send_file_stream(PDO $pdo, array $file, array $settings, strin
         'download_public' => 'public_download',
         'download_onetime' => 'onetime_download',
         'download_signed' => 'public_download',
+        'download_share_folder' => 'public_download',
     ];
     $hot = $resourceMap[$logAction] ?? 'download';
     datadock_log_hotlink_if_external($pdo, $settings, $hot, $fileId);
@@ -70,6 +72,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['download_access'])) 
         }
     }
     header('Location: ' . $next);
+    exit;
+}
+
+// Share folder link: ?sf=TOKEN&id=FILE_ID (one link, many files; optional per-file password/IP)
+if (isset($_GET['sf'], $_GET['id']) && $_GET['sf'] !== '' && is_numeric($_GET['id'])) {
+    $sfToken = trim((string) $_GET['sf']);
+    $fileId = (int) $_GET['id'];
+    if (strlen($sfToken) === 64 && ctype_xdigit($sfToken)) {
+        $stmt = $pdo->prepare('
+            SELECT sf.id AS sf_id, sf.expires_at
+            FROM share_folders sf
+            WHERE sf.token = ?
+        ');
+        $stmt->execute([$sfToken]);
+        $srow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($srow) {
+            $exp = $srow['expires_at'] ?? null;
+            if ($exp !== null && $exp !== '') {
+                $ts = strtotime((string) $exp . ' UTC');
+                if ($ts !== false && $ts < time()) {
+                    http_response_code(410);
+                    echo 'This share link has expired.';
+                    exit;
+                }
+            }
+            $sfId = (int) $srow['sf_id'];
+            $stmt = $pdo->prepare('
+                SELECT f.* FROM files f
+                INNER JOIN share_folder_files sff ON sff.file_id = f.id AND sff.share_folder_id = ?
+                WHERE f.id = ? AND f.deleted_at IS NULL AND (f.quarantine_status = \'approved\' OR f.quarantine_status IS NULL)
+            ');
+            $stmt->execute([$sfId, $fileId]);
+            $file = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($file) {
+                if (!datadock_ip_allowlist_allows($file['ip_allowlist'] ?? null, datadock_client_ip())) {
+                    http_response_code(403);
+                    echo 'Access denied (IP not allowed).';
+                    exit;
+                }
+                if (!empty($file['access_password_hash']) && !datadock_session_has_file_access($fileId)) {
+                    $q = 'sf=' . rawurlencode($sfToken) . '&id=' . $fileId;
+                    datadock_render_download_password_page((string) ($file['original_name'] ?? $file['filename']), '', ['file_id' => $fileId, 'next' => 'download.php?' . $q]);
+                }
+                $path = datadock_file_main_path($pdo, $file);
+                if (file_exists($path)) {
+                    datadock_send_file_stream($pdo, $file, $settings, 'download_share_folder', [
+                        'file_id' => $fileId,
+                        'detail' => ['name' => $file['original_name'] ?? $file['filename'], 'share_folder_id' => $sfId],
+                    ], true);
+                }
+            }
+        }
+    }
+    http_response_code(404);
+    echo 'File not found or link invalid.';
     exit;
 }
 

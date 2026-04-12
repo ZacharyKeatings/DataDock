@@ -1,7 +1,8 @@
 <?php
 // Load settings if not already loaded
 if (!isset($settings)) {
-    require_once __DIR__ . '/../config/settings.php';
+    require_once __DIR__ . '/settings_loader.php';
+    $settings = file_exists(__DIR__ . '/../config/settings.php') ? datadock_load_settings() : [];
 }
 if (!function_exists('sanitize_data')) {
     require_once __DIR__ . '/../includes/functions.php';

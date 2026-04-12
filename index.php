@@ -4,7 +4,8 @@ init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 $pageTitle = "Home";
-require_once 'config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
 require_once 'includes/header.php';
 
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);

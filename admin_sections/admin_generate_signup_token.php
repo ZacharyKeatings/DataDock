@@ -3,6 +3,14 @@ require_once __DIR__ . '/../includes/auth.php';
 init_session();
 require_admin();
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/settings_loader.php';
+$settings = datadock_load_settings();
+require_once __DIR__ . '/../includes/read_only.php';
+if (datadock_read_only_enabled($settings)) {
+    $_SESSION['flash_error'][] = '❌ Read-only mode: new signup tokens cannot be created.';
+    header('Location: ../admin.php?section=users');
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Location: ../admin.php?section=users");

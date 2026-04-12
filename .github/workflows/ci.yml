@@ -1,0 +1,25 @@
+# Quick CI: PHP syntax check on push and pull requests.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  php-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP syntax check
+        run: |
+          set -e
+          while IFS= read -r -d '' f; do
+            php -l "$f"
+          done < <(find . -name '*.php' -print0)

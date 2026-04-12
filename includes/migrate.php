@@ -427,4 +427,35 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    // v2.4.0: temporary share folders (one link, many files, optional recipient note per file)
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS share_folders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                token VARCHAR(64) NOT NULL UNIQUE,
+                title VARCHAR(200) DEFAULT NULL,
+                expires_at DATETIME DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_share_folders_token (token),
+                INDEX idx_share_folders_expires (expires_at)
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS share_folder_files (
+                share_folder_id INT NOT NULL,
+                file_id INT NOT NULL,
+                recipient_note VARCHAR(500) DEFAULT NULL,
+                sort_order INT NOT NULL DEFAULT 0,
+                PRIMARY KEY (share_folder_id, file_id),
+                FOREIGN KEY (share_folder_id) REFERENCES share_folders(id) ON DELETE CASCADE,
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+            )
+        ");
+    } catch (PDOException $e) {}
 }

@@ -9,8 +9,9 @@ if ($currentScript !== 'install.php' && (!file_exists($settingsPath) || !file_ex
 }
 
 require_once __DIR__ . '/../includes/functions.php';
-if (file_exists($settingsPath)) require $settingsPath;
-$settings = $settings ?? [];
+require_once __DIR__ . '/settings_loader.php';
+$settings = file_exists($settingsPath) ? datadock_load_settings() : [];
+$readOnlyMode = datadock_read_only_enabled($settings);
 
 $siteName = get_site_name();
 $pageTitle = $pageTitle ?? $siteName;
@@ -62,7 +63,9 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                     <?php if (!empty($_SESSION['user_id'])): ?>
                         <a href="dashboard.php"<?= $currentPage === 'dashboard.php' ? ' class="active"' : '' ?>>Your Files</a>
                         <a href="trash.php"<?= $currentPage === 'trash.php' ? ' class="active"' : '' ?>>Trash</a>
+                        <?php if (empty($readOnlyMode)): ?>
                         <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
+                        <?php endif; ?>
                         <a href="activity.php"<?= $currentPage === 'activity.php' ? ' class="active"' : '' ?>>Activity</a>
                         <a href="profile.php"<?= $currentPage === 'profile.php' ? ' class="active"' : '' ?>>Profile</a>
                         <?php if ($_SESSION['role'] === 'admin'): ?>
@@ -70,11 +73,13 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                         <?php endif; ?>
                         <span class="nav-logout-wrap"><a href="logout.php">Logout</a> (<?= user_profile_link($_SESSION['username']) ?>)</span>
                     <?php else: ?>
-                        <?php if ($guestUploadsEnabled): ?>
+                        <?php if ($guestUploadsEnabled && empty($readOnlyMode)): ?>
                             <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
                         <?php endif; ?>
                         <a href="login.php"<?= $currentPage === 'login.php' ? ' class="active"' : '' ?>>Login</a>
+                        <?php if (empty($readOnlyMode)): ?>
                         <a href="register.php"<?= $currentPage === 'register.php' ? ' class="active"' : '' ?>>Register</a>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </nav>
             </div>

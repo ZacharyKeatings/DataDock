@@ -3,10 +3,10 @@
  * Maintenance mode page. Shown to non-admins when maintenance_mode is enabled.
  */
 require_once __DIR__ . '/includes/functions.php';
-$settingsPath = __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
 $siteName = 'DataDock';
-if (file_exists($settingsPath)) {
-    require $settingsPath;
+if (file_exists(__DIR__ . '/config/settings.php')) {
+    $settings = datadock_load_settings();
     $siteName = $settings['site_name'] ?? 'DataDock';
 }
 ?>

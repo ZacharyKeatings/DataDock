@@ -23,6 +23,15 @@ function datadock_process_dashboard_post(PDO $pdo): void {
         return;
     }
 
+    require_once __DIR__ . '/settings_loader.php';
+    if (datadock_read_only_enabled(datadock_load_settings())) {
+        if (!empty($_POST['datadock_folder_create']) || !empty($_POST['datadock_move_file'])) {
+            $_SESSION['flash_error'][] = '❌ Read-only mode: folder changes are disabled.';
+            $rf = isset($_POST['redirect_folder']) ? (int) $_POST['redirect_folder'] : 0;
+            datadock_redirect_dashboard($rf > 0 ? $rf : 0);
+        }
+    }
+
     $userId = (int) ($_SESSION['user_id'] ?? 0);
     if ($userId <= 0) {
         return;

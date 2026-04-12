@@ -7,7 +7,8 @@ require_once __DIR__ . '/includes/auth.php';
 init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/includes/settings_loader.php';
+$settings = datadock_load_settings();
 require_once __DIR__ . '/includes/hotlink_log.php';
 require_once __DIR__ . '/includes/access_control.php';
 
@@ -35,6 +36,39 @@ if (!$allowed && $userId) {
     $chk = $pdo->prepare('SELECT 1 FROM file_shares WHERE file_id = ? AND shared_with_user_id = ? LIMIT 1');
     $chk->execute([$fileId, $userId]);
     $allowed = (bool) $chk->fetchColumn();
+}
+if (!$allowed && isset($_GET['sf']) && $_GET['sf'] !== '') {
+    $sf = trim((string) $_GET['sf']);
+    if (strlen($sf) === 64 && ctype_xdigit($sf)) {
+        $st = $pdo->prepare('
+            SELECT sf.expires_at FROM share_folders sf
+            INNER JOIN share_folder_files sff ON sff.share_folder_id = sf.id AND sff.file_id = ?
+            WHERE sf.token = ?
+        ');
+        $st->execute([$fileId, $sf]);
+        $srow = $st->fetch(PDO::FETCH_ASSOC);
+        if ($srow) {
+            $sexp = $srow['expires_at'] ?? null;
+            $expired = false;
+            if ($sexp !== null && $sexp !== '') {
+                $ts = strtotime((string) $sexp . ' UTC');
+                if ($ts !== false && $ts < time()) {
+                    $expired = true;
+                }
+            }
+            if (!$expired) {
+                if (!datadock_ip_allowlist_allows($row['ip_allowlist'] ?? null, datadock_client_ip())) {
+                    http_response_code(403);
+                    exit;
+                }
+                if (!empty($row['access_password_hash']) && !datadock_session_has_file_access($fileId)) {
+                    http_response_code(403);
+                    exit;
+                }
+                $allowed = true;
+            }
+        }
+    }
 }
 if (!$allowed) {
     $publicOk = !empty($settings['public_browsing_enabled'])
