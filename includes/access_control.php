@@ -179,7 +179,7 @@ function datadock_render_download_password_page(string $fileLabel, string $retur
     http_response_code(403);
     $title = 'Download password required';
     echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . htmlspecialchars($title) . '</title>';
-    echo '<link rel="stylesheet" href="assets/style.css">';
+    echo '<link rel="stylesheet" href="' . htmlspecialchars(app_asset_url('assets/style.css'), ENT_QUOTES, 'UTF-8') . '">';
     echo '</head><body><div class="page-wrapper"><main class="container page-section">';
     echo '<h2 class="page-title">' . htmlspecialchars($title) . '</h2>';
     echo '<p>This file requires a password to download.</p><p><strong>File:</strong> ' . htmlspecialchars($fileLabel) . '</p>';

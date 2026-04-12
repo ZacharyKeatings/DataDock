@@ -15,7 +15,7 @@ if (file_exists(__DIR__ . '/config/settings.php')) {
 <head>
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($siteName) ?> — Maintenance</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_asset_url('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body>
     <div class="page-wrapper">

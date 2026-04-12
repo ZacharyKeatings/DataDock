@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             var val = btn.dataset.copy;
             if (val && navigator.clipboard) navigator.clipboard.writeText(val);
-            btn.innerHTML = '<svg class="icon" aria-hidden="true" width="24" height="24"><use href="assets/icons.svg#icon-check"/></svg>';
+            btn.innerHTML = '<svg class="icon" aria-hidden="true" width="24" height="24"><use href="' + <?= json_encode(app_asset_url('assets/icons.svg')) ?> + '#icon-check"/></svg>';
             setTimeout(function () { btn.innerHTML = origHtml; }, 1500);
         });
     });

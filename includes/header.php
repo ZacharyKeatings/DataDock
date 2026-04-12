@@ -37,8 +37,8 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
     <?php if (!empty($faviconUrl)): ?>
     <link rel="icon" href="<?= sanitize_data($faviconUrl) ?>" type="image/x-icon">
     <?php endif; ?>
-    <link rel="stylesheet" href="assets/style.css">
-    <link rel="stylesheet" href="assets/<?= sanitize_data($themePath) ?>">
+    <link rel="stylesheet" href="<?= sanitize_data(app_asset_url('assets/style.css')) ?>">
+    <link rel="stylesheet" href="<?= sanitize_data(app_asset_url('assets/' . $themePath)) ?>">
 </head>
 <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>

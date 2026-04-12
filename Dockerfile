@@ -1,5 +1,5 @@
 # DataDock — PHP + Apache. Configure MySQL/MariaDB separately (see docker-compose.example.yml).
-FROM php:8.2-apache
+FROM php:8.5-apache
 
 RUN docker-php-ext-install pdo_mysql \
     && a2enmod rewrite headers

@@ -33,7 +33,8 @@ function user_profile_link($username) {
 function icon_svg($name, $class = '') {
     $id = strpos($name, 'icon-') === 0 ? $name : 'icon-' . $name;
     $cls = trim('icon ' . $class);
-    return '<svg class="' . htmlspecialchars($cls) . '" aria-hidden="true" width="24" height="24"><use href="assets/icons.svg#' . htmlspecialchars($id) . '"/></svg>';
+    $sprite = htmlspecialchars(app_asset_url('assets/icons.svg'), ENT_QUOTES, 'UTF-8');
+    return '<svg class="' . htmlspecialchars($cls) . '" aria-hidden="true" width="24" height="24"><use href="' . $sprite . '#' . htmlspecialchars($id) . '"/></svg>';
 }
 
 /**
@@ -127,6 +128,14 @@ function app_script_url(string $filename): string {
         return '/' . $filename;
     }
     return rtrim($dir, '/') . '/' . $filename;
+}
+
+/**
+ * Root-relative URL for static assets (CSS, icon sprite). Uses the same base path as app_script_url()
+ * so styles and sprites load when the app lives in a subdirectory or behind rewrites.
+ */
+function app_asset_url(string $path): string {
+    return app_script_url($path);
 }
 
 function return_bytes(string $val): int {
