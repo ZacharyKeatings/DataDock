@@ -1,5 +1,6 @@
 # .gitignore
 /config/db.php
+/config/.db-runtime.php
 /info.php
 /config/settings.php
 /uploads/

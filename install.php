@@ -101,7 +101,9 @@ $siteName = "DataDock";
                         }
                     ?>
                 </div>
-            <?php else: ?>
+            <?php else:
+                $dd_db_prefill = install_db_form_prefill();
+                ?>
                 <form method="post" class="form" onsubmit="return validateForm()">
                     <h3>Site Settings</h3>
                     <label for="site_name">Site Name</label>
@@ -109,20 +111,23 @@ $siteName = "DataDock";
                     <small>This is the name of your site (e.g., "My File Hub"). Choose any name you prefer.</small>
 
                     <h3>Database Settings</h3>
+                    <?php if (is_readable(__DIR__ . '/config/.db-runtime.php')): ?>
+                        <p><small>Database fields are prefilled from your Docker <code>DATADOCK_DB_*</code> environment (via <code>config/.db-runtime.php</code>). You can change them before installing.</small></p>
+                    <?php endif; ?>
                     <label for="db_host">Database Host</label>
-                    <input type="text" id="db_host" name="db_host" value="localhost" required>
-                    <small>The hostname of your MySQL server. Typically "localhost" on shared hosting.</small>
+                    <input type="text" id="db_host" name="db_host" value="<?= htmlspecialchars($dd_db_prefill['host'], ENT_QUOTES, 'UTF-8') ?>" required>
+                    <small>The hostname of your MySQL server. Typically "localhost" on shared hosting; use your DB service name (e.g. <code>db</code>) in Docker Compose.</small>
 
                     <label for="db_user">Database Username</label>
-                    <input type="text" id="db_user" name="db_user" required>
+                    <input type="text" id="db_user" name="db_user" value="<?= htmlspecialchars($dd_db_prefill['user'], ENT_QUOTES, 'UTF-8') ?>" required>
                     <small>Your MySQL username. This is provided by your hosting provider or set up in your control panel.</small>
 
                     <label for="db_pass">Database Password <span class="toggle-password" onclick="togglePassword()">[show]</span></label>
-                    <input type="password" id="db_pass" name="db_pass">
+                    <input type="password" id="db_pass" name="db_pass" value="<?= htmlspecialchars($dd_db_prefill['pass'], ENT_QUOTES, 'UTF-8') ?>">
                     <small>The password associated with your MySQL username.</small>
 
                     <label for="db_name">Database Name</label>
-                    <input type="text" id="db_name" name="db_name" value="file_upload_site" required>
+                    <input type="text" id="db_name" name="db_name" value="<?= htmlspecialchars($dd_db_prefill['name'], ENT_QUOTES, 'UTF-8') ?>" required>
                     <small>The name of the database to use for this site. It will be created automatically if it doesn't exist.</small>
 
                     <h3>Admin User Settings</h3>

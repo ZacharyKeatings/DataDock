@@ -7,9 +7,16 @@ RUN docker-php-ext-install pdo_mysql \
 # App root (adjust DocumentRoot if you mount the repo elsewhere)
 WORKDIR /var/www/html
 
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 COPY . /var/www/html/
 
-RUN chown -R www-data:www-data /var/www/html \
+RUN rm -f /var/www/html/docker-entrypoint.sh \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R u+rwX /var/www/html
 
 EXPOSE 80
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["apache2-foreground"]

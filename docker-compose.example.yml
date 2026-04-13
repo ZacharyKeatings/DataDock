@@ -1,4 +1,8 @@
-# Example: DataDock + MySQL. Copy to docker-compose.yml and adjust secrets.
+# Example: develop from this repo (build + bind mount). Copy to docker-compose.yml and adjust secrets.
+#
+# For the published image from Docker Hub (no build, no mount), use docker-compose.hub.example.yml
+# and paste that on Hub — it adds DATADOCK_DB_* on web.
+#
 # After containers are up, complete setup via install.php in a browser or scripts/datadock-install.php.
 #
 # Optional runtime overrides (see includes/settings_loader.php):
@@ -13,6 +17,11 @@ services:
       - "8080:80"
     environment:
       APACHE_RUN_USER: www-data
+      # TCP to the db service (avoid "localhost" → Unix socket in the web container).
+      DATADOCK_DB_HOST: db
+      DATADOCK_DB_NAME: datadock
+      DATADOCK_DB_USER: datadock
+      DATADOCK_DB_PASSWORD: changeme_app
     volumes:
       - ./:/var/www/html
     depends_on:

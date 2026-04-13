@@ -3,6 +3,52 @@
  * Shared database bootstrap for web install.php and CLI scripts/datadock-install.php.
  */
 
+/**
+ * Default values for the install form. Uses config/.db-runtime.php when present (Docker entrypoint),
+ * since Apache mod_php often does not expose DATADOCK_DB_* from the environment.
+ *
+ * @return array{host: string, user: string, pass: string, name: string}
+ */
+function install_db_form_prefill(): array {
+    $defaults = [
+        'host' => 'localhost',
+        'user' => '',
+        'pass' => '',
+        'name' => 'file_upload_site',
+    ];
+
+    $runtime = __DIR__ . '/../config/.db-runtime.php';
+    if (is_readable($runtime)) {
+        $host = null;
+        $dbname = null;
+        $user = null;
+        $pass = null;
+        require $runtime;
+
+        return [
+            'host' => $host ?? $defaults['host'],
+            'user' => $user ?? $defaults['user'],
+            'pass' => $pass ?? $defaults['pass'],
+            'name' => $dbname ?? $defaults['name'],
+        ];
+    }
+
+    if (($h = getenv('DATADOCK_DB_HOST')) !== false && $h !== '') {
+        $defaults['host'] = $h;
+    }
+    if (($n = getenv('DATADOCK_DB_NAME')) !== false && $n !== '') {
+        $defaults['name'] = $n;
+    }
+    if (($u = getenv('DATADOCK_DB_USER')) !== false && $u !== '') {
+        $defaults['user'] = $u;
+    }
+    if (($p = getenv('DATADOCK_DB_PASSWORD')) !== false) {
+        $defaults['pass'] = $p;
+    }
+
+    return $defaults;
+}
+
 function install_database($host, $user, $pass, $dbname) {
     try {
         $pdo = new PDO("mysql:host=$host;charset=utf8mb4", $user, $pass);
