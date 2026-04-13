@@ -3,6 +3,7 @@ $currentVersion = @file_get_contents(__DIR__ . '/../VERSION');
 $githubRepo = 'ZacharyKeatings/DataDock';
 $apiUrl = "https://api.github.com/repos/$githubRepo/releases/latest";
 $changelogUrl = "https://raw.githubusercontent.com/$githubRepo/main/CHANGELOG.md";
+$markdownBaseUrl = "https://github.com/$githubRepo/blob/main/";
 
 $latestTag = null;
 $releaseNotes = 'Unable to fetch release notes.';
@@ -72,7 +73,7 @@ curl_close($ch);
 <?php endif; ?>
 
 <h3>Latest Release Notes</h3>
-<div class="release-notes"><?= basic_markdown($releaseNotes) ?></div>
+<div class="release-notes"><?= basic_markdown($releaseNotes, $markdownBaseUrl) ?></div>
 
 <?php if ($changelog): 
     // Extract only the most recent changelog section (first ## version block until next ## or ---)
@@ -83,5 +84,5 @@ curl_close($ch);
     }
 ?>
     <h3>Recent Changelog</h3>
-    <div class="release-notes"><?= basic_markdown($changelogSection) ?></div>
+    <div class="release-notes"><?= basic_markdown($changelogSection, $markdownBaseUrl) ?></div>
 <?php endif; ?>

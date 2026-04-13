@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.4.3] - 2026-04-13
+### Updater markdown link handling
+
+#### Improved
+- **Markdown parser links** — `basic_markdown()` now parses standard markdown links more reliably in updater/release-note content, including relative links (not just absolute `http(s)` URLs).
+- **Absolute URL resolution** — Relative markdown links are now resolved against a configured base URL in the admin updater/changelog view, so links remain clickable and correct outside the repository context.
+- **Changelog reference** — Full notes: see [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## [v2.4.2] - 2026-04-12
+### Docker deployment hardening & hotfixes
+
+#### Fixed
+- **UI hotfix (v2.4.1)** — Repaired corrupted `assets/style.css` and related frontend rendering regressions introduced after `v2.4.0`.
+- **Docker bootstrap reliability** — Added `docker-entrypoint.sh` runtime bootstrapping so `config/db.php` is created from the example when missing and refreshed for Docker-based `DATADOCK_DB_*` setups.
+- **Container install defaults** — Installer DB prefill now reads generated runtime DB config (`config/.db-runtime.php`) or environment values so Docker installs avoid incorrect localhost/socket defaults.
+
+#### Improved
+- **Database configuration fallback** — `includes/db.php` and `health.php` now gracefully fall back to `config/db.php.example` and return clearer guidance when DB config is missing.
+- **Docker CI/CD tagging** — Docker publish workflow now builds on pushes to `main`/`master` (rolling `dev` + SHA tags), while SemVer and `latest` tags remain release-driven.
+- **Container templates/docs** — Updated Docker and compose examples (`Dockerfile`, `docker-compose*.yml`, `config/db.php.example`) and added runtime config generation script `scripts/generate-db-runtime.php`.
+
+---
+
 ## [v2.4.0] - 2026-04-11
 ### Collaboration, deployment & archive
 

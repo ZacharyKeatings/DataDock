@@ -817,6 +817,63 @@ function render_file_icon($icon, $class = 'file-icon') {
     return '<span class="' . htmlspecialchars($class) . '">' . sanitize_data($icon) . '</span>';
 }
 
+/**
+ * Resolve markdown link URLs against an optional base URL.
+ *
+ * @param string      $href
+ * @param string|null $baseUrl
+ * @return string
+ */
+function resolve_markdown_url(string $href, ?string $baseUrl = null): string {
+    $href = trim($href);
+    if ($href === '') {
+        return '#';
+    }
+
+    if (preg_match('/^(https?:|mailto:|tel:|#)/i', $href)) {
+        return $href;
+    }
+    if (preg_match('/^[a-z][a-z0-9+\-.]*:/i', $href)) {
+        return '#';
+    }
+    if (empty($baseUrl)) {
+        return $href;
+    }
+
+    $parts = parse_url($baseUrl);
+    if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
+        return $href;
+    }
+
+    $root = $parts['scheme'] . '://' . $parts['host'];
+    if (!empty($parts['port'])) {
+        $root .= ':' . $parts['port'];
+    }
+
+    if (str_starts_with($href, '/')) {
+        return $root . $href;
+    }
+
+    $basePath = $parts['path'] ?? '/';
+    $baseDir = preg_replace('#/[^/]*$#', '/', $basePath);
+    $combinedPath = $baseDir . $href;
+
+    $segments = explode('/', $combinedPath);
+    $normalized = [];
+    foreach ($segments as $segment) {
+        if ($segment === '' || $segment === '.') {
+            continue;
+        }
+        if ($segment === '..') {
+            array_pop($normalized);
+            continue;
+        }
+        $normalized[] = $segment;
+    }
+
+    return $root . '/' . implode('/', $normalized);
+}
+
 
 
 /**
@@ -837,10 +894,11 @@ function render_file_icon($icon, $class = 'file-icon') {
  * HTML output is sanitized to prevent XSS. Intended for displaying Markdown 
  * from trusted sources such as GitHub release notes or changelogs.
  *
- * @param string $text  Raw Markdown content
- * @return string       Safe HTML output
+ * @param string      $text     Raw Markdown content
+ * @param string|null $baseUrl  Base URL for converting relative markdown links
+ * @return string               Safe HTML output
  */
-function basic_markdown($text) {
+function basic_markdown($text, ?string $baseUrl = null) {
     $text = trim($text);
 
     // Escape HTML
@@ -872,8 +930,13 @@ function basic_markdown($text) {
     $text = preg_replace('/^## (.*?)$/m', '<h2>$1</h2>', $text);
     $text = preg_replace('/^# (.*?)$/m', '<h1>$1</h1>', $text);
 
-    // Links: [text](url)
-    $text = preg_replace('/\[(.*?)\]\((https?:\/\/[^\s]+)\)/', '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>', $text);
+    // Links: [text](url), excluding images and supporting relative URLs.
+    $text = preg_replace_callback('/(?<!!)\[(.*?)\]\(([^)\s]+)\)/', function ($matches) use ($baseUrl) {
+        $label = $matches[1];
+        $rawHref = html_entity_decode($matches[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $resolvedHref = resolve_markdown_url($rawHref, $baseUrl);
+        return '<a href="' . htmlspecialchars($resolvedHref, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">' . $label . '</a>';
+    }, $text);
 
     // Unordered lists
     $text = preg_replace('/^(\s*)[-*] (.+)$/m', '$1<li>$2</li>', $text);
