@@ -16,9 +16,16 @@ $payload = [
 ];
 
 $dbOk = false;
-if (is_readable(__DIR__ . '/config/db.php')) {
+$configDb = __DIR__ . '/config/db.php';
+if (!is_readable($configDb)) {
+    $fb = __DIR__ . '/config/db.php.example';
+    if (is_readable($fb)) {
+        $configDb = $fb;
+    }
+}
+if (is_readable($configDb)) {
     try {
-        require_once __DIR__ . '/config/db.php';
+        require_once $configDb;
         /** @var PDO $pdo */
         $pdo->query('SELECT 1');
         $dbOk = true;

@@ -1,5 +1,6 @@
 # Same stack as Docker Hub’s minimal example, but with the fields the app needs to reach MySQL.
-# Use this when pulling zacharykeatings/datadock:latest (no local build / no bind mount).
+# Use this when pulling from Docker Hub (no local build / no bind mount).
+# Image tags: :latest follows the newest GitHub Release; :dev follows the latest commit on main/master; :<sha> is immutable.
 #
 # Copy to docker-compose.yml, change secrets, then: docker compose up -d
 # Open http://localhost:8080 (or your mapped port) and complete install.php if required.

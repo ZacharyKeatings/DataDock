@@ -2,6 +2,10 @@
 set -e
 # config/db.php is gitignored; ensure a file exists so require_once does not fatal.
 if [ ! -f /var/www/html/config/db.php ]; then
+  if [ ! -f /var/www/html/config/db.php.example ]; then
+    echo "DataDock FATAL: /var/www/html/config/db.php.example is missing (broken image or bind mount hiding config/)." >&2
+    exit 1
+  fi
   echo "DataDock: config/db.php missing — copying config/db.php.example (edit credentials and DB host for your environment)."
   cp /var/www/html/config/db.php.example /var/www/html/config/db.php
 fi

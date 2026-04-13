@@ -1,4 +1,7 @@
-# Build and push to Docker Hub when a GitHub Release is published (recommended for v2.4.0+).
+# Build and push to Docker Hub on:
+#   - Every push to main or master (tags: <git-sha>, dev — rolling tip of default branch)
+#   - Published releases (tags: semver, latest, <git-sha> — latest = newest release only)
+#   - workflow_dispatch (sha always; dev when run on main/master; semver/latest only on release events)
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   DOCKERHUB_USERNAME — Docker Hub username or organization name
@@ -10,6 +13,10 @@
 name: Publish Docker image
 
 on:
+  push:
+    branches:
+      - main
+      - master
   release:
     types: [published]
   workflow_dispatch:
@@ -48,9 +55,10 @@ jobs:
         with:
           images: ${{ steps.image.outputs.name }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
             type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+            type=raw,value=dev,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref_name == 'main' || github.ref_name == 'master') }}
             type=sha,prefix=,format=short
 
       - name: Build and push
