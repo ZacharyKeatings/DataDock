@@ -5,6 +5,7 @@ if (is_readable($__dd_rt)) {
     require $__dd_rt;
 }
 if (!isset($host)) {
+    // Shared host default first; DATADOCK_DB_* overrides when provided.
     $host = getenv('DATADOCK_DB_HOST') ?: 'localhost';
     $dbname = getenv('DATADOCK_DB_NAME') ?: 'your_database_name';
     $user = getenv('DATADOCK_DB_USER') ?: 'your_database_user';
