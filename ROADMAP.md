@@ -302,7 +302,7 @@ Beyond the health check planned in **System Maturity**.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Documented security headers | Recommended CSP, HSTS, X-Frame-Options, etc. for reverse proxies and Docker. |
+| ✓ | Documented security headers | PHP modes + README; nginx/apache examples under `examples/` (v2.5+). |
 
 ---
 

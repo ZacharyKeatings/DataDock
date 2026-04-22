@@ -75,6 +75,12 @@ function datadock_apply_env_overrides(array $settings): array {
     if (($v = $e('DATADOCK_SESSION_TIMEOUT_MINUTES')) !== null && $v !== '' && is_numeric($v)) {
         $settings['session_timeout_minutes'] = (int) $v;
     }
+    if (($v = $e('DATADOCK_SECURITY_HEADERS')) !== null && $v !== '') {
+        $vm = strtolower(trim($v));
+        if (in_array($vm, ['off', 'recommended', 'strict'], true)) {
+            $settings['security_headers_mode'] = $vm;
+        }
+    }
     if (($b = datadock_env_bool($e('DATADOCK_GUEST_UPLOADS_ENABLED'), null)) !== null) {
         if (!isset($settings['guest_uploads']) || !is_array($settings['guest_uploads'])) {
             $settings['guest_uploads'] = ['enabled' => false, 'max_files' => 0, 'max_storage' => 0];

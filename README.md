@@ -97,7 +97,7 @@ Most settings are managed in the **Admin Panel** after installation:
 - **User permissions** — Registration on/off, invite-only registration (admin-generated signup links), guest upload limits, max files and storage per user (with byte/KB/MB/GB units), unique email enforcement.
 - **Storage** — Custom storage path (uploads and thumbnails can live outside the web root).
 - **Server PHP limits (optional)** — Override `upload_max_filesize` and `post_max_size` via a `.user.ini` file written from Site Settings; remove overrides when not needed.
-- **Security** — Brute-force protection thresholds, session timeout, install.php warning toggle.
+- **Security** — Brute-force protection thresholds, session idle timeout, optional PHP response headers (`recommended` / `strict`), optional “remember this device” (cookie lifetime only), install.php warning toggle.
 - **Logging** — Log file path and verbosity.
 
 There is no separate config file to edit for normal operation; the installer writes initial database and config, and the rest is done via the UI.
@@ -124,6 +124,8 @@ Security-related choices: CSRF-safe form handling, `password_hash` for passwords
 - **Access control** — Admin panel and sensitive actions require an authenticated session and appropriate role.
 - **Config protection** — The `config/` directory is protected (e.g. via `.htaccess` on Apache) so credentials are not directly accessible.
 - **Installation** — Deleting `install.php` after setup is recommended; a warning is shown to the logged-in admin on every page until it is removed (toggle in Site Settings).
+- **HTTP headers (optional, v2.5+)** — In **Admin → Site Settings**, you can set `security_headers_mode` to `recommended` or `strict` so PHP sends extra headers (nosniff, referrer policy, framing, and in `strict` mode a Content-Security-Policy aligned with this app’s inline scripts and the Activity chart CDN). For TLS/HSTS and duplicate-header control, prefer your reverse proxy: copy from **`examples/nginx-security-headers.conf`** or **`examples/apache-security-headers.conf`**. Container / env: `DATADOCK_SECURITY_HEADERS=off|recommended|strict`.
+- **Sessions** — Idle timeout signs users out with a clear message on the login page. Optional **Remember this device** only extends the session cookie lifetime (still the same PHP session; idle rules apply); it is not a separate “remember me” token system.
 
 For security-sensitive deployments, use HTTPS, restrict admin access (e.g. by IP or VPN), and keep PHP and MySQL updated. Report vulnerabilities responsibly (e.g. via GitHub issues or contact details in the repo).
 
@@ -137,6 +139,8 @@ For security-sensitive deployments, use HTTPS, restrict admin access (e.g. by IP
 | [**CONTRIBUTING.md**](CONTRIBUTING.md) | How to contribute: fork, branch naming, and pull requests. |
 | [**ROADMAP.md**](ROADMAP.md) | Full feature checklist (done and planned) with short descriptions. |
 | [**CHANGELOG.md**](CHANGELOG.md) | Release history and notable changes. |
+| [**examples/nginx-security-headers.conf**](examples/nginx-security-headers.conf) | Optional nginx header snippets (v2.5+). |
+| [**examples/apache-security-headers.conf**](examples/apache-security-headers.conf) | Optional Apache header snippets (v2.5+). |
 
 ---
 

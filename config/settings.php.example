@@ -8,7 +8,12 @@ $settings = [
     'max_file_size' => 5242880,             // 5 MB
     'default_file_expiry' => 'never',      // Default for upload form: 1_minute, 30_minutes, 1_hour, 6_hours, 1_day, 1_week, 1_month, 1_year, never
     'thumbnails_enabled' => true,          // Generate thumbnails for image uploads
-    'session_timeout_minutes' => 60,       // Session lifetime in minutes; 0 = until browser close
+    'session_timeout_minutes' => 60,       // Idle timeout for signed-in users (minutes); 0 = no idle limit (browser session cookie unless "remember" extends it)
+    'security_headers_mode' => 'off',      // off | recommended | strict — extra PHP response headers (see README + examples/*.conf for reverse proxies)
+    'remember_device' => [                 // Login checkbox: longer session cookie only; same PHP session; disable to hide the option
+        'enabled' => true,
+        'cookie_days' => 30,               // Max session cookie lifetime when "remember" is checked (1–365)
+    ],
     'install_warning_enabled' => true,     // Show admin warning when install.php exists
 
     'maintenance_mode' => false,           // Block non-admins when enabled
@@ -84,6 +89,7 @@ $settings = [
  *   DATADOCK_INVITE_ONLY_REGISTRATION, DATADOCK_GUEST_UPLOADS_ENABLED
  *   DATADOCK_STORAGE_BASE_PATH, DATADOCK_LOG_PATH, DATADOCK_LOG_LEVEL
  *   DATADOCK_MAX_FILE_SIZE (bytes), DATADOCK_SESSION_TIMEOUT_MINUTES
+ *   DATADOCK_SECURITY_HEADERS=off|recommended|strict
  * See includes/settings_loader.php for the authoritative list.
  */
 ?>

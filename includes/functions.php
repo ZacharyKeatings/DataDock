@@ -272,6 +272,11 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'default_file_expiry' => 'never',\n" .
         "    'thumbnails_enabled' => true,\n" .
         "    'session_timeout_minutes' => 60,\n" .
+        "    'security_headers_mode' => 'off',\n" .
+        "    'remember_device' => [\n" .
+        "        'enabled' => true,\n" .
+        "        'cookie_days' => 30\n" .
+        "    ],\n" .
         "    'install_warning_enabled' => true,\n" .
         "    'maintenance_mode' => false,\n" .
         "    'read_only_mode' => false,\n" .

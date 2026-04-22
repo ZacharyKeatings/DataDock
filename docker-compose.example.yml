@@ -9,6 +9,7 @@
 #   DATADOCK_READ_ONLY=1
 #   DATADOCK_SITE_NAME=My Archive
 #   DATADOCK_STORAGE_BASE_PATH=/var/www/html
+#   DATADOCK_SECURITY_HEADERS=recommended   # off | recommended | strict (v2.5+)
 
 services:
   web:

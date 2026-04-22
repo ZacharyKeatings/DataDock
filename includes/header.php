@@ -11,6 +11,8 @@ if ($currentScript !== 'install.php' && (!file_exists($settingsPath) || !file_ex
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/settings_loader.php';
 $settings = file_exists($settingsPath) ? datadock_load_settings() : [];
+require_once __DIR__ . '/security_headers.php';
+datadock_send_response_security_headers($settings);
 $readOnlyMode = datadock_read_only_enabled($settings);
 
 $siteName = get_site_name();

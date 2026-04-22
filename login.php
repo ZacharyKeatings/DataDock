@@ -7,6 +7,8 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
+$rememberDeviceRow = is_array($settings['remember_device'] ?? null) ? $settings['remember_device'] : [];
+$rememberDeviceOffer = !array_key_exists('enabled', $rememberDeviceRow) || !empty($rememberDeviceRow['enabled']);
 
 $input = '';
 $bruteForce      = $settings['brute_force'] ?? [];
@@ -21,6 +23,7 @@ $adaptiveSteps   = $bruteForce['adaptive_cooldown_steps'] ?? [5 => 5, 15 => 15, 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = trim($_POST['input'] ?? '');
     $password = $_POST['password'] ?? '';
+    $rememberThisDevice = $rememberDeviceOffer && isset($_POST['remember_device']);
     $clientIp = get_client_ip();
     $now = new DateTime('now', new DateTimeZone('UTC'));
     $windowStart = (clone $now)->modify("-$lockoutWindow minutes")->format('Y-m-d H:i:s');
@@ -96,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['user_id'] = $user['id'];
                             $_SESSION['username'] = $user['username'];
                             $_SESSION['role'] = $user['role'];
+                            datadock_finalize_login_session($settings, $rememberThisDevice);
                             $_SESSION['flash_success'][] = "🎉 Login successful. Welcome, " . $user['username'] . "!";
                             header("Location: dashboard.php");
                             exit;
@@ -121,11 +125,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = "Login";
+$idleNotice = isset($_GET['reason']) && $_GET['reason'] === 'idle';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-section auth-form">
     <h2 class="page-title">Login</h2>
+
+    <?php if ($idleNotice): ?>
+        <div class="flash warning" role="status">
+            Your session expired due to inactivity. Please sign in again.
+        </div>
+    <?php endif; ?>
 
     <form method="post" class="form">
         <div class="form-group">
@@ -137,6 +148,15 @@ require_once __DIR__ . '/includes/header.php';
             <label for="password">Password</label>
             <input type="password" name="password" id="password" required>
         </div>
+
+        <?php if ($rememberDeviceOffer): ?>
+        <div class="form-group settings-row-checkbox">
+            <label>
+                <input type="checkbox" name="remember_device" value="1">
+                Remember this device (keeps you signed in across browser restarts until idle timeout or logout; not a separate login token)
+            </label>
+        </div>
+        <?php endif; ?>
 
         <button type="submit" class="btn btn-primary">Login</button>
         <p style="margin-top: 1rem;"><a href="forgot_password.php">Forgot password?</a></p>

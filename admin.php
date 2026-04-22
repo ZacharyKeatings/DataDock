@@ -37,6 +37,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $thumbnailsEnabled = isset($_POST['thumbnails_enabled']);
         $sessionTimeoutMinutes = (int) ($_POST['session_timeout_minutes'] ?? 60);
+        $securityHeadersMode = strtolower(trim((string) ($_POST['security_headers_mode'] ?? 'off')));
+        if (!in_array($securityHeadersMode, ['off', 'recommended', 'strict'], true)) {
+            $securityHeadersMode = 'off';
+        }
+        $rememberDeviceEnabled = isset($_POST['remember_device_enabled']);
+        $rememberDeviceCookieDays = (int) ($_POST['remember_device_cookie_days'] ?? 30);
+        if ($rememberDeviceCookieDays < 1) {
+            $rememberDeviceCookieDays = 1;
+        }
+        if ($rememberDeviceCookieDays > 365) {
+            $rememberDeviceCookieDays = 365;
+        }
         $installWarningEnabled = isset($_POST['install_warning_enabled']);
         $maintenanceMode = isset($_POST['maintenance_mode']);
         $readOnlyMode = isset($_POST['read_only_mode']);
@@ -162,6 +174,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'default_file_expiry' => " . var_export($defaultFileExpiry, true) . ",\n" .
                 "    'thumbnails_enabled' => " . ($thumbnailsEnabled ? 'true' : 'false') . ",\n" .
                 "    'session_timeout_minutes' => $sessionTimeoutMinutes,\n" .
+                "    'security_headers_mode' => " . var_export($securityHeadersMode, true) . ",\n" .
+                "    'remember_device' => [\n" .
+                "        'enabled' => " . ($rememberDeviceEnabled ? 'true' : 'false') . ",\n" .
+                "        'cookie_days' => $rememberDeviceCookieDays\n" .
+                "    ],\n" .
                 "    'install_warning_enabled' => " . ($installWarningEnabled ? 'true' : 'false') . ",\n" .
                 "    'maintenance_mode' => " . ($maintenanceMode ? 'true' : 'false') . ",\n" .
                 "    'read_only_mode' => " . ($readOnlyMode ? 'true' : 'false') . ",\n" .
@@ -618,6 +635,19 @@ require_once __DIR__ . '/includes/header.php';
                 $trashRetentionDays = (int) ($fileSettings['trash_retention_days'] ?? 30);
                 $thumbnailsEnabled = $fileSettings['thumbnails_enabled'] ?? true;
                 $sessionTimeoutMinutes = (int) ($fileSettings['session_timeout_minutes'] ?? 60);
+                $securityHeadersMode = strtolower(trim((string) ($fileSettings['security_headers_mode'] ?? 'off')));
+                if (!in_array($securityHeadersMode, ['off', 'recommended', 'strict'], true)) {
+                    $securityHeadersMode = 'off';
+                }
+                $rememberDeviceCfg = is_array($fileSettings['remember_device'] ?? null) ? $fileSettings['remember_device'] : [];
+                $rememberDeviceEnabled = !array_key_exists('enabled', $rememberDeviceCfg) || !empty($rememberDeviceCfg['enabled']);
+                $rememberDeviceCookieDays = (int) ($rememberDeviceCfg['cookie_days'] ?? 30);
+                if ($rememberDeviceCookieDays < 1) {
+                    $rememberDeviceCookieDays = 1;
+                }
+                if ($rememberDeviceCookieDays > 365) {
+                    $rememberDeviceCookieDays = 365;
+                }
                 $installWarningEnabled = $fileSettings['install_warning_enabled'] ?? true;
                 $userLimits = $fileSettings['user_limits'] ?? [];
                 $userMaxFilesEnabled = $userLimits['max_files_enabled'] ?? false;

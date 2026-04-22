@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.5.0] - 2026-04-21
+### Edge security & abuse control
+
+#### Added
+- **Optional HTTP security headers (PHP)** — `security_headers_mode`: `off` (default), `recommended`, or `strict` (adds CSP tuned for this codebase, including Activity chart CDN). Documented in README; example snippets in `examples/nginx-security-headers.conf` and `examples/apache-security-headers.conf`.
+- **Environment override** — `DATADOCK_SECURITY_HEADERS=off|recommended|strict` (see `includes/settings_loader.php`).
+- **“Remember this device” (login)** — Optional longer session cookie only (no separate token store); respects idle timeout. Configurable in Admin → Site Settings (`remember_device.enabled`, `cookie_days`). Registration still uses a normal session finalize without remember.
+- **Idle session expiry UX** — After idle timeout, users are redirected to login with a clear notice (`?reason=idle`).
+
+#### Fixed
+- **Session cookie parameters** — Removed an eager `session_start()` in `includes/auth.php` that ran before `session_set_cookie_params()`, so `httponly`, `secure`, `SameSite`, and lifetime from Site Settings now apply.
+
+#### Improved
+- **Session hardening** — `session.use_strict_mode`, `session.use_only_cookies`, HTTPS detection via `X-Forwarded-Proto`, `session_regenerate_id(true)` on successful login (and registration), and coordinated `session.gc_maxlifetime` when remember-device is available.
+
+---
+
 ## [v2.4.3] - 2026-04-13
 ### Updater markdown link handling
 

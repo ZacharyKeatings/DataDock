@@ -354,10 +354,30 @@
                     </label>
                 </div>
                 <div class="settings-row">
-                    <label for="session_timeout_minutes">Session Timeout (minutes)</label>
+                    <label for="session_timeout_minutes">Session idle timeout (minutes)</label>
                     <input type="number" name="session_timeout_minutes" id="session_timeout_minutes" value="<?= sanitize_data($sessionTimeoutMinutes) ?>" min="0">
                 </div>
-                <p class="settings-hint">0 = until browser close.</p>
+                <p class="settings-hint">How long a signed-in user may be inactive before the next request signs them out. 0 = no idle limit (session still ends on logout). Does not replace server or PHP garbage collection.</p>
+                <div class="settings-row">
+                    <label for="security_headers_mode">HTTP security headers (PHP)</label>
+                    <select name="security_headers_mode" id="security_headers_mode">
+                        <option value="off"<?= $securityHeadersMode === 'off' ? ' selected' : '' ?>>Off (default)</option>
+                        <option value="recommended"<?= $securityHeadersMode === 'recommended' ? ' selected' : '' ?>>Recommended (nosniff, referrer, frame sameorigin)</option>
+                        <option value="strict"<?= $securityHeadersMode === 'strict' ? ' selected' : '' ?>>Strict (+ COOP, CSP for this app; see README)</option>
+                    </select>
+                </div>
+                <p class="settings-hint">Sent on normal HTML pages. For TLS/HSTS and duplicates, configure your reverse proxy; see <code>examples/nginx-security-headers.conf</code> and <code>examples/apache-security-headers.conf</code>. Env override: <code>DATADOCK_SECURITY_HEADERS</code>.</p>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="remember_device_enabled" <?= $rememberDeviceEnabled ? 'checked' : '' ?>>
+                        Offer “remember this device” on login (longer session cookie only)
+                    </label>
+                </div>
+                <div class="settings-row settings-row-split">
+                    <label for="remember_device_cookie_days">Remember cookie max (days)</label>
+                    <input type="number" name="remember_device_cookie_days" id="remember_device_cookie_days" value="<?= (int) $rememberDeviceCookieDays ?>" min="1" max="365">
+                </div>
+                <p class="settings-hint">When checked at login, the session cookie can persist across browser restarts up to this many days; idle timeout above still applies. Not a separate auth token.</p>
                 <div class="settings-row settings-row-checkbox">
                     <label>
                         <input type="checkbox" name="install_warning_enabled" <?= $installWarningEnabled ? 'checked' : '' ?>>

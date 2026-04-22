@@ -85,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $pdo->lastInsertId();
         $_SESSION['username'] = $username;
         $_SESSION['role'] = 'user';
+        datadock_finalize_login_session($settings, false);
 
         $_SESSION['flash_success'][] = "🎉 Registration successful. Welcome, $username!";
 
