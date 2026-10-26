@@ -185,6 +185,25 @@ function install_database($host, $user, $pass, $dbname) {
         ");
 
         $pdo->exec("
+            CREATE TABLE IF NOT EXISTS pastes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT DEFAULT NULL,
+                guest_id VARCHAR(64) DEFAULT NULL,
+                token VARCHAR(64) NOT NULL UNIQUE,
+                title VARCHAR(200) DEFAULT NULL,
+                content MEDIUMTEXT NOT NULL,
+                expires_at DATETIME DEFAULT NULL,
+                burn_after_read TINYINT(1) NOT NULL DEFAULT 0,
+                view_count INT NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_pastes_user (user_id),
+                INDEX idx_pastes_guest (guest_id),
+                INDEX idx_pastes_expires (expires_at)
+            )
+        ");
+
+        $pdo->exec("
             CREATE TABLE IF NOT EXISTS login_attempts (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT DEFAULT NULL,

@@ -83,6 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deduplicateStorage = !empty($_POST['deduplicate_storage']);
         $foldersEnabledSetting = !empty($_POST['folders_enabled']);
         $tagsEnabledSetting = !empty($_POST['tags_enabled']);
+        $pastesEnabledSetting = !empty($_POST['pastes_enabled']);
         $hotlinkLoggingEnabled = isset($_POST['hotlink_logging_enabled']);
         $hotlinkTrustedHosts = trim((string) ($_POST['hotlink_trusted_hosts'] ?? ''));
 
@@ -217,6 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'deduplicate_storage' => " . ($deduplicateStorage ? 'true' : 'false') . ",\n" .
                 "    'folders_enabled' => " . ($foldersEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'tags_enabled' => " . ($tagsEnabledSetting ? 'true' : 'false') . ",\n" .
+                "    'pastes_enabled' => " . ($pastesEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'hotlink_logging_enabled' => " . ($hotlinkLoggingEnabled ? 'true' : 'false') . ",\n" .
                 "    'hotlink_trusted_hosts' => " . var_export($hotlinkTrustedHosts, true) . ",\n" .
                 "    'ops_alerts' => [\n" .
@@ -306,12 +308,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deletedCount = $result['deleted'];
         $freedBytes = $result['freed_bytes'];
         $filetypeBreakdown = $result['filetype_breakdown'];
+        $purgedPastes = datadock_purge_expired_pastes($pdo);
         $adminUid = (int) ($_SESSION['user_id'] ?? 0);
         datadock_log_activity($pdo, 'admin_purge_expired', [
             'actor_user_id' => $adminUid > 0 ? $adminUid : null,
-            'detail' => ['deleted' => $deletedCount, 'freed_bytes' => $freedBytes],
+            'detail' => ['deleted' => $deletedCount, 'freed_bytes' => $freedBytes, 'pastes' => $purgedPastes],
         ]);
-
         if ($deletedCount > 0) {
             $_SESSION['flash_success'][] = "✅ Purged $deletedCount expired file(s).";
             $_SESSION['flash_success'][] = "💾 Total space freed: " . format_filesize($freedBytes) . ".";
@@ -322,7 +324,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $_SESSION['flash_success'][] = rtrim($summary, ',');
             }
-        } else {
+        }
+        if ($purgedPastes > 0) {
+            $_SESSION['flash_success'][] = "✅ Purged $purgedPastes expired paste(s).";
+        }
+        if ($deletedCount === 0 && $purgedPastes === 0) {
             $_SESSION['flash_warning'][] = "⚠️ No expired files found.";
         }
 
@@ -385,6 +391,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             try {
                 $pdo->exec('DELETE FROM share_folders');
+            } catch (PDOException $e) {
+            }
+            try {
+                $pdo->exec('DELETE FROM pastes');
             } catch (PDOException $e) {
             }
 
@@ -713,6 +723,7 @@ require_once __DIR__ . '/includes/header.php';
                 $deduplicateStorage = !empty($fileSettings['deduplicate_storage'] ?? true);
                 $foldersEnabledSetting = !isset($fileSettings['folders_enabled']) || !empty($fileSettings['folders_enabled']);
                 $tagsEnabledSetting = !isset($fileSettings['tags_enabled']) || !empty($fileSettings['tags_enabled']);
+                $pastesEnabledSetting = !isset($fileSettings['pastes_enabled']) || !empty($fileSettings['pastes_enabled']);
                 $hotlinkLoggingEnabled = !isset($fileSettings['hotlink_logging_enabled']) || !empty($fileSettings['hotlink_logging_enabled']);
                 $hotlinkTrustedHosts = trim($fileSettings['hotlink_trusted_hosts'] ?? '');
 

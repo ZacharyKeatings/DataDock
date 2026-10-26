@@ -58,6 +58,7 @@ $settings = [
     'deduplicate_storage' => true,
     'folders_enabled' => true,
     'tags_enabled' => true,
+    'pastes_enabled' => true,
 
     'public_browsing_enabled' => false,  // Allow anonymous browsing of public files
 

@@ -179,6 +179,7 @@
                 <input type="hidden" name="deduplicate_storage" value="0">
                 <input type="hidden" name="folders_enabled" value="0">
                 <input type="hidden" name="tags_enabled" value="0">
+                <input type="hidden" name="pastes_enabled" value="0">
                 <div class="settings-row settings-row-checkbox">
                     <label>
                         <input type="checkbox" name="deduplicate_storage" value="1" <?= !empty($deduplicateStorage) ? 'checked' : '' ?>>
@@ -195,6 +196,12 @@
                     <label>
                         <input type="checkbox" name="tags_enabled" value="1" <?= !empty($tagsEnabledSetting) ? 'checked' : '' ?>>
                         Enable tags (edit file, filter on dashboard)
+                    </label>
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="pastes_enabled" value="1" <?= !empty($pastesEnabledSetting) ? 'checked' : '' ?>>
+                        Enable plaintext pastes (unlisted text sharing)
                     </label>
                 </div>
                 <p class="settings-hint">Manage storage roots and per-user assignment under <a href="admin.php?section=storage">Storage partitions</a>.</p>

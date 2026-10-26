@@ -34,7 +34,16 @@ function datadock_send_response_security_headers(array $settings): void {
     }
 
     header('X-Content-Type-Options: nosniff');
-    header('Referrer-Policy: strict-origin-when-cross-origin');
+    $hasReferrerPolicy = false;
+    foreach (headers_list() as $sentHeader) {
+        if (stripos($sentHeader, 'Referrer-Policy:') === 0) {
+            $hasReferrerPolicy = true;
+            break;
+        }
+    }
+    if (!$hasReferrerPolicy) {
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+    }
     header('Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()');
 
     if ($mode === 'recommended') {

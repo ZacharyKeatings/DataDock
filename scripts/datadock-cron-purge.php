@@ -6,6 +6,7 @@
  *        php scripts/datadock-cron-purge.php --no-trash
  *        php scripts/datadock-cron-purge.php --no-expired
  *        php scripts/datadock-cron-purge.php --no-share-folders
+ *        php scripts/datadock-cron-purge.php --no-pastes
  */
 $base = dirname(__DIR__);
 chdir($base);
@@ -24,6 +25,7 @@ require_once $base . '/includes/purge_ops.php';
 $doExpired = true;
 $doTrash = true;
 $doShareFolders = true;
+$doPastes = true;
 foreach ($argv as $a) {
     if ($a === '--no-trash') {
         $doTrash = false;
@@ -33,6 +35,9 @@ foreach ($argv as $a) {
     }
     if ($a === '--no-share-folders') {
         $doShareFolders = false;
+    }
+    if ($a === '--no-pastes') {
+        $doPastes = false;
     }
 }
 
@@ -50,6 +55,10 @@ if ($doTrash) {
 if ($doShareFolders) {
     $n = datadock_purge_expired_share_folders($pdo);
     echo '[share_folders] expired_removed=' . $n . "\n";
+}
+if ($doPastes) {
+    $n = datadock_purge_expired_pastes($pdo);
+    echo '[pastes] expired_removed=' . $n . "\n";
 }
 
 exit($exit);

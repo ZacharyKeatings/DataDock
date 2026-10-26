@@ -60,6 +60,9 @@ function datadock_apply_env_overrides(array $settings): array {
     if (($b = datadock_env_bool($e('DATADOCK_PUBLIC_BROWSING_ENABLED'), null)) !== null) {
         $settings['public_browsing_enabled'] = $b;
     }
+    if (($b = datadock_env_bool($e('DATADOCK_PASTES_ENABLED'), null)) !== null) {
+        $settings['pastes_enabled'] = $b;
+    }
     if (($v = $e('DATADOCK_STORAGE_BASE_PATH')) !== null) {
         $settings['storage_base_path'] = $v;
     }

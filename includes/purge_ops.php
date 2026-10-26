@@ -72,3 +72,18 @@ function datadock_purge_expired_share_folders(PDO $pdo): int {
         return 0;
     }
 }
+
+/**
+ * Remove expired plaintext pastes.
+ *
+ * @return int Number of pastes deleted
+ */
+function datadock_purge_expired_pastes(PDO $pdo): int {
+    try {
+        $stmt = $pdo->prepare('DELETE FROM pastes WHERE expires_at IS NOT NULL AND expires_at < UTC_TIMESTAMP()');
+        $stmt->execute();
+        return $stmt->rowCount();
+    } catch (PDOException $e) {
+        return 0;
+    }
+}

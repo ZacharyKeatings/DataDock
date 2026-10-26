@@ -8,6 +8,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
 $readOnly = datadock_read_only_enabled($settings);
+require_once __DIR__ . '/includes/pastes.php';
 require_once __DIR__ . '/includes/dashboard_actions.php';
 require_once __DIR__ . '/includes/user_trust.php';
 
@@ -190,6 +191,8 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
         </ul>
     </div>
     <?php endif; ?>
+
+    <?php datadock_echo_owned_pastes($pdo, !empty($readOnly), 'dashboard.php', datadock_pastes_enabled($settings)); ?>
 
     <?php if ($foldersEnabled): ?>
     <nav class="folder-breadcrumb" aria-label="Folder path" style="margin-bottom:0.75rem;font-size:0.95rem;">

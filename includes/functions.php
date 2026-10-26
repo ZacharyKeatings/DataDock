@@ -325,6 +325,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'deduplicate_storage' => true,\n" .
         "    'folders_enabled' => true,\n" .
         "    'tags_enabled' => true,\n" .
+        "    'pastes_enabled' => true,\n" .
         "    'hotlink_logging_enabled' => true,\n" .
         "    'hotlink_trusted_hosts' => '',\n" .
         "    'ops_alerts' => [\n" .

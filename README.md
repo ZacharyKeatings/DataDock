@@ -47,7 +47,7 @@ Ideal for small teams, internal file sharing, or anyone who wants a minimal, con
 | Area | Capabilities |
 |------|----------------|
 | **Users & auth** | Registration (optional or invite-only), login, password reset (user or admin), guest uploads with quotas, role-based access, user-to-user file sharing. User profiles: private (edit username, email, display name, avatar, bio; change password; stats) and public (view by username; avatar, bio, public file stats and list). Usernames link to public profiles. |
-| **Files & storage** | Upload with expiry, thumbnails, custom storage path, allowed types, ZIP download, one-time links, QR codes, checksums (MD5/SHA256). Bulk actions on dashboard: zip selected files, toggle public/private, or delete multiple. |
+| **Files & storage** | Upload with expiry, thumbnails, custom storage path, allowed types, ZIP download, one-time links, QR codes, checksums (MD5/SHA256). Bulk actions on dashboard: zip selected files, toggle public/private, or delete multiple. Plaintext pastes: unlisted links for text, with expiry and optional one-time view. |
 | **Admin panel** | Site settings (branding, limits in B/KB/MB/GB, optional .user.ini override for PHP upload limits), user and file management, manual purge, maintenance mode, site stats, one-click updates. |
 | **Security** | Secure password hashing, CSRF-safe forms, brute-force protection, config directory protection, optional install.php warning. |
 

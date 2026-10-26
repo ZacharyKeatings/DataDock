@@ -67,6 +67,9 @@ a:hover {
 .form-grid select,
 .form-grid textarea,
 .form-group input,
+.form-group textarea,
+.form-group select,
+.paste-url,
 .upload-option select {
     background: var(--color-secondary);
     color: var(--color-text);

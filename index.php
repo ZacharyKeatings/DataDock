@@ -9,6 +9,9 @@ $settings = datadock_load_settings();
 require_once 'includes/header.php';
 
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
+$pastesEnabled = !isset($settings['pastes_enabled']) || !empty($settings['pastes_enabled']);
+$readOnly = datadock_read_only_enabled($settings);
+$guestUploadsEnabled = !empty($settings['guest_uploads']['enabled']);
 $userId = $_SESSION['user_id'] ?? null;
 
 // Get files to display
@@ -46,6 +49,9 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="welcome-banner"><?= nl2br(sanitize_data($welcomeMessage)) ?></div>
     <?php endif; ?>
     <p class="page-description">This site allows registered users to upload files and manage them securely.<?= $publicBrowsingEnabled ? ' Below are publicly shared files:' : ' Below are the most recent uploads:' ?></p>
+    <?php if ($pastesEnabled && !$readOnly && ($userId || $guestUploadsEnabled)): ?>
+    <p class="page-description"><a href="paste.php">Share plaintext</a> with an unlisted link.</p>
+    <?php endif; ?>
 
     <?php if ($recentFiles): ?>
         <div class="file-list file-list-index file-list-expandable<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">

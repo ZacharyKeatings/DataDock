@@ -83,6 +83,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Tags | Comma-separated tags on edit file; optional tag filter on dashboard; can disable in settings. |
 | ✓ | SHA-256 deduplication | Optional per storage partition (`storage_objects`); identical content shares one blob; refs decremented on delete/purge. |
 | ✓ | Partition-aware storage paths | `includes/storage.php` resolves paths for downloads, thumbnails, ZIP, one-time links, uploads, delete/purge across partitions. |
+| ✓ | Plaintext pastes | Unlisted pastebin-style text sharing (`paste.php`): expiry, one-time view, raw/download, dashboard list. Toggle in Site Settings. |
 
 ---
 

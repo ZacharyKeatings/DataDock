@@ -10,10 +10,12 @@ if ($currentScript !== 'install.php' && (!file_exists($settingsPath) || !file_ex
 
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/settings_loader.php';
+require_once __DIR__ . '/pastes.php';
 $settings = file_exists($settingsPath) ? datadock_load_settings() : [];
 require_once __DIR__ . '/security_headers.php';
 datadock_send_response_security_headers($settings);
 $readOnlyMode = datadock_read_only_enabled($settings);
+$pastesEnabled = datadock_pastes_enabled($settings);
 
 $siteName = get_site_name();
 $pageTitle = $pageTitle ?? $siteName;
@@ -68,6 +70,9 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                         <?php if (empty($readOnlyMode)): ?>
                         <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
                         <?php endif; ?>
+                        <?php if (!empty($pastesEnabled)): ?>
+                        <a href="paste.php"<?= $currentPage === 'paste.php' ? ' class="active"' : '' ?>>Paste</a>
+                        <?php endif; ?>
                         <a href="activity.php"<?= $currentPage === 'activity.php' ? ' class="active"' : '' ?>>Activity</a>
                         <a href="profile.php"<?= $currentPage === 'profile.php' ? ' class="active"' : '' ?>>Profile</a>
                         <?php if ($_SESSION['role'] === 'admin'): ?>
@@ -77,6 +82,9 @@ $themePath = $themeMap[$theme] ?? 'themes/light.css';
                     <?php else: ?>
                         <?php if ($guestUploadsEnabled && empty($readOnlyMode)): ?>
                             <a href="upload.php"<?= $currentPage === 'upload.php' ? ' class="active"' : '' ?>>Upload</a>
+                        <?php endif; ?>
+                        <?php if (!empty($pastesEnabled) && $guestUploadsEnabled && empty($readOnlyMode)): ?>
+                            <a href="paste.php"<?= $currentPage === 'paste.php' ? ' class="active"' : '' ?>>Paste</a>
                         <?php endif; ?>
                         <a href="login.php"<?= $currentPage === 'login.php' ? ' class="active"' : '' ?>>Login</a>
                         <?php if (empty($readOnlyMode)): ?>

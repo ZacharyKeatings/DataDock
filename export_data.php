@@ -49,12 +49,27 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId]);
 $downloadEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$pastes = [];
+try {
+    $stmt = $pdo->prepare('
+        SELECT id, token, title, content, expires_at, burn_after_read, view_count, created_at
+        FROM pastes
+        WHERE user_id = ?
+        ORDER BY id ASC
+    ');
+    $stmt->execute([$userId]);
+    $pastes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $pastes = [];
+}
+
 $export = [
     'export_version' => 1,
     'generated_at_utc' => gmdate('c'),
     'site' => get_site_name(),
     'account' => $user,
     'files' => $files,
+    'pastes' => $pastes,
     'activity_log_self' => $activity,
     'download_events_for_own_files' => $downloadEvents,
 ];
