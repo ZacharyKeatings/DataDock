@@ -308,6 +308,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'rewrite_file_extension' => false,\n" .
         "    'upload_quarantine_enabled' => false,\n" .
         "    'storage_base_path' => '',\n" .
+        "    'trusted_proxies' => '',\n" .
         "    'public_browsing_enabled' => false,\n" .
         "    'guest_uploads' => [\n" .
         "        'enabled' => false,\n" .

@@ -52,8 +52,18 @@ $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
                     <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['deleted_at']) ?>"></span></div>
                     <div class="file-actions">
                         <?php if (!$readOnly): ?>
-                        <a href="restore_file.php?id=<?= (int)$file['id'] ?>" class="btn btn-small">Restore</a>
-                        <a href="delete.php?id=<?= (int)$file['id'] ?>&permanent=1&from=trash" class="btn btn-small btn-danger" onclick="return confirm('Permanently delete this file? This cannot be undone.')">Delete permanently</a>
+                        <form method="post" action="restore_file.php" class="inline-action">
+                            <?= datadock_csrf_field() ?>
+                            <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
+                            <button type="submit" class="btn btn-small">Restore</button>
+                        </form>
+                        <form method="post" action="delete.php" class="inline-action" onsubmit="return confirm('Permanently delete this file? This cannot be undone.')">
+                            <?= datadock_csrf_field() ?>
+                            <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
+                            <input type="hidden" name="permanent" value="1">
+                            <input type="hidden" name="from" value="trash">
+                            <button type="submit" class="btn btn-small btn-danger">Delete permanently</button>
+                        </form>
                         <?php else: ?>
                         <span class="settings-hint">Read-only mode</span>
                         <?php endif; ?>

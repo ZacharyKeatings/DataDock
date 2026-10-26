@@ -167,9 +167,9 @@
             <div class="settings-card-body">
                 <div class="settings-row">
                     <label for="storage_base_path">Custom Storage Base Path</label>
-                    <input type="text" name="storage_base_path" id="storage_base_path" value="<?= sanitize_data($storageBasePath ?? '') ?>" placeholder="e.g. /var/data/datadock">
+                    <input type="text" name="storage_base_path" id="storage_base_path" value="<?= sanitize_data($storageBasePath ?? '') ?>" placeholder="Leave empty to place storage outside the web root">
                 </div>
-                <p class="settings-hint">Absolute or relative to project root. Creates uploads/ and thumbnails/ subdirs. Leave empty for default.</p>
+                <p class="settings-hint">Leave this empty on shared hosting. The next page load creates <code>datadock-storage</code> next to <code>public_html</code> (or <code>www</code> / <code>htdocs</code>) and moves <code>uploads/</code> and <code>thumbnails/</code> there. If the host will not allow that, files stay in the site folder and the web server is told to deny direct access. Set a path only when you want a specific directory.</p>
             </div>
         </div>
 
@@ -235,6 +235,11 @@
                     <input type="number" name="adaptive_cooldown_ip_window_minutes" id="adaptive_cooldown_ip_window_minutes" value="<?= sanitize_data($adaptiveCooldownWindow) ?>" min="1">
                 </div>
                 <p class="settings-hint">More failed logins from the same IP → longer lockout (5 / 15 / 60 min).</p>
+                <div class="settings-row">
+                    <label for="trusted_proxies">Trusted proxies</label>
+                    <input type="text" name="trusted_proxies" id="trusted_proxies" value="<?= sanitize_data($trustedProxies ?? '') ?>" placeholder="Leave empty on shared hosting">
+                </div>
+                <p class="settings-hint">IP allowlists, login lockouts, and upload limits use the address that connected to PHP. Forwarded headers are ignored unless that address is listed here (comma-separated IPs or CIDR blocks, for example <code>203.0.113.10, 10.0.0.0/8</code>).</p>
             </div>
         </div>
 

@@ -2,7 +2,16 @@
 FROM php:8.5-apache
 
 RUN docker-php-ext-install pdo_mysql \
-    && a2enmod rewrite headers
+    && a2enmod rewrite headers \
+    && printf '%s\n' \
+        '<Directory /var/www/html/uploads>' \
+        '    Require all denied' \
+        '</Directory>' \
+        '<Directory /var/www/html/thumbnails>' \
+        '    Require all denied' \
+        '</Directory>' \
+        > /etc/apache2/conf-available/datadock-deny-storage.conf \
+    && a2enconf datadock-deny-storage
 
 # App root (adjust DocumentRoot if you mount the repo elsewhere)
 WORKDIR /var/www/html

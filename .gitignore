@@ -3,8 +3,12 @@
 /config/.db-runtime.php
 /info.php
 /config/settings.php
-/uploads/
-/thumbnails/
+/uploads/**
+!/uploads/.htaccess
+/thumbnails/**
+!/thumbnails/.htaccess
+/config/.private-storage-skip
+/config/.private-storage.lock
 /logs/
 *.log
 *.bak

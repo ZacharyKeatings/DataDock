@@ -9,12 +9,14 @@ require_once __DIR__ . '/includes/read_only.php';
 datadock_block_if_read_only($settings);
 require_once __DIR__ . '/includes/audit_log.php';
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+datadock_reject_invalid_csrf('admin.php?section=files');
+
+if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
     $_SESSION['flash_error'][] = "❌ Invalid file.";
     header("Location: admin.php?section=files");
     exit;
 }
-$fileId = (int) $_GET['id'];
+$fileId = (int) $_POST['id'];
 
 $stmt = $pdo->prepare("UPDATE files SET quarantine_status = 'approved' WHERE id = ? AND deleted_at IS NULL AND (quarantine_status = 'pending' OR quarantine_status IS NULL)");
 $stmt->execute([$fileId]);

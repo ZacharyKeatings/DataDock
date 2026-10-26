@@ -4,16 +4,10 @@
  */
 
 function datadock_client_ip(): string {
-    $xff = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
-    if (is_string($xff) && $xff !== '') {
-        $parts = explode(',', $xff);
-        $first = trim($parts[0]);
-        if ($first !== '') {
-            return substr($first, 0, 45);
-        }
+    if (!function_exists('get_client_ip')) {
+        require_once __DIR__ . '/rate_limit.php';
     }
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-    return is_string($ip) ? substr($ip, 0, 45) : '';
+    return substr(get_client_ip(), 0, 45);
 }
 
 /**

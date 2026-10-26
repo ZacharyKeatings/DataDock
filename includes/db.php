@@ -18,6 +18,16 @@ if (!is_readable($configDb)) {
         . "If you bind-mount the project or config/, ensure config/db.php.example is present and writable, or create config/db.php on the host.\n"
     );
 }
-require_once $configDb;
+if (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+    $pdo = $GLOBALS['pdo'];
+} else {
+    require_once $configDb;
+    if (isset($pdo) && $pdo instanceof PDO) {
+        $GLOBALS['pdo'] = $pdo;
+    }
+}
 require_once __DIR__ . '/migrate.php';
 run_migrations($pdo);
+if (function_exists('datadock_sync_session_user')) {
+    datadock_sync_session_user();
+}

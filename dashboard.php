@@ -410,7 +410,11 @@ if ($tagsEnabled && !empty($_GET['tag'])) {
                                         <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">Share link (token)</a>
                                         <a href="create_signed.php?id=<?= $file['id'] ?>" class="dropdown-item">Signed link (HMAC)</a>
                                     <?php endif; ?>
-                                    <a href="delete.php?id=<?= $file['id'] ?>" class="dropdown-item dropdown-item-danger" onclick="return confirm('Delete this file?')">Delete</a>
+                                    <form method="post" action="delete.php" class="dropdown-item-form" onsubmit="return confirm('Delete this file?')">
+                                        <?= datadock_csrf_field() ?>
+                                        <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
+                                        <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
+                                    </form>
                                 </div>
                             </details>
                         </div>

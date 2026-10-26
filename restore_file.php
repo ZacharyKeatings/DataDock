@@ -11,13 +11,15 @@ require_once __DIR__ . '/includes/read_only.php';
 datadock_block_if_read_only($settings);
 require_once __DIR__ . '/includes/audit_log.php';
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+datadock_reject_invalid_csrf('trash.php');
+
+if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
     $_SESSION['flash_error'][] = "❌ Invalid request.";
     header("Location: trash.php");
     exit;
 }
 
-$fileId = (int) $_GET['id'];
+$fileId = (int) $_POST['id'];
 $userId = $_SESSION['user_id'];
 
 $stmt = $pdo->prepare("SELECT id, original_name FROM files WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL");

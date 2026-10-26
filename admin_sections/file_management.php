@@ -108,10 +108,19 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
                     </div>
                     <div class="file-actions">
                         <?php if (($file['quarantine_status'] ?? '') === 'pending'): ?>
-                            <a href="approve_file.php?id=<?= $afid ?>" class="btn btn-small">Approve</a>
+                            <form method="post" action="approve_file.php" class="inline-action">
+                                <?= datadock_csrf_field() ?>
+                                <input type="hidden" name="id" value="<?= $afid ?>">
+                                <button type="submit" class="btn btn-small">Approve</button>
+                            </form>
                         <?php endif; ?>
                         <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a>
-                        <a href="delete.php?id=<?= $file['id'] ?>&from=admin" class="btn btn-small btn-danger" onclick="return confirm('Delete this file?')">Delete</a>
+                        <form method="post" action="delete.php" class="inline-action" onsubmit="return confirm('Delete this file?')">
+                            <?= datadock_csrf_field() ?>
+                            <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
+                            <input type="hidden" name="from" value="admin">
+                            <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                        </form>
                     </div>
                 </div>
                 <div class="file-row-details" id="admin-details-<?= $afid ?>" role="region" aria-labelledby="admin-toggle-<?= $afid ?>" hidden>

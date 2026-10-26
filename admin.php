@@ -6,6 +6,7 @@ require_admin();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/audit_log.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/purge_ops.php';
 
 $pageTitle = "Admin Panel";
@@ -64,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tosText = trim($_POST['tos_text'] ?? '');
 
         $storageBasePath = trim($_POST['storage_base_path'] ?? '');
+        $trustedProxies = datadock_normalize_trusted_proxies(trim((string) ($_POST['trusted_proxies'] ?? '')));
         $publicBrowsingEnabled = isset($_POST['public_browsing_enabled']);
 
         $bruteForceEnabled = isset($_POST['brute_force_enabled']);
@@ -193,6 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'tos_enabled' => " . ($tosEnabled ? 'true' : 'false') . ",\n" .
                 "    'tos_text' => " . var_export($tosText, true) . ",\n" .
                 "    'storage_base_path' => " . var_export($storageBasePath, true) . ",\n" .
+                "    'trusted_proxies' => " . var_export($trustedProxies, true) . ",\n" .
                 "    'public_browsing_enabled' => " . ($publicBrowsingEnabled ? 'true' : 'false') . ",\n" .
                 "    'brute_force' => [\n" .
                 "        'enabled' => " . ($bruteForceEnabled ? 'true' : 'false') . ",\n" .
@@ -237,6 +240,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "];\n?>";
 
             if (file_put_contents($settingsFile, $updatedSettings)) {
+                if ($storageBasePath === '') {
+                    @unlink(__DIR__ . '/config/.private-storage-skip');
+                }
                 $_SESSION['flash_success'][] = "✅ Site settings updated successfully.";
             } else {
                 $_SESSION['flash_error'][] = "❌ Failed to update site settings.";
@@ -702,6 +708,7 @@ require_once __DIR__ . '/includes/header.php';
                 $tosText = trim($fileSettings['tos_text'] ?? '');
 
                 $storageBasePath = trim($fileSettings['storage_base_path'] ?? '');
+                $trustedProxies = trim((string) ($fileSettings['trusted_proxies'] ?? ''));
                 $publicBrowsingEnabled = !empty($fileSettings['public_browsing_enabled']);
                 $deduplicateStorage = !empty($fileSettings['deduplicate_storage'] ?? true);
                 $foldersEnabledSetting = !isset($fileSettings['folders_enabled']) || !empty($fileSettings['folders_enabled']);

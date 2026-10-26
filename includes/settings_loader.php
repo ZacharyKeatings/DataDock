@@ -63,6 +63,9 @@ function datadock_apply_env_overrides(array $settings): array {
     if (($v = $e('DATADOCK_STORAGE_BASE_PATH')) !== null) {
         $settings['storage_base_path'] = $v;
     }
+    if (($v = $e('DATADOCK_TRUSTED_PROXIES')) !== null) {
+        $settings['trusted_proxies'] = $v;
+    }
     if (($v = $e('DATADOCK_LOG_PATH')) !== null) {
         $settings['log_path'] = $v;
     }
@@ -101,10 +104,19 @@ function datadock_apply_env_overrides(array $settings): array {
  */
 function datadock_load_settings(): array {
     static $cached = null;
+    static $loading = false;
     if ($cached !== null) {
         return $cached;
     }
-    $cached = datadock_apply_env_overrides(datadock_load_settings_from_file());
+    if ($loading) {
+        return datadock_apply_env_overrides(datadock_load_settings_from_file());
+    }
+    $loading = true;
+    $settings = datadock_load_settings_from_file();
+    require_once __DIR__ . '/private_storage.php';
+    $settings = datadock_maybe_relocate_private_storage($settings);
+    $cached = datadock_apply_env_overrides($settings);
+    $loading = false;
     return $cached;
 }
 

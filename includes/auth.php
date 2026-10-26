@@ -83,6 +83,7 @@ function datadock_finalize_login_session(array $settings, bool $rememberDevice):
         return;
     }
     session_regenerate_id(true);
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
     $rememberCfg = is_array($settings['remember_device'] ?? null) ? $settings['remember_device'] : [];
     $rememberAllowed = !empty($rememberCfg['enabled']);
@@ -121,7 +122,95 @@ function datadock_session_refresh_remember_cookie(array $settings, bool $remembe
     ]);
 }
 
+function datadock_session_pdo(): ?PDO {
+    if (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+        return $GLOBALS['pdo'];
+    }
+    $configDb = __DIR__ . '/../config/db.php';
+    if (!is_readable($configDb)) {
+        return null;
+    }
+    $loaded = (static function (string $configDb): ?PDO {
+        require $configDb;
+        return (isset($pdo) && $pdo instanceof PDO) ? $pdo : null;
+    })($configDb);
+    if ($loaded instanceof PDO) {
+        $GLOBALS['pdo'] = $loaded;
+    }
+    return $loaded instanceof PDO ? $loaded : null;
+}
+
+/**
+ * Reload username and role from the database so a demotion or deletion
+ * takes effect on the next request instead of lingering in the session.
+ */
+function datadock_sync_session_user(): void {
+    static $done = false;
+    if ($done || session_status() !== PHP_SESSION_ACTIVE || empty($_SESSION['user_id'])) {
+        return;
+    }
+    $pdo = datadock_session_pdo();
+    if (!$pdo instanceof PDO) {
+        return;
+    }
+    try {
+        $stmt = $pdo->prepare('SELECT username, role FROM users WHERE id = ?');
+        $stmt->execute([(int) $_SESSION['user_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return;
+    }
+    $done = true;
+    if (!$row) {
+        unset(
+            $_SESSION['user_id'],
+            $_SESSION['username'],
+            $_SESSION['role'],
+            $_SESSION['datadock_remember_device']
+        );
+        return;
+    }
+    $_SESSION['role'] = (($row['role'] ?? '') === 'admin') ? 'admin' : 'user';
+    if (!empty($row['username']) && is_string($row['username'])) {
+        $_SESSION['username'] = $row['username'];
+    }
+}
+
+function datadock_csrf_token(): string {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return '';
+    }
+    $token = $_SESSION['csrf_token'] ?? '';
+    if (!is_string($token) || strlen($token) !== 64) {
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token'] = $token;
+    }
+    return $token;
+}
+
+function datadock_csrf_field(): string {
+    return '<input type="hidden" name="csrf_token" value="'
+        . htmlspecialchars(datadock_csrf_token(), ENT_QUOTES, 'UTF-8')
+        . '">';
+}
+
+function datadock_csrf_is_valid(): bool {
+    $sent = $_POST['csrf_token'] ?? '';
+    $sess = $_SESSION['csrf_token'] ?? '';
+    return is_string($sent) && is_string($sess) && $sess !== '' && hash_equals($sess, $sent);
+}
+
+function datadock_reject_invalid_csrf(string $redirect): void {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && datadock_csrf_is_valid()) {
+        return;
+    }
+    $_SESSION['flash_error'][] = '❌ That action could not be confirmed. Use the button on the page.';
+    header('Location: ' . $redirect);
+    exit;
+}
+
 function datadock_session_post_start_maintenance_and_idle(): void {
+    datadock_sync_session_user();
     $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
     if ($currentScript !== 'login.php' && $currentScript !== 'maintenance.php') {
@@ -171,6 +260,7 @@ function datadock_session_post_start_maintenance_and_idle(): void {
  * Require user to be logged in. Redirect to login page if not.
  */
 function require_login(): void {
+    datadock_sync_session_user();
     if (empty($_SESSION['user_id'])) {
         header('Location: login.php');
         exit;
@@ -181,6 +271,7 @@ function require_login(): void {
  * Require user to be an admin. Redirect if not.
  */
 function require_admin(): void {
+    datadock_sync_session_user();
     if (empty($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header('Location: index.php');
         exit;

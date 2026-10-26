@@ -920,6 +920,16 @@ body {
     flex-wrap: wrap;
 }
 
+.file-actions form.inline-action {
+    display: inline-flex;
+    margin: 0;
+}
+
+.file-row-file-management .file-actions form.inline-action {
+    display: flex;
+    width: 100%;
+}
+
 .file-row-file-management .file-actions {
     flex-shrink: 0;
     flex-direction: column;

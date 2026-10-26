@@ -11,13 +11,20 @@ require_once __DIR__ . '/includes/read_only.php';
 datadock_block_if_read_only($settings);
 require_once __DIR__ . '/includes/audit_log.php';
 
-// Validate file ID parameter
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    http_response_code(400);
-    exit('Invalid request.');
+$from = (string) ($_POST['from'] ?? '');
+if (!in_array($from, ['trash', 'admin'], true)) {
+    $from = '';
+}
+$redirect = $from === 'trash' ? 'trash.php' : ($from === 'admin' ? 'admin.php?section=files' : 'dashboard.php');
+datadock_reject_invalid_csrf($redirect);
+
+if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+    $_SESSION['flash_error'][] = '❌ Invalid request.';
+    header('Location: ' . $redirect);
+    exit;
 }
 
-$fileId = (int) $_GET['id'];
+$fileId = (int) $_POST['id'];
 $userId = $_SESSION['user_id'];
 $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 
@@ -37,7 +44,7 @@ if (!$file) {
     exit;
 }
 
-$permanent = isset($_GET['permanent']) && $_GET['permanent'] === '1';
+$permanent = isset($_POST['permanent']) && $_POST['permanent'] === '1';
 
 if ($permanent) {
     // Permanent delete: remove file from disk and DB (e.g. from trash)
@@ -58,7 +65,6 @@ if ($permanent) {
         'html' => true,
         'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> permanently deleted."
     ];
-    $redirect = (isset($_GET['from']) && $_GET['from'] === 'trash') ? 'trash.php' : ((isset($_GET['from']) && $_GET['from'] === 'admin') ? 'admin.php?section=files' : 'dashboard.php');
 } else {
     // Soft delete: move to trash (set deleted_at)
     if ($isAdmin) {
@@ -77,7 +83,6 @@ if ($permanent) {
         'html' => true,
         'msg' => "✅ <code>" . sanitize_data($file['original_name']) . "</code> moved to trash."
     ];
-    $redirect = (isset($_GET['from']) && $_GET['from'] === 'admin') ? 'admin.php?section=files' : 'dashboard.php';
 }
 
 header("Location: $redirect");
