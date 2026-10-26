@@ -50,6 +50,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Invite-only registration | Signups only via link/token created by admin. |
 | ✓ | Password reset flow | Admin-initiated or token-based reset for forgotten passwords. |
 | ✓ | User-to-user file sharing | Share files with specific usernames; "Shared with You" on dashboard. |
+| — | Suspend user | Admin can disable an account so login and new shares are blocked while files, quotas, and the audit trail stay in place. |
+| — | Close your own account | Password-confirmed self-service deletion. Files are trashed or purged, an audit row is written, and the last admin cannot be removed. |
+| — | Claim a guest upload | One-time claim token so a guest upload can be attached to an account at registration or login and counted against that user's quota. |
 
 ---
 
@@ -84,6 +87,12 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | SHA-256 deduplication | Optional per storage partition (`storage_objects`); identical content shares one blob; refs decremented on delete/purge. |
 | ✓ | Partition-aware storage paths | `includes/storage.php` resolves paths for downloads, thumbnails, ZIP, one-time links, uploads, delete/purge across partitions. |
 | ✓ | Plaintext pastes | Unlisted pastebin-style text sharing (`paste.php`): expiry, one-time view, raw/download, dashboard list. Toggle in Site Settings. |
+| — | Expiring soon on the dashboard | Owner warning for files expiring within seven days, matching the admin Overview notice. |
+| — | Safe inline preview | Viewer for full images, audio, video, and plain text. HTML, SVG, and script types stay forced downloads. |
+| — | Bulk move to folder | Dashboard bulk action to move the selection into a folder. |
+| — | Replace file contents | Upload new bytes for an existing file and keep the id, shares, and links. The previous blob follows trash retention. |
+| — | Chunked upload | Client sends slices; the server reassembles into the user's partition, then runs MIME, quarantine, deduplication, and quota checks once. |
+| — | Paste passwords | Optional password gate on pastes, including raw and download URLs, using the same idea as per-file download passwords. |
 
 ---
 
@@ -109,6 +118,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Backup / export | Admin → Backup & integrity: full SQL dump or JSON `files` metadata (`backup_download.php`). |
 | ✓ | Hotlink log | Optional referer logging for downloads, ZIP, thumbnails, avatars from other hostnames; Admin → Hotlink log; Site Settings → Hotlink monitoring. |
 | ✓ | Storage partitions | Admin UI: multiple roots, default partition, per-user assignment; usage listing. |
+| — | Transfer file ownership | Move a user's files to another account before deletion, respecting storage partitions. |
+| — | Audit log download | CSV or JSON export of the activity log from Admin, beside the existing backup action. |
 
 ---
 
@@ -124,6 +135,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Responsive layout | Sections and file tables scale; horizontal scroll on small screens. |
 | — | Localization/multilanguage support | Multiple languages; string extraction and locale selection. |
 | — | Mobile responsiveness refinements | Extra polish on small screens. |
+| — | Editable privacy page | Site setting for a public privacy notice, separate from the repository `PRIVACY.md`. |
+| — | Public thumbnail grid | Optional grid layout for the public file index when public browsing is on. |
 | ✓ | Accessibility (WCAG) improvements | Improve accessibility. |
 | ✓ | Custom file icons | Flat SVG icons per type; custom URLs in settings. |
 
@@ -137,6 +150,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | — | Email notifications on upload, expiry, etc. | Notify users or admin on events. |
 | — | SMTP configuration | Host, port, user, pass, encryption. |
 | — | Email registration confirmation | Confirm email on signup. |
+| — | In-app notices | Per-user list for shares received, report reviews, quota warnings, and files expiring soon. Works with SMTP off; email can deliver the same events later. |
 
 ---
 
@@ -152,6 +166,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | — | CAPTCHA on login/register forms | Reduce automated abuse. |
 | ✓ | Rate limiting on uploads | Throttle upload frequency per user or IP. |
 | ✓ | Session timeout duration setting | Configurable session lifetime. |
+| — | Block hotlinks | Optional deny when the referer is another host and is not in the trusted-host list. Applies to downloads, ZIP, thumbnails, and avatars. |
+| — | Admin IP allowlist | Optional IP and CIDR list for the admin panel and other destructive actions, using the same style as per-file download allowlists. |
 
 ---
 
@@ -171,6 +187,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 |--------|---------|-------------|
 | ✓ | Users can report files | Report files for malicious or inappropriate content. |
 | ✓ | Admin handling of reports | Review, dismiss, and take moderation action. |
+| — | Purge hold | Flag so expiry and trash retention skip a file until an admin clears it. Set from the report queue when a file should stay available for review. |
 
 ---
 
@@ -184,6 +201,7 @@ Improvements that keep access control simple while adding stronger options (v2.3
 | ✓ | IP-restricted downloads | Restrict anonymous downloads to listed IPs/CIDR (JSON on `files.ip_allowlist`). Owners and logged-in shared access bypass. |
 | ✓ | Download expiration by count + time | `download_tokens`: `max_uses`, `use_count`, `expires_at`. **Share link (token)** flow (`create_onetime.php`). |
 | ✓ | Signed URLs | Time-limited HMAC (`download.php?id=&exp=&sig=`), secret in `app_secrets`. **Signed link** (`create_signed.php`). |
+| — | Outstanding links | Dashboard list of live token links (uses left, expiry, file) with revoke. Signed links gain an id so one URL can be revoked without rotating the site secret. |
 
 ---
 
@@ -197,6 +215,7 @@ Admin and ops tools without introducing daemons or heavy infrastructure.
 | ✓ | Disk usage integrity checker | Admin → Backup & integrity: scan uploads vs database per partition (DB rows missing on disk; on-disk blobs not in DB). |
 | ✓ | File integrity verification | Verify MD5/SHA256 vs bytes on disk (optional row limit); re-hash from disk to update DB (optional limit). |
 | ✓ | Storage partition support | Multiple roots (`storage_partitions`); user assignment; default partition; empty root inherits custom storage base path. |
+| — | Full backup and CLI restore | Partition-aware archive of the database plus storage roots, and a `scripts/` restore command. Restore stays out of the admin UI. |
 
 ---
 
@@ -211,6 +230,7 @@ Additional hardening with minimal complexity.
 | ✓ | Upload quarantine mode | New uploads invisible until admin approval (for public instances). |
 | ✓ | Automatic MIME anomaly detection | Flag when extension and MIME type disagree for admin review. |
 | ✓ | Upload hardening (v2.0.0) | Reject dangerous filename segments; MIME + magic-byte checks for images; scan image/SVG bodies for embedded PHP; expanded forbidden extensions; upload UI mirrors checks. |
+| — | Optional upload scan hook | Off-by-default local command or `clamd` socket. A failed scan leaves the upload pending. No scanner or signatures ship with the app. |
 
 ---
 
@@ -234,6 +254,7 @@ Light collaboration without a full folder/collab system.
 |--------|---------|-------------|
 | ✓ | Temporary share folders | One share container, multiple files, one link, expiry (no full folder system). |
 | ✓ | Comment field per file | Optional recipient note per file on share-folder page (v2.4+). |
+| — | Live folder link | Link to a real folder that follows adds and removes, with the same expiry, password, and IP options as files. Distinct from snapshot share bundles. |
 
 ---
 
@@ -247,6 +268,7 @@ Makes DataDock easier to deploy and operate in production environments.
 | ✓ | Environment-based config override | `DATADOCK_*` env vars via `includes/settings_loader.php`. |
 | ✓ | Docker support | `Dockerfile` and `docker-compose.example.yml`. |
 | ✓ | Health check endpoint | `health.php` returns JSON for uptime monitoring. |
+| — | CLI admin | `scripts/` commands for create-user, set-quota, and list-users, alongside install and purge. |
 
 ---
 
@@ -256,6 +278,7 @@ Makes DataDock easier to deploy and operate in production environments.
 |--------|---------|-------------|
 | ✓ | Per-IP upload throttling | Throttle uploads per IP or per account. |
 | ✓ | Adaptive cooldown | Progressive slowdown for repeated failed logins from one IP across usernames. |
+| — | Download quota | Per-user or per-file download byte budget over a time window, using the same pattern as upload throttling. |
 
 ---
 
@@ -294,8 +317,12 @@ Beyond the health check planned in **System Maturity**.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
+| — | Password rules | Site setting for minimum length and a simple complexity toggle. |
 | — | TOTP two-factor authentication | Authenticator-app 2FA; typically admin-first, then optional for all users. |
 | — | Session / device management | e.g. list active sessions and revoke others (optional; schedule with 2FA or later). |
+| — | OIDC login | Optional OpenID Connect sign-in against a self-hosted provider such as Authentik (also Authelia, Keycloak, and similar). Map a group or role claim onto DataDock roles. Local accounts stay available so an admin can still sign in if the provider is down. |
+| — | LDAP login | Optional bind against a self-hosted directory (Authentik's LDAP outpost, OpenLDAP, Active Directory). Map a directory group onto DataDock roles. Local accounts stay available as a break-glass login. |
+| — | Forward auth / SSO | For basic shared hosting, where a local directory bind or a bundled identity provider is not available. Optional trust of identity headers from a reverse proxy or SSO gateway (Authentik proxy provider, Authelia, oauth2-proxy, nginx `auth_request`). DataDock signs in the forwarded user and maps groups to roles. Headers are honored only from a configured proxy. Local accounts stay available as a break-glass login. |
 
 ---
 
