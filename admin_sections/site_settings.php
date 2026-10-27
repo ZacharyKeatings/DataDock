@@ -549,6 +549,115 @@
             </div>
         </div>
 
+        <div class="settings-card">
+            <h4 class="settings-card-title">Public grid, download quota, and upload scan</h4>
+            <div class="settings-card-body">
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="public_grid_enabled" <?= !empty($publicGridEnabled) ? 'checked' : '' ?>>
+                        Show the public file index as a thumbnail grid
+                    </label>
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="download_quota_enabled" <?= !empty($downloadQuotaEnabled) ? 'checked' : '' ?>>
+                        Limit download bytes in a time window
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <label for="download_quota_window">Window (minutes)</label>
+                    <input type="number" name="download_quota_window" id="download_quota_window" min="1" max="10080" value="<?= (int) ($downloadQuotaWindow ?? 60) ?>">
+                </div>
+                <div class="settings-row">
+                    <label for="download_quota_user">Max bytes per account</label>
+                    <input type="number" name="download_quota_user" id="download_quota_user" min="0" step="any" value="<?= sanitize_data((string) ($downloadQuotaUserDisplay[0] ?? 0)) ?>">
+                    <select name="download_quota_user_unit">
+                        <?php foreach (['b' => 'B', 'k' => 'KB', 'm' => 'MB', 'g' => 'GB'] as $unit => $label): ?>
+                            <option value="<?= $unit ?>"<?= (($downloadQuotaUserDisplay[1] ?? 'm') === $unit) ? ' selected' : '' ?>><?= $label ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <label for="download_quota_file">Max bytes per file</label>
+                    <input type="number" name="download_quota_file" id="download_quota_file" min="0" step="any" value="<?= sanitize_data((string) ($downloadQuotaFileDisplay[0] ?? 0)) ?>">
+                    <select name="download_quota_file_unit">
+                        <?php foreach (['b' => 'B', 'k' => 'KB', 'm' => 'MB', 'g' => 'GB'] as $unit => $label): ?>
+                            <option value="<?= $unit ?>"<?= (($downloadQuotaFileDisplay[1] ?? 'm') === $unit) ? ' selected' : '' ?>><?= $label ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <p class="settings-hint">Zero means that side of the budget is not enforced. Guests are counted by IP. A failed check refuses the download.</p>
+                <div class="settings-row">
+                    <label for="upload_scan_mode">Upload scan</label>
+                    <select name="upload_scan_mode" id="upload_scan_mode">
+                        <?php foreach (['off' => 'Off', 'command' => 'Local command', 'clamd' => 'clamd socket'] as $mode => $label): ?>
+                            <option value="<?= $mode ?>"<?= (($uploadScanMode ?? 'off') === $mode) ? ' selected' : '' ?>><?= $label ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <label for="upload_scan_command">Command</label>
+                    <input type="text" name="upload_scan_command" id="upload_scan_command" value="<?= sanitize_data($uploadScanCommand ?? '') ?>" placeholder="/usr/bin/clamscan --no-summary">
+                </div>
+                <div class="settings-row">
+                    <label for="upload_scan_socket">clamd socket</label>
+                    <input type="text" name="upload_scan_socket" id="upload_scan_socket" value="<?= sanitize_data($uploadScanSocket ?? '') ?>" placeholder="/var/run/clamav/clamd.ctl or 127.0.0.1:3310">
+                </div>
+                <p class="settings-hint">Off by default. No scanner or signatures are included. A failed scan, a missing command, or an unreachable socket leaves the upload pending.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h4 class="settings-card-title">Identity</h4>
+            <div class="settings-card-body">
+                <div class="settings-row">
+                    <label for="totp_policy">Authenticator policy</label>
+                    <select name="totp_policy" id="totp_policy">
+                        <option value="off"<?= (($totpPolicy ?? 'off') === 'off') ? ' selected' : '' ?>>Off</option>
+                        <option value="optional"<?= (($totpPolicy ?? '') === 'optional') ? ' selected' : '' ?>>Optional</option>
+                        <option value="required_admin"<?= (($totpPolicy ?? '') === 'required_admin') ? ' selected' : '' ?>>Required for admins</option>
+                    </select>
+                </div>
+                <p class="settings-hint">Users enroll from Profile. Required admins can still open Profile and log out until they enroll. Local passwords stay available.</p>
+                <div class="settings-row settings-row-checkbox">
+                    <label><input type="checkbox" name="oidc_enabled" <?= !empty($oidcCfg['enabled']) ? 'checked' : '' ?>> Enable OpenID Connect</label>
+                </div>
+                <div class="settings-row"><label for="oidc_issuer">Issuer URL</label><input type="url" name="oidc_issuer" id="oidc_issuer" value="<?= sanitize_data($oidcCfg['issuer'] ?? '') ?>" placeholder="https://auth.example.com/application/o/datadock"></div>
+                <div class="settings-row"><label for="oidc_client_id">Client ID</label><input type="text" name="oidc_client_id" id="oidc_client_id" value="<?= sanitize_data($oidcCfg['client_id'] ?? '') ?>"></div>
+                <div class="settings-row"><label for="oidc_client_secret">Client secret</label><input type="password" name="oidc_client_secret" id="oidc_client_secret" value="<?= sanitize_data($oidcCfg['client_secret'] ?? '') ?>"></div>
+                <div class="settings-row"><label for="oidc_role_claim">Role claim</label><input type="text" name="oidc_role_claim" id="oidc_role_claim" value="<?= sanitize_data($oidcCfg['role_claim'] ?? 'groups') ?>"></div>
+                <div class="settings-row"><label for="oidc_admin_groups">Admin groups</label><input type="text" name="oidc_admin_groups" id="oidc_admin_groups" value="<?= sanitize_data($oidcCfg['admin_groups'] ?? '') ?>" placeholder="comma-separated"></div>
+                <div class="settings-row settings-row-checkbox">
+                    <label><input type="checkbox" name="ldap_enabled" <?= !empty($ldapCfg['enabled']) ? 'checked' : '' ?>> Enable LDAP</label>
+                </div>
+                <p class="settings-hint">Used when the PHP LDAP extension is installed. A local password is tried first, so an admin can still sign in if the directory is down.</p>
+                <div class="settings-row"><label for="ldap_host">Host</label><input type="text" name="ldap_host" id="ldap_host" value="<?= sanitize_data($ldapCfg['host'] ?? '') ?>"></div>
+                <div class="settings-row"><label for="ldap_port">Port</label><input type="number" name="ldap_port" id="ldap_port" value="<?= (int) ($ldapCfg['port'] ?? 389) ?>"></div>
+                <div class="settings-row">
+                    <label for="ldap_encryption">Encryption</label>
+                    <select name="ldap_encryption" id="ldap_encryption">
+                        <?php foreach (['none' => 'None', 'starttls' => 'STARTTLS', 'ldaps' => 'LDAPS'] as $mode => $label): ?>
+                            <option value="<?= $mode ?>"<?= (($ldapCfg['encryption'] ?? 'none') === $mode) ? ' selected' : '' ?>><?= $label ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="settings-row"><label for="ldap_user_dn">User DN template</label><input type="text" name="ldap_user_dn" id="ldap_user_dn" value="<?= sanitize_data($ldapCfg['user_dn_template'] ?? '') ?>" placeholder="uid=%s,ou=users,dc=example,dc=com"></div>
+                <div class="settings-row"><label for="ldap_base_dn">Base DN</label><input type="text" name="ldap_base_dn" id="ldap_base_dn" value="<?= sanitize_data($ldapCfg['base_dn'] ?? '') ?>"></div>
+                <div class="settings-row"><label for="ldap_bind_dn">Service bind DN</label><input type="text" name="ldap_bind_dn" id="ldap_bind_dn" value="<?= sanitize_data($ldapCfg['bind_dn'] ?? '') ?>"></div>
+                <div class="settings-row"><label for="ldap_bind_password">Service bind password</label><input type="password" name="ldap_bind_password" id="ldap_bind_password" value="<?= sanitize_data($ldapCfg['bind_password'] ?? '') ?>"></div>
+                <div class="settings-row"><label for="ldap_user_filter">User filter</label><input type="text" name="ldap_user_filter" id="ldap_user_filter" value="<?= sanitize_data($ldapCfg['user_filter'] ?? '(uid=%s)') ?>"></div>
+                <div class="settings-row"><label for="ldap_admin_group">Admin group</label><input type="text" name="ldap_admin_group" id="ldap_admin_group" value="<?= sanitize_data($ldapCfg['admin_group'] ?? '') ?>"></div>
+                <div class="settings-row settings-row-checkbox">
+                    <label><input type="checkbox" name="forward_auth_enabled" <?= !empty($forwardCfg['enabled']) ? 'checked' : '' ?>> Trust identity headers from a proxy</label>
+                </div>
+                <div class="settings-row"><label for="forward_trusted_proxies">Trusted proxy IPs</label><textarea name="forward_trusted_proxies" id="forward_trusted_proxies" rows="2"><?= sanitize_data($forwardCfg['trusted_proxies'] ?? '') ?></textarea></div>
+                <div class="settings-row"><label for="forward_user_header">User header</label><input type="text" name="forward_user_header" id="forward_user_header" value="<?= sanitize_data($forwardCfg['user_header'] ?? 'Remote-User') ?>"></div>
+                <div class="settings-row"><label for="forward_group_header">Group header</label><input type="text" name="forward_group_header" id="forward_group_header" value="<?= sanitize_data($forwardCfg['group_header'] ?? 'Remote-Groups') ?>"></div>
+                <div class="settings-row"><label for="forward_admin_groups">Admin groups</label><input type="text" name="forward_admin_groups" id="forward_admin_groups" value="<?= sanitize_data($forwardCfg['admin_groups'] ?? '') ?>"></div>
+                <p class="settings-hint">Headers are read only when the connection comes from a listed proxy. If the proxy is down and sends nothing, the local login form still works. Use “Use a local account” on the login page when the proxy is injecting a user you do not want.</p>
+            </div>
+        </div>
+
         <div class="settings-form-actions">
             <button type="submit" class="btn btn-primary">Update Settings</button>
         </div>

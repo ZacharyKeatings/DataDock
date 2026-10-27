@@ -171,13 +171,37 @@ $tokenParam = isset($_GET['t']) ? (string) $_GET['t'] : '';
 $createdParam = isset($_GET['created']) ? (string) $_GET['created'] : '';
 
 if ($tokenParam !== '') {
+    $wantsDownload = isset($_GET['dl']) && (string) $_GET['dl'] === '1';
+    $wantsRaw = $wantsDownload || (isset($_GET['raw']) && (string) $_GET['raw'] === '1');
+    $lockedRow = datadock_paste_by_token($pdo, $tokenParam);
+    if ($lockedRow && !empty($lockedRow['access_password_hash']) && !datadock_paste_is_creator($lockedRow) && !datadock_paste_unlocked((int) $lockedRow['id'])) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['paste_password'])) {
+            datadock_reject_invalid_csrf('paste.php?t=' . rawurlencode($tokenParam));
+            if (password_verify((string) $_POST['paste_password'], (string) $lockedRow['access_password_hash'])) {
+                datadock_paste_grant((int) $lockedRow['id']);
+                header('Location: paste.php?t=' . rawurlencode($tokenParam) . ($wantsDownload ? '&dl=1' : ($wantsRaw ? '&raw=1' : '')));
+                exit;
+            }
+            $_SESSION['flash_error'][] = '❌ Incorrect paste password.';
+        }
+        if ($wantsRaw) {
+            datadock_paste_plain_response(401, "This paste requires a password.\n");
+        }
+        datadock_paste_send_privacy_headers();
+        $pageTitle = 'Locked paste';
+        require __DIR__ . '/includes/header.php';
+        echo '<div class="page-section"><h2 class="page-title">This paste is locked</h2><form method="post" class="form">';
+        echo datadock_csrf_field();
+        echo '<div class="form-group"><label for="paste_password">Password</label><input type="password" name="paste_password" id="paste_password" required></div>';
+        echo '<button type="submit" class="btn btn-primary">Unlock</button></form></div>';
+        require __DIR__ . '/includes/footer.php';
+        exit;
+    }
     try {
         $opened = datadock_paste_open($pdo, $tokenParam);
     } catch (Throwable $e) {
         $opened = null;
     }
-    $wantsDownload = isset($_GET['dl']) && (string) $_GET['dl'] === '1';
-    $wantsRaw = $wantsDownload || (isset($_GET['raw']) && (string) $_GET['raw'] === '1');
     if (!$opened) {
         if ($wantsRaw) {
             datadock_paste_plain_response(404, "This paste is unavailable. It may have expired or already been read.\n");
@@ -239,6 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formContent = str_replace(["\r\n", "\r"], "\n", str_replace("\0", '', (string) ($_POST['content'] ?? '')));
     $formDuration = (string) ($_POST['duration'] ?? $defaultExpiry);
     $formBurn = !empty($_POST['burn_after_read']);
+    $formPastePassword = (string) ($_POST['paste_password'] ?? '');
 
     $postMax = return_bytes((string) ini_get('post_max_size'));
     $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
@@ -273,6 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'content' => $formContent,
                 'expires_at' => datadock_paste_expiry_utc($formDuration, $settings),
                 'burn_after_read' => $formBurn ? 1 : 0,
+                'access_password_hash' => $formPastePassword !== '' ? password_hash($formPastePassword, PASSWORD_DEFAULT) : null,
             ]);
             try {
                 record_upload_rate_limit($pdo, $clientIp, $currentUserId ? (int) $currentUserId : null, 1);
@@ -336,6 +362,11 @@ require __DIR__ . '/includes/header.php';
                             <option value="<?= sanitize_data($key) ?>"<?= $key === $formDuration ? ' selected' : '' ?>><?= sanitize_data(ucwords(str_replace('_', ' ', $key))) ?></option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                <div class="upload-option">
+                    <label for="paste_password">Password <span class="paste-optional">(optional)</span></label>
+                    <input type="password" name="paste_password" id="paste_password" autocomplete="new-password">
+                    <small>Required to view the link, the raw text, and the download.</small>
                 </div>
                 <div class="upload-option upload-option-checkbox">
                     <label class="tos-checkbox">

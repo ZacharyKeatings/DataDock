@@ -88,6 +88,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['username'] = $username;
         $_SESSION['role'] = 'user';
         datadock_finalize_login_session($settings, false);
+        datadock_session_record($pdo, (int) $_SESSION['user_id']);
+        $claimCode = trim((string) ($_POST['claim_code'] ?? ''));
+        if ($claimCode !== '') {
+            require_once __DIR__ . '/includes/guest_claim.php';
+            $claimed = datadock_claim_guest_uploads($pdo, $settings, (int) $_SESSION['user_id'], $claimCode);
+            if ($claimed['message'] !== '') {
+                if ($claimed['ok']) {
+                    $_SESSION['flash_success'][] = $claimed['message'];
+                } else {
+                    $_SESSION['flash_error'][] = $claimed['message'];
+                }
+            }
+        }
 
         $_SESSION['flash_success'][] = "🎉 Registration successful. Welcome, $username!";
 
@@ -145,6 +158,11 @@ require_once __DIR__ . '/includes/header.php';
             <div class="form-group">
                 <label for="confirm">Confirm Password</label>
                 <input type="password" name="confirm" id="confirm" required>
+            </div>
+
+            <div class="form-group">
+                <label for="claim_code">Guest upload claim code <span class="paste-optional">(optional)</span></label>
+                <input type="text" name="claim_code" id="claim_code" value="<?= sanitize_data($_POST['claim_code'] ?? '') ?>" autocomplete="off" spellcheck="false">
             </div>
 
             <p class="form-hint" id="register-mismatch" hidden>Passwords do not match.</p>

@@ -318,6 +318,48 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'storage_base_path' => '',\n" .
         "    'trusted_proxies' => '',\n" .
         "    'public_browsing_enabled' => false,\n" .
+        "    'public_grid_enabled' => false,\n" .
+        "    'download_quota' => [\n" .
+        "        'enabled' => false,\n" .
+        "        'window_minutes' => 60,\n" .
+        "        'max_bytes_per_user' => 0,\n" .
+        "        'max_bytes_per_file' => 0\n" .
+        "    ],\n" .
+        "    'upload_scan' => [\n" .
+        "        'mode' => 'off',\n" .
+        "        'command' => '',\n" .
+        "        'socket' => ''\n" .
+        "    ],\n" .
+        "    'identity' => [\n" .
+        "        'totp_policy' => 'off',\n" .
+        "        'oidc' => [\n" .
+        "            'enabled' => false,\n" .
+        "            'issuer' => '',\n" .
+        "            'client_id' => '',\n" .
+        "            'client_secret' => '',\n" .
+        "            'role_claim' => 'groups',\n" .
+        "            'admin_groups' => ''\n" .
+        "        ],\n" .
+        "        'ldap' => [\n" .
+        "            'enabled' => false,\n" .
+        "            'host' => '',\n" .
+        "            'port' => 389,\n" .
+        "            'encryption' => 'none',\n" .
+        "            'user_dn_template' => '',\n" .
+        "            'base_dn' => '',\n" .
+        "            'bind_dn' => '',\n" .
+        "            'bind_password' => '',\n" .
+        "            'user_filter' => '(uid=%s)',\n" .
+        "            'admin_group' => ''\n" .
+        "        ],\n" .
+        "        'forward_auth' => [\n" .
+        "            'enabled' => false,\n" .
+        "            'trusted_proxies' => '',\n" .
+        "            'user_header' => 'Remote-User',\n" .
+        "            'group_header' => 'Remote-Groups',\n" .
+        "            'admin_groups' => ''\n" .
+        "        ]\n" .
+        "    ],\n" .
         "    'guest_uploads' => [\n" .
         "        'enabled' => false,\n" .
         "        'max_files' => 0,\n" .

@@ -35,6 +35,13 @@ function datadock_send_file_stream(PDO $pdo, array $file, array $settings, strin
     $hot = $resourceMap[$logAction] ?? 'download';
     datadock_log_hotlink_if_external($pdo, $settings, $hot, $fileId);
     datadock_deny_untrusted_hotlink($settings);
+    if (!function_exists('datadock_download_quota_check')) {
+        require_once __DIR__ . '/includes/quotas.php';
+    }
+    $quotaBlock = datadock_download_quota_check($pdo, $file, $settings);
+    if ($quotaBlock !== null) {
+        datadock_render_status_page(429, 'Download limit', $quotaBlock);
+    }
     datadock_log_activity($pdo, $logAction, $logOpts);
     $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$fileId]);
     if ($logDownloadEventForOwner) {
@@ -117,6 +124,35 @@ if (isset($_GET['sf'], $_GET['id']) && $_GET['sf'] !== '' && is_numeric($_GET['i
                         'detail' => ['name' => $file['original_name'] ?? $file['filename'], 'share_folder_id' => $sfId],
                     ], true);
                 }
+            }
+        }
+    }
+    datadock_render_status_page(404, 'File not found', 'This file was not found, or the link is not valid.');
+}
+
+if (isset($_GET['fl'], $_GET['id']) && $_GET['fl'] !== '' && is_numeric($_GET['id'])) {
+    require_once __DIR__ . '/includes/folder_links.php';
+    $flToken = trim((string) $_GET['fl']);
+    $fileId = (int) $_GET['id'];
+    $link = datadock_folder_link_by_token($pdo, $flToken);
+    if ($link) {
+        if (!datadock_ip_allowlist_allows($link['ip_allowlist'] ?? null, datadock_client_ip())) {
+            datadock_render_status_page(403, 'Access denied', 'This link is limited to specific IP addresses.');
+        }
+        if (!empty($link['access_password_hash']) && !datadock_folder_link_unlocked((int) $link['id'])) {
+            datadock_render_status_page(403, 'Locked', 'Open the folder link and enter its password before downloading.');
+        }
+        $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND (quarantine_status = 'approved' OR quarantine_status IS NULL)");
+        $stmt->execute([$fileId, (int) $link['user_id']]);
+        $file = $stmt->fetch(PDO::FETCH_ASSOC);
+        $inTree = $file && datadock_folder_is_under($pdo, (int) ($file['folder_id'] ?? 0), (int) $link['folder_id'], (int) $link['user_id']);
+        if ($file && $inTree) {
+            $path = datadock_file_main_path($pdo, $file);
+            if (file_exists($path)) {
+                datadock_send_file_stream($pdo, $file, $settings, 'download_share_folder', [
+                    'file_id' => $fileId,
+                    'detail' => ['name' => $file['original_name'] ?? $file['filename'], 'folder_link_id' => (int) $link['id']],
+                ], true);
             }
         }
     }

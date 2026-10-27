@@ -71,7 +71,30 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <p class="page-description"><a href="paste.php">Share plaintext</a> with an unlisted link.</p>
     <?php endif; ?>
 
-    <?php if ($recentFiles): ?>
+    <?php
+    $publicGrid = $publicBrowsingEnabled && !empty($settings['public_grid_enabled']);
+    if ($recentFiles && $publicGrid): ?>
+        <div class="public-grid">
+            <?php foreach ($recentFiles as $file):
+                $rid = (int) $file['id'];
+                $hasThumb = !empty($file['thumbnail_path']) && str_starts_with((string) ($file['filetype'] ?? ''), 'image/');
+                $mime = (string) ($file['filetype'] ?? '');
+                $canPreview = !is_risky_mime_for_inline($mime) && $mime !== 'image/svg+xml' && (str_starts_with($mime, 'image/') || str_starts_with($mime, 'audio/') || str_starts_with($mime, 'video/') || $mime === 'text/plain');
+            ?>
+                <article class="public-card">
+                    <a href="<?= $canPreview ? 'preview.php?id=' . $rid : 'download.php?id=' . $rid ?>">
+                        <?php if ($hasThumb): ?>
+                            <img src="thumbnail.php?id=<?= $rid ?>" alt="">
+                        <?php else: ?>
+                            <span class="public-card-icon"><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?></span>
+                        <?php endif; ?>
+                        <span class="public-card-name"><?= sanitize_data($file['original_name']) ?></span>
+                    </a>
+                    <p class="form-hint"><?= format_filesize($file['filesize']) ?></p>
+                </article>
+            <?php endforeach; ?>
+        </div>
+    <?php elseif ($recentFiles): ?>
         <div class="file-list file-list-index file-list-expandable<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
             <div class="file-row file-header">
                 <div class="file-row-toggle-cell" aria-hidden="true"></div>

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/identity.php';
 // Load settings early for debug mode and maintenance check
 require_once __DIR__ . '/settings_loader.php';
 require_once __DIR__ . '/security_headers.php';
@@ -177,6 +178,7 @@ function datadock_sync_session_user(): void {
     if (!empty($row['username']) && is_string($row['username'])) {
         $_SESSION['username'] = $row['username'];
     }
+    datadock_session_touch($pdo, (int) $_SESSION['user_id']);
 }
 
 function datadock_csrf_token(): string {
@@ -303,5 +305,12 @@ function require_admin(): void {
         header('Content-Type: text/plain; charset=UTF-8');
         echo "This admin panel is limited to specific IP addresses.\n";
         exit;
+    }
+    $pdo = datadock_session_pdo();
+    if ($pdo instanceof PDO) {
+        if (!function_exists('datadock_load_settings')) {
+            require_once __DIR__ . '/settings_loader.php';
+        }
+        datadock_admin_totp_gate($pdo, datadock_load_settings());
     }
 }

@@ -132,6 +132,18 @@ function datadock_paste_by_token(PDO $pdo, string $token): ?array {
  *
  * @return array<string, mixed>|null Row plus _burned. Null when missing or expired.
  */
+function datadock_paste_unlocked(int $pasteId): bool {
+    $bag = $_SESSION['datadock_paste_access'] ?? [];
+    return is_array($bag) && !empty($bag[$pasteId]);
+}
+
+function datadock_paste_grant(int $pasteId): void {
+    if (!isset($_SESSION['datadock_paste_access']) || !is_array($_SESSION['datadock_paste_access'])) {
+        $_SESSION['datadock_paste_access'] = [];
+    }
+    $_SESSION['datadock_paste_access'][$pasteId] = true;
+}
+
 function datadock_paste_open(PDO $pdo, string $token): ?array {
     if (!datadock_paste_token_ok($token)) {
         return null;
@@ -170,7 +182,7 @@ function datadock_paste_open(PDO $pdo, string $token): ?array {
 }
 
 /**
- * @param array{user_id:?int,guest_id:?string,title:?string,content:string,expires_at:?string,burn_after_read:int} $row
+ * @param array{user_id:?int,guest_id:?string,title:?string,content:string,expires_at:?string,burn_after_read:int,access_password_hash?:?string} $row
  * @return array{id:int,token:string}
  */
 function datadock_paste_create(PDO $pdo, array $row): array {
@@ -179,8 +191,8 @@ function datadock_paste_create(PDO $pdo, array $row): array {
         $token = bin2hex(random_bytes(16));
         try {
             $stmt = $pdo->prepare('
-                INSERT INTO pastes (user_id, guest_id, token, title, content, expires_at, burn_after_read, view_count, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 0, UTC_TIMESTAMP())
+                INSERT INTO pastes (user_id, guest_id, token, title, content, expires_at, burn_after_read, access_password_hash, view_count, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, UTC_TIMESTAMP())
             ');
             $stmt->execute([
                 $row['user_id'],
@@ -190,6 +202,7 @@ function datadock_paste_create(PDO $pdo, array $row): array {
                 $row['content'],
                 $row['expires_at'],
                 $row['burn_after_read'],
+                $row['access_password_hash'] ?? null,
             ]);
             return ['id' => (int) $pdo->lastInsertId(), 'token' => $token];
         } catch (PDOException $e) {

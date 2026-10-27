@@ -529,4 +529,104 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    $userCols = [
+        'totp_secret' => "ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64) DEFAULT NULL AFTER suspended",
+        'totp_enabled' => "ALTER TABLE users ADD COLUMN totp_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER totp_secret",
+        'quota_max_files' => "ALTER TABLE users ADD COLUMN quota_max_files INT DEFAULT NULL AFTER totp_enabled",
+        'quota_max_bytes' => "ALTER TABLE users ADD COLUMN quota_max_bytes BIGINT DEFAULT NULL AFTER quota_max_files",
+        'external_subject' => "ALTER TABLE users ADD COLUMN external_subject VARCHAR(255) DEFAULT NULL AFTER quota_max_bytes",
+        'auth_source' => "ALTER TABLE users ADD COLUMN auth_source VARCHAR(16) NOT NULL DEFAULT 'local' AFTER external_subject",
+    ];
+    foreach ($userCols as $col => $sql) {
+        try {
+            $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE " . $pdo->quote($col));
+            if ($stmt && $stmt->rowCount() === 0) {
+                $pdo->exec($sql);
+            }
+        } catch (PDOException $e) {}
+    }
+    try {
+        $stmt = $pdo->query("SHOW INDEX FROM users WHERE Key_name = 'uniq_users_external_subject'");
+        if ($stmt && $stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uniq_users_external_subject (external_subject)');
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM pastes LIKE 'access_password_hash'");
+        if ($stmt && $stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE pastes ADD COLUMN access_password_hash VARCHAR(255) DEFAULT NULL AFTER burn_after_read');
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS guest_claims (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                token CHAR(32) NOT NULL,
+                guest_id VARCHAR(64) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                claimed_at DATETIME DEFAULT NULL,
+                claimed_by INT DEFAULT NULL,
+                UNIQUE KEY uniq_guest_claim_token (token),
+                INDEX idx_guest_claim_guest (guest_id),
+                FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS user_sessions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                session_hash CHAR(64) NOT NULL,
+                ip_address VARCHAR(45) DEFAULT NULL,
+                user_agent VARCHAR(255) DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                revoked_at DATETIME DEFAULT NULL,
+                UNIQUE KEY uniq_session_hash (session_hash),
+                INDEX idx_user_sessions_user (user_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS folder_links (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                folder_id INT NOT NULL,
+                user_id INT NOT NULL,
+                token CHAR(64) NOT NULL,
+                expires_at DATETIME DEFAULT NULL,
+                access_password_hash VARCHAR(255) DEFAULT NULL,
+                ip_allowlist TEXT DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_folder_link_token (token),
+                INDEX idx_folder_links_folder (folder_id),
+                FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS download_quota_events (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                file_id INT NOT NULL,
+                user_id INT DEFAULT NULL,
+                ip_address VARCHAR(45) NOT NULL DEFAULT '',
+                bytes BIGINT NOT NULL DEFAULT 0,
+                downloaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_dq_user (user_id, downloaded_at),
+                INDEX idx_dq_file (file_id, downloaded_at),
+                INDEX idx_dq_ip (ip_address, downloaded_at)
+            )
+        ");
+    } catch (PDOException $e) {}
 }

@@ -271,6 +271,9 @@ if ($foldersEnabled && $currentFolderId > 0) {
         <h2 class="page-title">Your files</h2>
         <?php if (empty($readOnly)): ?>
         <a href="<?= sanitize_data($uploadHere) ?>" class="btn btn-primary"><?= ($foldersEnabled && $currentFolderId > 0) ? 'Upload to this folder' : 'Upload files' ?></a>
+        <?php if ($foldersEnabled && $currentFolderId > 0): ?>
+        <a href="create_folder_link.php?folder=<?= (int) $currentFolderId ?>" class="btn btn-quiet">Live folder link</a>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -522,6 +525,8 @@ if ($foldersEnabled && $currentFolderId > 0) {
                                             </button>
                                         </form>
                                         <?php endif; ?>
+                                        <a href="preview.php?id=<?= $file['id'] ?>" class="dropdown-item">Preview</a>
+                                        <a href="replace_file.php?id=<?= $file['id'] ?>" class="dropdown-item">Replace contents</a>
                                         <a href="share.php?id=<?= $file['id'] ?>" class="dropdown-item">Share</a>
                                         <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
                                         <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">Share link (token)</a>

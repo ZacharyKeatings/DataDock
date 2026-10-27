@@ -61,6 +61,52 @@ $settings = [
     'pastes_enabled' => true,
 
     'public_browsing_enabled' => false,  // Allow anonymous browsing of public files
+    'public_grid_enabled' => false,      // Thumbnail grid on the public index
+
+    'download_quota' => [
+        'enabled' => false,
+        'window_minutes' => 60,
+        'max_bytes_per_user' => 0,       // 0 = no per-account cap. Guests are counted by IP.
+        'max_bytes_per_file' => 0
+    ],
+
+    // Off by default. A failed scan leaves the upload pending. No scanner ships with the app.
+    'upload_scan' => [
+        'mode' => 'off',                 // off | command | clamd
+        'command' => '',                 // e.g. /usr/bin/clamscan --no-summary
+        'socket' => ''                   // unix path or host:port
+    ],
+
+    'identity' => [
+        'totp_policy' => 'off',          // off | optional | required_admin
+        'oidc' => [
+            'enabled' => false,
+            'issuer' => '',
+            'client_id' => '',
+            'client_secret' => '',
+            'role_claim' => 'groups',
+            'admin_groups' => ''
+        ],
+        'ldap' => [
+            'enabled' => false,
+            'host' => '',
+            'port' => 389,
+            'encryption' => 'none',      // none | starttls | ldaps
+            'user_dn_template' => '',
+            'base_dn' => '',
+            'bind_dn' => '',
+            'bind_password' => '',
+            'user_filter' => '(uid=%s)',
+            'admin_group' => ''
+        ],
+        'forward_auth' => [
+            'enabled' => false,
+            'trusted_proxies' => '',     // Connection IP must be listed. Empty list trusts nobody.
+            'user_header' => 'Remote-User',
+            'group_header' => 'Remote-Groups',
+            'admin_groups' => ''
+        ]
+    ],
 
     // Log requests with Referer from another host (Admin → Hotlink log)
     'hotlink_logging_enabled' => true,

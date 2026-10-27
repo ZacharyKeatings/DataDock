@@ -87,6 +87,7 @@ if ($loggedIn && isset($pdo) && $pdo instanceof PDO) {
                             </summary>
                             <div class="nav-account-menu">
                                 <a href="profile.php"<?= $currentPage === 'profile.php' ? ' class="active"' : '' ?>>Profile</a>
+                                <a href="sessions.php"<?= $currentPage === 'sessions.php' ? ' class="active"' : '' ?>>Sessions</a>
                                 <a href="notices.php"<?= $currentPage === 'notices.php' ? ' class="active"' : '' ?>>Notices<?php if ($noticeUnread > 0): ?> (<?= (int) $noticeUnread ?>)<?php endif; ?></a>
                                 <a href="activity.php"<?= $currentPage === 'activity.php' ? ' class="active"' : '' ?>>Activity</a>
                                 <a href="trash.php"<?= $currentPage === 'trash.php' ? ' class="active"' : '' ?>>Trash</a>

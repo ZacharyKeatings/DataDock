@@ -101,6 +101,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $passwordComplexity = isset($_POST['password_complexity']);
         $privacyEnabled = isset($_POST['privacy_enabled']);
         $privacyText = trim((string) ($_POST['privacy_text'] ?? ''));
+        $publicGridEnabled = isset($_POST['public_grid_enabled']);
+        $downloadQuotaEnabled = isset($_POST['download_quota_enabled']);
+        $downloadQuotaWindow = (int) ($_POST['download_quota_window'] ?? 60);
+        if ($downloadQuotaWindow < 1) {
+            $downloadQuotaWindow = 1;
+        }
+        if ($downloadQuotaWindow > 10080) {
+            $downloadQuotaWindow = 10080;
+        }
+        $downloadQuotaUserBytes = form_size_to_bytes($_POST['download_quota_user'] ?? 0, $_POST['download_quota_user_unit'] ?? 'm');
+        $downloadQuotaFileBytes = form_size_to_bytes($_POST['download_quota_file'] ?? 0, $_POST['download_quota_file_unit'] ?? 'm');
+        $uploadScanMode = strtolower(trim((string) ($_POST['upload_scan_mode'] ?? 'off')));
+        if (!in_array($uploadScanMode, ['off', 'command', 'clamd'], true)) {
+            $uploadScanMode = 'off';
+        }
+        $uploadScanCommand = trim((string) ($_POST['upload_scan_command'] ?? ''));
+        $uploadScanSocket = trim((string) ($_POST['upload_scan_socket'] ?? ''));
+        $totpPolicy = strtolower(trim((string) ($_POST['totp_policy'] ?? 'off')));
+        if (!in_array($totpPolicy, ['off', 'optional', 'required_admin'], true)) {
+            $totpPolicy = 'off';
+        }
+        $oidcEnabled = isset($_POST['oidc_enabled']);
+        $oidcIssuer = trim((string) ($_POST['oidc_issuer'] ?? ''));
+        $oidcClientId = trim((string) ($_POST['oidc_client_id'] ?? ''));
+        $oidcClientSecret = (string) ($_POST['oidc_client_secret'] ?? '');
+        $oidcRoleClaim = trim((string) ($_POST['oidc_role_claim'] ?? 'groups')) ?: 'groups';
+        $oidcAdminGroups = trim((string) ($_POST['oidc_admin_groups'] ?? ''));
+        $ldapEnabled = isset($_POST['ldap_enabled']);
+        $ldapHost = trim((string) ($_POST['ldap_host'] ?? ''));
+        $ldapPort = (int) ($_POST['ldap_port'] ?? 389);
+        $ldapEncryption = strtolower(trim((string) ($_POST['ldap_encryption'] ?? 'none')));
+        if (!in_array($ldapEncryption, ['none', 'starttls', 'ldaps'], true)) {
+            $ldapEncryption = 'none';
+        }
+        $ldapUserDn = trim((string) ($_POST['ldap_user_dn'] ?? ''));
+        $ldapBaseDn = trim((string) ($_POST['ldap_base_dn'] ?? ''));
+        $ldapBindDn = trim((string) ($_POST['ldap_bind_dn'] ?? ''));
+        $ldapBindPassword = (string) ($_POST['ldap_bind_password'] ?? '');
+        $ldapUserFilter = trim((string) ($_POST['ldap_user_filter'] ?? '')) ?: '(uid=%s)';
+        $ldapAdminGroup = trim((string) ($_POST['ldap_admin_group'] ?? ''));
+        $forwardEnabled = isset($_POST['forward_auth_enabled']);
+        $forwardProxies = trim((string) ($_POST['forward_trusted_proxies'] ?? ''));
+        $forwardUserHeader = trim((string) ($_POST['forward_user_header'] ?? '')) ?: 'Remote-User';
+        $forwardGroupHeader = trim((string) ($_POST['forward_group_header'] ?? '')) ?: 'Remote-Groups';
+        $forwardAdminGroups = trim((string) ($_POST['forward_admin_groups'] ?? ''));
 
         $opsStoragePartitionPercentEnabled = isset($_POST['ops_storage_partition_percent_enabled']);
         $opsStoragePartitionPercentThreshold = (int) ($_POST['ops_storage_partition_percent_threshold'] ?? 85);
@@ -226,6 +271,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'storage_base_path' => " . var_export($storageBasePath, true) . ",\n" .
                 "    'trusted_proxies' => " . var_export($trustedProxies, true) . ",\n" .
                 "    'public_browsing_enabled' => " . ($publicBrowsingEnabled ? 'true' : 'false') . ",\n" .
+                "    'public_grid_enabled' => " . ($publicGridEnabled ? 'true' : 'false') . ",\n" .
+                "    'download_quota' => [\n" .
+                "        'enabled' => " . ($downloadQuotaEnabled ? 'true' : 'false') . ",\n" .
+                "        'window_minutes' => $downloadQuotaWindow,\n" .
+                "        'max_bytes_per_user' => $downloadQuotaUserBytes,\n" .
+                "        'max_bytes_per_file' => $downloadQuotaFileBytes\n" .
+                "    ],\n" .
+                "    'upload_scan' => [\n" .
+                "        'mode' => " . var_export($uploadScanMode, true) . ",\n" .
+                "        'command' => " . var_export($uploadScanCommand, true) . ",\n" .
+                "        'socket' => " . var_export($uploadScanSocket, true) . "\n" .
+                "    ],\n" .
+                "    'identity' => [\n" .
+                "        'totp_policy' => " . var_export($totpPolicy, true) . ",\n" .
+                "        'oidc' => [\n" .
+                "            'enabled' => " . ($oidcEnabled ? 'true' : 'false') . ",\n" .
+                "            'issuer' => " . var_export($oidcIssuer, true) . ",\n" .
+                "            'client_id' => " . var_export($oidcClientId, true) . ",\n" .
+                "            'client_secret' => " . var_export($oidcClientSecret, true) . ",\n" .
+                "            'role_claim' => " . var_export($oidcRoleClaim, true) . ",\n" .
+                "            'admin_groups' => " . var_export($oidcAdminGroups, true) . "\n" .
+                "        ],\n" .
+                "        'ldap' => [\n" .
+                "            'enabled' => " . ($ldapEnabled ? 'true' : 'false') . ",\n" .
+                "            'host' => " . var_export($ldapHost, true) . ",\n" .
+                "            'port' => $ldapPort,\n" .
+                "            'encryption' => " . var_export($ldapEncryption, true) . ",\n" .
+                "            'user_dn_template' => " . var_export($ldapUserDn, true) . ",\n" .
+                "            'base_dn' => " . var_export($ldapBaseDn, true) . ",\n" .
+                "            'bind_dn' => " . var_export($ldapBindDn, true) . ",\n" .
+                "            'bind_password' => " . var_export($ldapBindPassword, true) . ",\n" .
+                "            'user_filter' => " . var_export($ldapUserFilter, true) . ",\n" .
+                "            'admin_group' => " . var_export($ldapAdminGroup, true) . "\n" .
+                "        ],\n" .
+                "        'forward_auth' => [\n" .
+                "            'enabled' => " . ($forwardEnabled ? 'true' : 'false') . ",\n" .
+                "            'trusted_proxies' => " . var_export($forwardProxies, true) . ",\n" .
+                "            'user_header' => " . var_export($forwardUserHeader, true) . ",\n" .
+                "            'group_header' => " . var_export($forwardGroupHeader, true) . ",\n" .
+                "            'admin_groups' => " . var_export($forwardAdminGroups, true) . "\n" .
+                "        ]\n" .
+                "    ],\n" .
                 "    'brute_force' => [\n" .
                 "        'enabled' => " . ($bruteForceEnabled ? 'true' : 'false') . ",\n" .
                 "        'max_attempts' => $maxAttempts,\n" .
@@ -620,6 +707,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if (isset($_POST['ops_restore_backup'])) {
+        require_once __DIR__ . '/includes/full_backup.php';
+        $confirm = trim((string) ($_POST['restore_confirm'] ?? ''));
+        $upload = $_FILES['backup_archive'] ?? null;
+        if ($confirm !== 'REPLACE') {
+            $_SESSION['flash_error'][] = 'Type REPLACE to confirm the restore.';
+        } elseif (!is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($upload['tmp_name'] ?? ''))) {
+            $_SESSION['flash_error'][] = 'Choose a full backup .tar file.';
+        } else {
+            try {
+                datadock_full_backup_restore($pdo, (string) $upload['tmp_name']);
+                $still = $pdo->prepare('SELECT id FROM users WHERE id = ?');
+                $still->execute([(int) ($_SESSION['user_id'] ?? 0)]);
+                if (!$still->fetch()) {
+                    unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['role']);
+                    $_SESSION['flash_success'][] = 'Backup restored. Sign in again with an account from that backup.';
+                    header('Location: login.php');
+                    exit;
+                }
+                $_SESSION['flash_success'][] = 'Backup restored. Database rows were replaced and stored files were copied back.';
+            } catch (Throwable $e) {
+                $_SESSION['flash_error'][] = 'Restore failed. ' . $e->getMessage();
+            }
+        }
+        header('Location: admin.php?section=ops');
+        exit;
+    }
+
     if (isset($_POST['ops_run_disk_scan'])) {
         require_once __DIR__ . '/includes/integrity.php';
         $_SESSION['ops_disk_scan_result'] = datadock_scan_uploads_vs_database($pdo);
@@ -807,6 +922,21 @@ require_once __DIR__ . '/includes/header.php';
                 $storageBasePath = trim($fileSettings['storage_base_path'] ?? '');
                 $trustedProxies = trim((string) ($fileSettings['trusted_proxies'] ?? ''));
                 $publicBrowsingEnabled = !empty($fileSettings['public_browsing_enabled']);
+                $publicGridEnabled = !empty($fileSettings['public_grid_enabled']);
+                $downloadQuota = is_array($fileSettings['download_quota'] ?? null) ? $fileSettings['download_quota'] : [];
+                $downloadQuotaEnabled = !empty($downloadQuota['enabled']);
+                $downloadQuotaWindow = (int) ($downloadQuota['window_minutes'] ?? 60);
+                $downloadQuotaUserDisplay = bytes_to_display((int) ($downloadQuota['max_bytes_per_user'] ?? 0));
+                $downloadQuotaFileDisplay = bytes_to_display((int) ($downloadQuota['max_bytes_per_file'] ?? 0));
+                $uploadScan = is_array($fileSettings['upload_scan'] ?? null) ? $fileSettings['upload_scan'] : [];
+                $uploadScanMode = (string) ($uploadScan['mode'] ?? 'off');
+                $uploadScanCommand = (string) ($uploadScan['command'] ?? '');
+                $uploadScanSocket = (string) ($uploadScan['socket'] ?? '');
+                $identityCfg = is_array($fileSettings['identity'] ?? null) ? $fileSettings['identity'] : [];
+                $totpPolicy = (string) ($identityCfg['totp_policy'] ?? 'off');
+                $oidcCfg = is_array($identityCfg['oidc'] ?? null) ? $identityCfg['oidc'] : [];
+                $ldapCfg = is_array($identityCfg['ldap'] ?? null) ? $identityCfg['ldap'] : [];
+                $forwardCfg = is_array($identityCfg['forward_auth'] ?? null) ? $identityCfg['forward_auth'] : [];
                 $deduplicateStorage = !empty($fileSettings['deduplicate_storage'] ?? true);
                 $foldersEnabledSetting = !isset($fileSettings['folders_enabled']) || !empty($fileSettings['folders_enabled']);
                 $tagsEnabledSetting = !isset($fileSettings['tags_enabled']) || !empty($fileSettings['tags_enabled']);
@@ -829,11 +959,13 @@ require_once __DIR__ . '/includes/header.php';
                 // Fetch user stats
                 $stmt = $pdo->query("
                     SELECT u.id, u.username, u.email, u.role, u.suspended, u.created_at, u.storage_partition_id,
+                        u.quota_max_files, u.quota_max_bytes,
                         COUNT(f.id) AS file_count,
                         COALESCE(SUM(f.filesize), 0) AS total_size
                     FROM users u
                     LEFT JOIN files f ON u.id = f.user_id AND f.deleted_at IS NULL
-                    GROUP BY u.id, u.username, u.email, u.role, u.suspended, u.created_at, u.storage_partition_id
+                    GROUP BY u.id, u.username, u.email, u.role, u.suspended, u.created_at, u.storage_partition_id,
+                        u.quota_max_files, u.quota_max_bytes
                     ORDER BY u.created_at DESC
                 ");
                 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);

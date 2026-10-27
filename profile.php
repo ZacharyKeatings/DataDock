@@ -162,6 +162,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'totp_start') {
+        $_SESSION['datadock_totp_setup'] = datadock_base32_encode(random_bytes(20));
+        header('Location: profile.php');
+        exit;
+    }
+    if ($action === 'totp_confirm' || $action === 'totp_disable') {
+        $stmt = $pdo->prepare('SELECT password_hash, totp_secret, totp_enabled FROM users WHERE id = ?');
+        $stmt->execute([(int) $userId]);
+        $authRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        $passwordOk = $authRow && password_verify((string) ($_POST['confirm_password'] ?? ''), (string) $authRow['password_hash']);
+        if (!$passwordOk) {
+            $_SESSION['flash_error'][] = 'Current password is not correct.';
+        } elseif ($action === 'totp_confirm') {
+            $secret = (string) ($_SESSION['datadock_totp_setup'] ?? '');
+            if ($secret === '' || !datadock_totp_verify($secret, (string) ($_POST['totp_code'] ?? ''))) {
+                $_SESSION['flash_error'][] = 'That authenticator code does not match. Start again.';
+            } else {
+                $pdo->prepare('UPDATE users SET totp_secret = ?, totp_enabled = 1 WHERE id = ?')->execute([$secret, (int) $userId]);
+                unset($_SESSION['datadock_totp_setup']);
+                $_SESSION['flash_success'][] = 'Authenticator codes are on for this account.';
+            }
+        } else {
+            if (empty($authRow['totp_enabled']) || !datadock_totp_verify((string) $authRow['totp_secret'], (string) ($_POST['totp_code'] ?? ''))) {
+                $_SESSION['flash_error'][] = 'Enter a current authenticator code to turn this off.';
+            } else {
+                $pdo->prepare('UPDATE users SET totp_secret = NULL, totp_enabled = 0 WHERE id = ?')->execute([(int) $userId]);
+                $_SESSION['flash_success'][] = 'Authenticator codes are off.';
+            }
+        }
+        header('Location: profile.php');
+        exit;
+    }
+
     if ($action === 'close_account') {
         if (datadock_read_only_enabled($settings)) {
             $_SESSION['flash_error'][] = '❌ Read-only mode: account changes are disabled.';
@@ -437,6 +470,62 @@ require_once __DIR__ . '/includes/header.php';
                 return true;
             }
             </script>
+        </div>
+    </div>
+
+    <?php
+    $totpRow = $pdo->prepare('SELECT totp_enabled FROM users WHERE id = ?');
+    $totpRow->execute([(int) $userId]);
+    $totpOn = !empty($totpRow->fetchColumn());
+    $totpPolicy = datadock_identity_config($settings)['totp_policy'];
+    $setupSecret = (string) ($_SESSION['datadock_totp_setup'] ?? '');
+    $otpauth = '';
+    if ($setupSecret !== '') {
+        $otpauth = 'otpauth://totp/' . rawurlencode(get_site_name() . ':' . $username) . '?secret=' . rawurlencode($setupSecret) . '&issuer=' . rawurlencode(get_site_name()) . '&digits=6&period=30';
+    }
+    ?>
+    <div class="settings-card stack-card">
+        <h3 class="settings-card-title">Authenticator</h3>
+        <div class="settings-card-body">
+            <?php if ($totpPolicy === 'required_admin' && ($user['role'] ?? '') === 'admin' && !$totpOn): ?>
+                <p class="form-hint">Admin accounts need an authenticator code before the admin panel will open.</p>
+            <?php endif; ?>
+            <?php if ($totpOn): ?>
+                <p>Authenticator codes are on.</p>
+                <form method="post" class="form">
+                    <input type="hidden" name="action" value="totp_disable">
+                    <div class="form-group">
+                        <label for="totp_off_password">Current password</label>
+                        <input type="password" name="confirm_password" id="totp_off_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="totp_off_code">Current code</label>
+                        <input type="text" name="totp_code" id="totp_off_code" inputmode="numeric" required>
+                    </div>
+                    <button type="submit" class="btn btn-quiet">Turn off</button>
+                </form>
+            <?php elseif ($setupSecret !== ''): ?>
+                <p>Add this key to your authenticator app, then enter a code to confirm.</p>
+                <p><code><?= sanitize_data($setupSecret) ?></code></p>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=<?= urlencode($otpauth) ?>" alt="Authenticator QR code" class="qr-image">
+                <form method="post" class="form">
+                    <input type="hidden" name="action" value="totp_confirm">
+                    <div class="form-group">
+                        <label for="totp_on_password">Current password</label>
+                        <input type="password" name="confirm_password" id="totp_on_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="totp_on_code">Code</label>
+                        <input type="text" name="totp_code" id="totp_on_code" inputmode="numeric" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Confirm</button>
+                </form>
+            <?php else: ?>
+                <form method="post">
+                    <input type="hidden" name="action" value="totp_start">
+                    <button type="submit" class="btn btn-primary">Set up authenticator</button>
+                </form>
+            <?php endif; ?>
         </div>
     </div>
 

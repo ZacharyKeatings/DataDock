@@ -31,3 +31,9 @@ run_migrations($pdo);
 if (function_exists('datadock_sync_session_user')) {
     datadock_sync_session_user();
 }
+if (session_status() === PHP_SESSION_ACTIVE && empty($_SESSION['user_id']) && function_exists('datadock_forward_auth_maybe') && $pdo instanceof PDO) {
+    if (!function_exists('datadock_load_settings')) {
+        require_once __DIR__ . '/settings_loader.php';
+    }
+    datadock_forward_auth_maybe($pdo, datadock_load_settings());
+}

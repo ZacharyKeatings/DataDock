@@ -18,9 +18,29 @@ $cronExample = '0 * * * * php ' . $scriptPath . '  # hourly purge (adjust path)'
         <div class="settings-card-body">
             <p class="settings-hint">Downloads are generated on demand. For large databases, run <code>mysqldump</code> on the server if PHP time limits apply.</p>
             <div class="form-actions">
-                <a href="backup_download.php?format=sql" class="btn btn-primary">Download SQL dump</a>
+                <a href="backup_download.php?format=full" class="btn btn-primary">Download full backup</a>
+                <a href="backup_download.php?format=sql" class="btn btn-quiet">Download SQL dump</a>
                 <a href="backup_download.php?format=files_meta" class="btn btn-quiet">Download files metadata (JSON)</a>
             </div>
+            <p class="settings-hint">The full backup is a .tar of the database plus every storage partition. Use it with the restore form below.</p>
+        </div>
+    </div>
+
+    <div class="settings-card">
+        <h4 class="settings-card-title">Restore a full backup</h4>
+        <div class="settings-card-body">
+            <p class="settings-hint">This replaces the database with the archive and copies the archived files back onto the storage partitions. Download a full backup first if you may want the current site back.</p>
+            <form method="post" enctype="multipart/form-data" class="form" onsubmit="return confirm('Replace the database and stored files with this backup?');">
+                <div class="form-group">
+                    <label for="backup_archive">Backup file</label>
+                    <input type="file" name="backup_archive" id="backup_archive" accept=".tar,application/x-tar" required>
+                </div>
+                <div class="form-group">
+                    <label for="restore_confirm">Type REPLACE to confirm</label>
+                    <input type="text" name="restore_confirm" id="restore_confirm" autocomplete="off" required>
+                </div>
+                <button type="submit" name="ops_restore_backup" value="1" class="btn btn-danger">Restore backup</button>
+            </form>
         </div>
     </div>
 

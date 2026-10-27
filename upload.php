@@ -8,6 +8,8 @@ require_once __DIR__ . '/includes/audit_log.php';
 require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
 require_once __DIR__ . '/includes/read_only.php';
+require_once __DIR__ . '/includes/ingest_file.php';
+require_once __DIR__ . '/includes/quotas.php';
 
 // feature flags & limits
 $guestUploadsEnabled       = $settings['guest_uploads']['enabled']         ?? false;
@@ -175,6 +177,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($currentUserId) {
+        $quotaLimits = datadock_user_quota_limits($pdo, (int) $currentUserId, $settings);
+        $userQuotaByCountEnabled = $quotaLimits['count_enabled'];
+        $userMaxFiles = $quotaLimits['max_files'];
+        $userQuotaByStorageEnabled = $quotaLimits['bytes_enabled'];
+        $userMaxStorage = $quotaLimits['max_bytes'];
+    }
+
     // enforce user quotas
     if ($currentUserId && ($userQuotaByCountEnabled || $userQuotaByStorageEnabled)) {
         $stmt = $pdo->prepare("
@@ -194,6 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // process each uploaded file
+    $storedCount = 0;
     foreach ($_FILES['upload']['name'] as $i => $originalName) {
         $error       = $_FILES['upload']['error'][$i];
         $tmpPath     = $_FILES['upload']['tmp_name'][$i];
@@ -222,143 +233,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             continue;
         }
 
-        // forbidden final extension?
-        if (in_array($extension, $forbiddenExtensions, true)) {
-            $_SESSION['flash_error'][] = "❌ {$originalName} has a forbidden file type.";
-            continue;
-        }
-
-        // any dot segment (blocks evil.php.jpg, shell.asp.png, …)
-        if (upload_basename_has_dangerous_extension_segment($originalName)) {
-            $_SESSION['flash_error'][] = "❌ {$originalName}: disallowed extension in the filename (including hidden segments before the last dot).";
-            continue;
-        }
-
-        // application size check
-        if ($appMaxFileSize > 0 && $fileSize > $appMaxFileSize) {
-            $_SESSION['flash_error'][] = "❌ {$originalName} is too large. Max is " . format_filesize($appMaxFileSize) . ".";
-            continue;
-        }
-
-        $mimeType = mime_content_type($tmpPath);
-
-        if (!upload_strict_image_format_ok($tmpPath, $extension, $mimeType)) {
-            $_SESSION['flash_error'][] = "❌ {$originalName}: file content does not match the image type implied by the extension.";
-            continue;
-        }
-
-        if (upload_image_body_has_embedded_script_markers($tmpPath, $mimeType, $extension)) {
-            $_SESSION['flash_error'][] = "❌ {$originalName}: blocked (executable/script content inside a binary image).";
-            continue;
-        }
-
-        $checksumMd5 = hash_file('md5', $tmpPath);
-        $checksumSha = hash_file('sha256', $tmpPath);
-
-        $partitionId = datadock_resolve_user_partition_id($pdo, $currentUserId);
-        datadock_ensure_partition_dirs($pdo, $partitionId);
-        $uploadDir = datadock_upload_dir($pdo, $partitionId);
-        $thumbDir = datadock_thumbnails_dir($pdo, $partitionId);
-
         $folderId = null;
         if ($currentUserId && !empty($_POST['folder_id']) && is_numeric($_POST['folder_id'])) {
-            $fid = (int) $_POST['folder_id'];
-            if ($fid > 0) {
-                $chk = $pdo->prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?');
-                $chk->execute([$fid, $currentUserId]);
-                if ($chk->fetch()) {
-                    $folderId = $fid;
-                }
-            }
+            $folderId = (int) $_POST['folder_id'];
         }
-
-        $dedupEnabled = !empty($settings['deduplicate_storage'] ?? true);
-        $dupRow = ($dedupEnabled && $checksumSha !== '')
-            ? datadock_find_duplicate_object($pdo, $partitionId, $checksumSha)
-            : null;
-
-        $storageObjectId = null;
-        $uniqueName = null;
-        $destPath = null;
-
-        if ($dupRow !== null) {
-            datadock_increment_object_ref($pdo, (int) $dupRow['id']);
-            $storageObjectId = (int) $dupRow['id'];
-            $uniqueName = $dupRow['stored_filename'];
-            $destPath = $uploadDir . $uniqueName;
-        } else {
-            $uniqueName = $rewriteFileExtension ? uniqid('', true) : (uniqid('', true) . ".$extension");
-            $destPath = $uploadDir . $uniqueName;
-            if (!move_uploaded_file($tmpPath, $destPath)) {
-                $_SESSION['flash_error'][] = "❌ Failed to store {$originalName}.";
-                continue;
-            }
-            $storageObjectId = datadock_create_storage_object($pdo, $partitionId, $checksumSha, $uniqueName, $fileSize);
-        }
-
-        // MIME anomaly: extension vs detected MIME mismatch (for admin review)
-        $mimeAnomaly = (int) mime_extension_mismatch($extension, $mimeType);
-
-        // generate thumbnail if image (when enabled)
-        $thumbnailName = null;
-        if ($thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
-            $thumbBase = pathinfo($uniqueName, PATHINFO_FILENAME) ?: $uniqueName;
-            $thumbnailName = 'thumb_' . $thumbBase . '.jpg';
-            $thumbPath = $thumbDir . $thumbnailName;
-            if (!file_exists($thumbPath) && is_readable($destPath)) {
-                if ($img = @imagecreatefromstring(file_get_contents($destPath))) {
-                    $thumb = imagescale($img, 100);
-                    imagejpeg($thumb, $thumbPath);
-                    imagedestroy($img);
-                    imagedestroy($thumb);
-                } else {
-                    $thumbnailName = null;
-                }
-            }
-        }
-
-        // timestamps
         $nowUTC = new DateTime('now', new DateTimeZone('UTC'));
-        $uploadTs = $nowUTC->format('Y-m-d H:i:s');
         $expiryTs = null;
         $chosenDuration = $_POST['duration'] ?? 'never';
-        if ($autoDeleteDurations[$chosenDuration] !== null) {
-            $expiryTs = (clone $nowUTC)
-                ->modify($autoDeleteDurations[$chosenDuration])
-                ->format('Y-m-d H:i:s');
+        if (isset($autoDeleteDurations[$chosenDuration]) && $autoDeleteDurations[$chosenDuration] !== null) {
+            $expiryTs = (clone $nowUTC)->modify($autoDeleteDurations[$chosenDuration])->format('Y-m-d H:i:s');
         }
-
-        $isPublic = isset($_POST['is_public']) ? 1 : 0;
-        $quarantineStatus = $uploadQuarantineEnabled ? 'pending' : 'approved';
-
-        $ins = $pdo->prepare("
-            INSERT INTO files
-              (user_id, guest_id, storage_partition_id, folder_id, is_public, filename, storage_object_id, original_name,
-               filetype, filesize, thumbnail_path,
-               upload_date, expiry_date, checksum_md5, checksum_sha256,
-               quarantine_status, mime_anomaly)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $ins->execute([
-            $currentUserId,
-            $isGuest ? $guestId : null,
-            $partitionId,
-            $folderId,
-            $isPublic,
-            $uniqueName,
-            $storageObjectId,
-            $originalName,
-            $mimeType,
-            $fileSize,
-            $thumbnailName,
-            $uploadTs,
-            $expiryTs,
-            $checksumMd5,
-            $checksumSha,
-            $quarantineStatus,
-            $mimeAnomaly,
+        $stored = datadock_ingest_local_file($pdo, $settings, [
+            'source_path' => $tmpPath,
+            'original_name' => $originalName,
+            'file_size' => $fileSize,
+            'user_id' => $currentUserId ? (int) $currentUserId : 0,
+            'guest_id' => $isGuest ? ($guestId ?? null) : null,
+            'folder_id' => $folderId,
+            'is_public' => isset($_POST['is_public']) ? 1 : 0,
+            'expiry_ts' => $expiryTs,
+            'relocate' => 'upload',
         ]);
-        $newFileId = (int) $pdo->lastInsertId();
+        if (!$stored['ok']) {
+            $_SESSION['flash_error'][] = $stored['error'];
+            continue;
+        }
+        $newFileId = (int) $stored['file_id'];
+        $storedCount++;
+        if (($stored['quarantine'] ?? '') === 'pending' && ($stored['scan'] ?? '') !== '') {
+            $_SESSION['flash_success'][] = $originalName . ' was saved and is waiting for review.';
+        }
         datadock_log_activity($pdo, 'upload', [
             'actor_user_id' => $currentUserId,
             'actor_guest_id' => $isGuest ? ($guestId ?? null) : null,
@@ -366,18 +270,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'detail' => [
                 'name' => $originalName,
                 'size' => $fileSize,
-                'public' => (bool) $isPublic,
+                'public' => isset($_POST['is_public']),
             ],
         ]);
     }
 
     // on success: record rate limit events (one per file actually inserted)
-    if (empty($_SESSION['flash_error'])) {
-        $filesInRequest = count(array_filter($_FILES['upload']['name'] ?? []));
-        if ($filesInRequest > 0) {
-            record_upload_rate_limit($pdo, $clientIp, $currentUserId, $filesInRequest);
-        }
+    if ($storedCount > 0 && empty($_SESSION['flash_error'])) {
+        record_upload_rate_limit($pdo, $clientIp, $currentUserId, $storedCount);
         $_SESSION['flash_success'][] = "✅ File(s) uploaded successfully.";
+        if ($isGuest && !empty($guestId)) {
+            require_once __DIR__ . '/includes/guest_claim.php';
+            $claimToken = datadock_issue_guest_claim($pdo, (string) $guestId);
+            if ($claimToken) {
+                $_SESSION['flash_success'][] = 'Claim code: ' . $claimToken . '. Enter it when you register or log in to attach these uploads to an account.';
+            }
+        }
     }
 
     // AJAX vs normal
@@ -416,6 +324,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
 
   <?php if (! $formDisabled): ?>
     <form method="post" enctype="multipart/form-data" id="uploadForm" class="upload-form">
+      <?= datadock_csrf_field() ?>
       <?php if ($tosEnabled && !empty($tosText)): ?>
       <div class="tos-block upload-options-block">
         <div class="tos-text"><?= nl2br(sanitize_data($tosText)) ?></div>
@@ -498,6 +407,20 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       require_once __DIR__ . '/includes/progress_bar.php';
       ?>
 
+      <div class="form-group settings-row-checkbox">
+        <label>
+          <input type="checkbox" name="use_chunks" id="use_chunks" value="1">
+          Send large files in chunks
+        </label>
+        <p class="form-hint">The server reassembles the file, then runs the same type, quota, and scan checks once.</p>
+      </div>
+      <div class="form-group settings-row-checkbox">
+        <label>
+          <input type="checkbox" name="use_chunks" id="use_chunks" value="1">
+          Send large files in chunks
+        </label>
+        <p class="form-hint">The browser slices the file. The server reassembles it, then runs the usual type, quota, and scan checks once.</p>
+      </div>
       <div class="upload-submit-wrap">
         <button type="submit" class="btn btn-primary btn-upload-submit">Upload</button>
       </div>
@@ -602,6 +525,75 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       }
     }
 
+    function csrfToken() {
+      const field = uploadForm.querySelector('input[name="csrf_token"]');
+      return field ? field.value : '';
+    }
+
+    async function uploadChunked() {
+      const files = Array.from(fileInput.files);
+      const errors = [];
+      const success = [];
+      const chunkSize = 1024 * 1024;
+      let done = 0;
+      const total = files.reduce((sum, file) => sum + file.size, 0) || 1;
+      for (const file of files) {
+        const start = new FormData();
+        start.append('action', 'start');
+        start.append('filename', file.name);
+        start.append('size', String(file.size));
+        start.append('csrf_token', csrfToken());
+        const started = await fetch('upload_chunk.php', { method: 'POST', body: start, headers: { 'X-Requested-With': 'xmlhttprequest' } });
+        const startJson = await started.json();
+        if (!startJson.ok) {
+          errors.push(startJson.error || ('Could not start ' + file.name));
+          continue;
+        }
+        const count = Math.max(1, Math.ceil(file.size / chunkSize));
+        let failed = false;
+        for (let index = 0; index < count; index++) {
+          const blob = file.slice(index * chunkSize, Math.min(file.size, (index + 1) * chunkSize));
+          const part = new FormData();
+          part.append('action', 'chunk');
+          part.append('upload_id', startJson.upload_id);
+          part.append('index', String(index));
+          part.append('chunk', blob, 'chunk');
+          part.append('csrf_token', csrfToken());
+          const sent = await fetch('upload_chunk.php', { method: 'POST', body: part });
+          const partJson = await sent.json();
+          if (!partJson.ok) {
+            errors.push(partJson.error || ('Chunk failed for ' + file.name));
+            failed = true;
+            break;
+          }
+          done += blob.size;
+          const percent = Math.round((done / total) * 100);
+          uploadProgress.value = percent;
+          progressText.textContent = percent + '%';
+        }
+        if (failed) continue;
+        const finish = new FormData(uploadForm);
+        finish.delete('upload');
+        finish.set('action', 'finish');
+        finish.set('upload_id', startJson.upload_id);
+        finish.set('filename', file.name);
+        const finished = await fetch('upload_chunk.php', { method: 'POST', body: finish });
+        const finishJson = await finished.json();
+        if (!finishJson.ok) {
+          errors.push(finishJson.error || ('Could not finish ' + file.name));
+        } else if (finishJson.message) {
+          success.push(finishJson.message);
+        }
+      }
+      showUploadResult(errors, success);
+      if (errors.length === 0 && success.length > 0) {
+        setTimeout(() => { window.location = 'upload.php'; }, 1500);
+      } else {
+        uploadButton.disabled = false;
+        uploadButton.textContent = 'Upload';
+      }
+    }
+
     uploadForm.addEventListener("submit", function(event) {
       event.preventDefault();
       const bad = Array.from(fileInput.files).filter(f =>
@@ -616,6 +608,16 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       uploadButton.disabled    = true;
       uploadButton.textContent = "Uploading…";
       progressContainer.style.display = "block";
+
+      const chunked = document.getElementById('use_chunks');
+      if (chunked && chunked.checked) {
+        uploadChunked().catch(() => {
+          showUploadResult(['❌ Upload failed: network error.'], []);
+          uploadButton.disabled = false;
+          uploadButton.textContent = 'Upload';
+        });
+        return;
+      }
 
       const formData = new FormData(this);
       const xhr      = new XMLHttpRequest();
