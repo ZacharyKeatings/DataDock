@@ -124,10 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ?>
     <div class="page-section">
         <h2 class="page-title">Share folder link</h2>
-        <p>Anyone with this link can view the list and download files (subject to each file’s IP and password rules, if any).</p>
-        <p><input type="text" readonly class="form-input" id="share-folder-url" style="width:100%;max-width:48rem;" value="<?= sanitize_data($shareUrl) ?>"></p>
-        <p><button type="button" class="btn btn-primary" onclick="var u=document.getElementById('share-folder-url');if(u&&navigator.clipboard)navigator.clipboard.writeText(u.value);this.textContent='Copied!';">Copy link</button></p>
-        <p><a href="dashboard.php" class="btn btn-small">Back to dashboard</a></p>
+        <p class="page-description">Anyone with this link can view the list and download the files. Each file still follows its own password and IP rules.</p>
+        <div class="onetimelink-box">
+            <label for="share-folder-url" class="visually-hidden">Share folder link</label>
+            <input type="text" readonly class="onetimelink-input" id="share-folder-url" value="<?= sanitize_data($shareUrl) ?>">
+            <button type="button" class="btn btn-primary btn-small btn-copy" data-copy="<?= sanitize_data($shareUrl) ?>">Copy link</button>
+        </div>
+        <p class="form-actions"><a href="dashboard.php" class="btn btn-quiet">Back to your files</a></p>
     </div>
     <?php
     require_once __DIR__ . '/includes/footer.php';
@@ -139,42 +142,44 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 <div class="page-section">
     <h2 class="page-title">Create share folder link</h2>
-    <p>One link for <?= (int) count($orderedFiles) ?> file(s). Optional note per file is shown to recipients only.</p>
+    <p class="page-description">One link for <?= (int) count($orderedFiles) ?> file<?= count($orderedFiles) === 1 ? '' : 's' ?>. A note is shown only to people who open the link.</p>
     <form method="post" class="form">
         <div class="settings-row">
             <label for="title">Title (optional)</label>
-            <input type="text" name="title" id="title" maxlength="200" placeholder="e.g. Project deliverables" style="max-width:32rem;">
+            <input type="text" name="title" id="title" maxlength="200" placeholder="e.g. Project deliverables">
         </div>
         <div class="settings-row">
             <label for="link_expires">Link expires</label>
             <select name="link_expires" id="link_expires">
                 <?php foreach ($linkExpiryOptions as $k => $_): ?>
-                    <option value="<?= sanitize_data($k) ?>"<?= $k === '7_days' ? ' selected' : '' ?>><?= sanitize_data(str_replace('_', ' ', $k)) ?></option>
+                    <option value="<?= sanitize_data($k) ?>"<?= $k === '7_days' ? ' selected' : '' ?>><?= sanitize_data(ucwords(str_replace('_', ' ', $k))) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <table class="file-list" style="width:100%;border-collapse:collapse;margin-top:1rem;">
-            <thead>
-                <tr>
-                    <th style="text-align:left;padding:0.35rem;">File</th>
-                    <th style="text-align:left;padding:0.35rem;">Recipient note (optional)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($orderedFiles as $f): $fid = (int) $f['id']; ?>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <td style="padding:0.35rem;vertical-align:top;"><?= sanitize_data($f['original_name'] ?? $f['filename']) ?></td>
-                        <td style="padding:0.35rem;">
-                            <textarea name="recipient_note[<?= $fid ?>]" rows="2" maxlength="500" style="width:100%;max-width:28rem;" placeholder="Visible only on the share page"></textarea>
+                        <th scope="col">File</th>
+                        <th scope="col">Note for recipient</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($orderedFiles as $f): $fid = (int) $f['id']; ?>
+                    <tr>
+                        <td><?= sanitize_data($f['original_name'] ?? $f['filename']) ?></td>
+                        <td>
+                            <textarea name="recipient_note[<?= $fid ?>]" rows="2" maxlength="500" placeholder="Optional"></textarea>
                         </td>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <p style="margin-top:1rem;">
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create link</button>
-            <a href="dashboard.php" class="btn btn-small">Cancel</a>
-        </p>
+            <a href="dashboard.php" class="btn btn-quiet">Cancel</a>
+        </div>
     </form>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php';

@@ -1,5 +1,5 @@
 <section class="admin-settings">
-    <h3 class="page-title">Site Settings</h3>
+    <h2 class="page-title">Site Settings</h2>
 
     <form method="post" class="settings-form">
         <input type="hidden" name="section" value="site">
@@ -309,7 +309,7 @@
                 </div>
                 <div class="settings-row">
                     <label for="ops_storage_partition_percent_threshold">Disk usage threshold (%)</label>
-                    <input type="number" name="ops_storage_partition_percent_threshold" id="ops_storage_partition_percent_threshold" value="<?= (int) $opsStoragePartitionPercentThreshold ?>" min="1" max="100" style="width:5rem;">
+                    <input type="number" name="ops_storage_partition_percent_threshold" id="ops_storage_partition_percent_threshold" class="input-compact" value="<?= (int) $opsStoragePartitionPercentThreshold ?>" min="1" max="100">
                 </div>
                 <div class="settings-row settings-row-checkbox">
                     <label>
@@ -319,7 +319,7 @@
                 </div>
                 <div class="settings-row">
                     <label for="ops_user_quota_percent_threshold">Quota usage threshold (%)</label>
-                    <input type="number" name="ops_user_quota_percent_threshold" id="ops_user_quota_percent_threshold" value="<?= (int) $opsUserQuotaPercentThreshold ?>" min="1" max="100" style="width:5rem;">
+                    <input type="number" name="ops_user_quota_percent_threshold" id="ops_user_quota_percent_threshold" class="input-compact" value="<?= (int) $opsUserQuotaPercentThreshold ?>" min="1" max="100">
                 </div>
                 <p class="settings-hint">Requires per-user limits or guest limits to be enabled for quota alerts. Partition alerts use free space on the filesystem that contains each partition root.</p>
             </div>

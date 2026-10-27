@@ -19,13 +19,13 @@ $reportsListQuery = static function (array $parts): string {
 <div class="admin-reports">
     <div class="file-mgmt-header">
         <h2 class="page-title">Reports &amp; moderation</h2>
-        <p class="settings-hint" style="margin-top:0.5rem;max-width:52rem;">
-            Review user reports for malicious or inappropriate files. Dismiss false positives or take file actions.
-        </p>
     </div>
+    <p class="page-description">
+        Review user reports for malicious or inappropriate files. Dismiss false positives or take file actions.
+    </p>
 
     <?php if ($reportsError !== null): ?>
-        <p class="message message-error">Could not load reports: <?= sanitize_data($reportsError) ?></p>
+        <p class="flash error" role="alert">Could not load reports: <?= sanitize_data($reportsError) ?></p>
     <?php else: ?>
         <?php if ($reportIdFilter > 0): ?>
             <p class="settings-hint admin-reports-filter-banner">
@@ -51,9 +51,9 @@ $reportsListQuery = static function (array $parts): string {
                     $statusQs['file_id'] = $reportsFileIdFilter;
                 }
                 ?>
-                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'open']))) ?>" class="btn btn-small<?= $reportStatus === 'open' ? ' btn-primary' : '' ?>">Open</a>
-                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'actioned']))) ?>" class="btn btn-small<?= $reportStatus === 'actioned' ? ' btn-primary' : '' ?>">Actioned</a>
-                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'dismissed']))) ?>" class="btn btn-small<?= $reportStatus === 'dismissed' ? ' btn-primary' : '' ?>">Dismissed</a>
+                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'open']))) ?>" class="btn btn-small<?= $reportStatus === 'open' ? ' btn-primary' : ' btn-quiet' ?>">Open</a>
+                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'actioned']))) ?>" class="btn btn-small<?= $reportStatus === 'actioned' ? ' btn-primary' : ' btn-quiet' ?>">Actioned</a>
+                <a href="<?= sanitize_data($reportsListQuery(array_merge($statusQs, ['status' => 'dismissed']))) ?>" class="btn btn-small<?= $reportStatus === 'dismissed' ? ' btn-primary' : ' btn-quiet' ?>">Dismissed</a>
             </div>
         </div>
 
@@ -137,8 +137,8 @@ $reportsListQuery = static function (array $parts): string {
                                                 <input type="hidden" name="report_id" value="<?= $reportId ?>">
                                                 <textarea name="review_note" rows="3" maxlength="1000" placeholder="Review note (optional)" class="admin-reports-review-note"></textarea>
                                                 <div class="admin-reports-actions">
-                                                    <button type="submit" name="moderation_report_action" value="dismiss" class="btn btn-small">Dismiss</button>
-                                                    <button type="submit" name="moderation_report_action" value="quarantine" class="btn btn-small">Quarantine</button>
+                                                    <button type="submit" name="moderation_report_action" value="dismiss" class="btn btn-quiet btn-small">Dismiss</button>
+                                                    <button type="submit" name="moderation_report_action" value="quarantine" class="btn btn-quiet btn-small">Quarantine</button>
                                                     <button type="submit" name="moderation_report_action" value="delete" class="btn btn-small btn-danger" onclick="return confirm('Move this file to trash?');">Delete</button>
                                                 </div>
                                             </form>
@@ -169,7 +169,7 @@ $reportsListQuery = static function (array $parts): string {
                                 $pageQs['file_id'] = $reportsFileIdFilter;
                             }
                             ?>
-                            <a href="<?= sanitize_data($reportsListQuery($pageQs)) ?>" class="btn btn-small"><?= $p ?></a>
+                            <a href="<?= sanitize_data($reportsListQuery($pageQs)) ?>" class="btn btn-quiet btn-small"><?= $p ?></a>
                         <?php endif; ?>
                     <?php endfor; ?>
                 </nav>

@@ -1,7 +1,7 @@
 <h2 class="page-title">Storage partitions</h2>
-<p class="page-description" style="max-width:42rem;">Each partition is a separate storage root (empty <code>root path</code> inherits the site <strong>Custom Storage Base Path</strong> from Site Settings). Every root has its own <code>uploads/</code> and <code>thumbnails/</code> subdirectories. Assign users to a partition in User Management so new uploads land on the correct disk.</p>
+<p class="page-description">Each partition is a separate storage root. An empty root path inherits the site storage base path from Site Settings. Every root has its own uploads and thumbnails folders. Assign users to a partition in User Management so new uploads land on the correct disk.</p>
 
-<div class="settings-card" style="margin-bottom:1.5rem;">
+<div class="settings-card stack-gap">
     <h3 class="settings-card-title">Add partition</h3>
     <div class="settings-card-body">
         <form method="post" action="admin.php" class="settings-form">
@@ -21,8 +21,8 @@
 </div>
 
 <?php if (!empty($storagePartitions)): ?>
-<div class="file-list">
-    <div class="file-row-dashboard file-header">
+<div class="file-list log-scroll">
+    <div class="file-row-partitions file-header">
         <div>Name</div>
         <div>Root path</div>
         <div>Files</div>
@@ -30,7 +30,7 @@
         <div>Default</div>
     </div>
     <?php foreach ($storagePartitions as $sp): ?>
-        <div class="file-row-dashboard">
+        <div class="file-row-partitions">
             <div><?= sanitize_data($sp['name']) ?> (id <?= (int) $sp['id'] ?>)</div>
             <div><code><?= $sp['root_path'] === '' ? '(site default)' : sanitize_data($sp['root_path']) ?></code></div>
             <div><?= (int) ($sp['file_count'] ?? 0) ?></div>
@@ -39,7 +39,7 @@
                 <?php if (!empty($sp['is_default'])): ?>
                     <strong>Default</strong>
                 <?php else: ?>
-                    <form method="post" action="admin.php" style="display:inline;">
+                    <form method="post" action="admin.php" class="inline-form compact">
                         <input type="hidden" name="set_default_partition" value="1">
                         <input type="hidden" name="partition_id" value="<?= (int) $sp['id'] ?>">
                         <button type="submit" class="btn btn-small">Set default</button>
@@ -50,5 +50,7 @@
     <?php endforeach; ?>
 </div>
 <?php else: ?>
-<p>No partitions defined.</p>
+    <div class="empty-state">
+        <p>No partitions defined.</p>
+    </div>
 <?php endif; ?>

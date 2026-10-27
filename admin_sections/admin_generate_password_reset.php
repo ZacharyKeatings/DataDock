@@ -32,7 +32,9 @@ $scriptName = rtrim($scriptName, '/');
 $resetUrl = $baseUrl . $scriptName . '/reset_password.php?token=' . urlencode($token);
 
 $_SESSION['flash_success'][] = [
-    'msg' => 'Password reset link for <strong>' . htmlspecialchars($user['username']) . '</strong> (valid 1 hour):<br><input type="text" readonly class="signup-link-copy" value="' . htmlspecialchars($resetUrl) . '" style="width:100%;max-width:400px;padding:0.25rem;"><button type="button" class="btn btn-primary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent=\'Copied!\';">Copy</button>',
+    'msg' => 'Password reset link for <strong>' . htmlspecialchars($user['username']) . '</strong> (valid 1 hour).'
+        . '<div class="onetimelink-box"><input type="text" readonly class="onetimelink-input" value="' . htmlspecialchars($resetUrl) . '">'
+        . '<button type="button" class="btn btn-primary btn-small btn-copy" data-copy="' . htmlspecialchars($resetUrl) . '">Copy</button></div>',
     'html' => true
 ];
 header("Location: ../admin.php?section=users");

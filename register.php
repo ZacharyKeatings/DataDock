@@ -111,14 +111,15 @@ require_once __DIR__ . '/includes/header.php';
     <h2 class="page-title">Register</h2>
 
     <?php if (empty($settings['registration_enabled']) || !$settings['registration_enabled']): ?>
-        <div class="error-box">
-            🚫 Registration is currently disabled by the site administrator.
+        <div class="flash warning persistent" role="status">
+            Registration is turned off. <a href="login.php">Log in</a> if you already have an account.
         </div>
     <?php elseif ($inviteOnly && !$showRegistrationForm): ?>
-        <div class="error-box">
-            🚫 Registration is by invitation only. Please use the signup link provided by an administrator, or <a href="login.php">log in</a> if you already have an account.
+        <div class="flash warning persistent" role="status">
+            Registration is by invitation only. Use the signup link from an administrator, or <a href="login.php">log in</a> if you already have an account.
         </div>
     <?php else: ?>
+        <p class="page-description">Create an account to upload and manage files.</p>
         <form method="post" class="form" onsubmit="return validateForm()">
             <?php if ($inviteOnly && $signupTokenParam !== ''): ?>
             <input type="hidden" name="signup_token" value="<?= sanitize_data($signupTokenParam) ?>">
@@ -143,18 +144,19 @@ require_once __DIR__ . '/includes/header.php';
                 <input type="password" name="confirm" id="confirm" required>
             </div>
 
+            <p class="form-hint" id="register-mismatch" hidden>Passwords do not match.</p>
             <button type="submit" class="btn btn-primary">Register</button>
         </form>
+        <p class="form-hint"><a href="login.php">Already have an account? Log in</a></p>
 
         <script>
         function validateForm() {
-            const password = document.getElementById("password");
-            const confirm = document.getElementById("confirm");
-            if (password.value !== confirm.value) {
-                alert("Passwords do not match.");
-                return false;
-            }
-            return true;
+            var password = document.getElementById("password");
+            var confirm = document.getElementById("confirm");
+            var hint = document.getElementById("register-mismatch");
+            var mismatch = password.value !== confirm.value;
+            if (hint) hint.hidden = !mismatch;
+            return !mismatch;
         }
         </script>
     <?php endif; ?>

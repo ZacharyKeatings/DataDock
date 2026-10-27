@@ -1,13 +1,13 @@
 /* Dark theme: same structure as light, green accent kept, white → dark */
 :root {
-    --color-header-background: #038C96;
-    --color-background: #2d3436;
-    --color-text: #dfe6e9;
-    --color-primary: #0077cc;
-    --color-secondary: #3d4a4d;
+    --color-header-background: #0f3d42;
+    --color-background: #1e2426;
+    --color-text: #e7eeef;
+    --color-primary: #4db8c0;
+    --color-secondary: #2c3638;
     --color-accent: #ffbc42;
-    --color-border: #4a5d60;
-    --color-box-background: #37474f;
+    --color-border: #3d4c4e;
+    --color-box-background: #262e30;
     --color-file-row-alt: rgba(255, 255, 255, 0.04);
 
     --color-success-text: #ffffff;
@@ -30,11 +30,11 @@ body {
 }
 
 a {
-    color: #74b9ff;
+    color: #8fd4da;
 }
 
 a:hover {
-    color: var(--color-accent);
+    color: #c8f3f6;
 }
 
 .container {
@@ -55,8 +55,9 @@ a:hover {
     color: white;
 }
 
-.main-nav a.active::after {
-    background-color: var(--color-accent);
+.main-nav a.active::after,
+.nav-link.active::after {
+    background-color: #fff;
 }
 
 .page-section {
@@ -105,8 +106,9 @@ a:hover {
     border-color: var(--color-border);
 }
 
-.stat-value {
-    color: var(--color-header-background);
+.stat-value,
+.profile-stat-value {
+    color: #7fd4da;
 }
 
 .sidebar-nav a {
@@ -116,7 +118,7 @@ a:hover {
 .sidebar-nav a.active,
 .sidebar-nav a:hover {
     background-color: var(--color-secondary);
-    color: var(--color-header-background);
+    color: #7fd4da;
 }
 
 .changelog-box,

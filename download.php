@@ -23,9 +23,7 @@ function datadock_send_file_stream(PDO $pdo, array $file, array $settings, strin
     $fileId = (int) $file['id'];
     $path = datadock_file_main_path($pdo, $file);
     if (!file_exists($path)) {
-        http_response_code(404);
-        echo 'File missing.';
-        exit;
+        datadock_render_status_page(404, 'File missing', 'This file is no longer on the server.');
     }
     $resourceMap = [
         'download' => 'download',
@@ -92,9 +90,7 @@ if (isset($_GET['sf'], $_GET['id']) && $_GET['sf'] !== '' && is_numeric($_GET['i
             if ($exp !== null && $exp !== '') {
                 $ts = strtotime((string) $exp . ' UTC');
                 if ($ts !== false && $ts < time()) {
-                    http_response_code(410);
-                    echo 'This share link has expired.';
-                    exit;
+                    datadock_render_status_page(410, 'Share expired', 'This share link has expired.');
                 }
             }
             $sfId = (int) $srow['sf_id'];
@@ -107,9 +103,7 @@ if (isset($_GET['sf'], $_GET['id']) && $_GET['sf'] !== '' && is_numeric($_GET['i
             $file = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($file) {
                 if (!datadock_ip_allowlist_allows($file['ip_allowlist'] ?? null, datadock_client_ip())) {
-                    http_response_code(403);
-                    echo 'Access denied (IP not allowed).';
-                    exit;
+                    datadock_render_status_page(403, 'Access denied', 'This download is limited to specific IP addresses.');
                 }
                 if (!empty($file['access_password_hash']) && !datadock_session_has_file_access($fileId)) {
                     $q = 'sf=' . rawurlencode($sfToken) . '&id=' . $fileId;
@@ -125,9 +119,7 @@ if (isset($_GET['sf'], $_GET['id']) && $_GET['sf'] !== '' && is_numeric($_GET['i
             }
         }
     }
-    http_response_code(404);
-    echo 'File not found or link invalid.';
-    exit;
+    datadock_render_status_page(404, 'File not found', 'This file was not found, or the link is not valid.');
 }
 
 // HMAC-signed temporary URL (no DB token row)
@@ -136,28 +128,20 @@ if (isset($_GET['id'], $_GET['exp'], $_GET['sig']) && is_numeric($_GET['id']) &&
     $exp = (int) $_GET['exp'];
     $sig = (string) $_GET['sig'];
     if (!datadock_signed_download_verify($pdo, $fileId, $exp, $sig)) {
-        http_response_code(403);
-        echo 'Invalid or expired link.';
-        exit;
+        datadock_render_status_page(403, 'Link expired', 'This download link is invalid or has expired.');
     }
     $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND deleted_at IS NULL AND (quarantine_status = 'approved' OR quarantine_status IS NULL) AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
     $stmt->execute([$fileId]);
     $file = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$file) {
-        http_response_code(404);
-        echo 'File not found.';
-        exit;
+        datadock_render_status_page(404, 'File not found', 'This file was not found.');
     }
     if (!datadock_anonymous_access_allowed($file, true)) {
-        http_response_code(403);
-        echo 'Access denied (IP not allowed).';
-        exit;
+        datadock_render_status_page(403, 'Access denied', 'This download is limited to specific IP addresses.');
     }
     $path = datadock_file_main_path($pdo, $file);
     if (!file_exists($path)) {
-        http_response_code(404);
-        echo 'File missing.';
-        exit;
+        datadock_render_status_page(404, 'File missing', 'This file is no longer on the server.');
     }
     datadock_send_file_stream($pdo, $file, $settings, 'download_signed', [
         'file_id' => $fileId,
@@ -201,9 +185,7 @@ if (isset($_GET['token']) && $_GET['token'] !== '') {
         unset($file['dt_expires_at'], $file['dt_max_uses'], $file['dt_use_count']);
         $fid = (int) $file['id'];
         if (!datadock_ip_allowlist_allows($file['ip_allowlist'] ?? null, datadock_client_ip())) {
-            http_response_code(403);
-            echo 'Access denied (IP not allowed).';
-            exit;
+            datadock_render_status_page(403, 'Access denied', 'This download is limited to specific IP addresses.');
         }
         if (!empty($file['access_password_hash']) && !datadock_session_has_file_access($fid)) {
             $q = 'token=' . rawurlencode($token);
@@ -242,9 +224,7 @@ if (empty($userId) && isset($_GET['id']) && is_numeric($_GET['id']) && $publicBr
     $file = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($file) {
         if (!datadock_ip_allowlist_allows($file['ip_allowlist'] ?? null, datadock_client_ip())) {
-            http_response_code(403);
-            echo 'Access denied (IP not allowed).';
-            exit;
+            datadock_render_status_page(403, 'Access denied', 'This download is limited to specific IP addresses.');
         }
         if (!empty($file['access_password_hash']) && !datadock_session_has_file_access($fileId)) {
             $q = 'id=' . $fileId;
@@ -257,6 +237,7 @@ if (empty($userId) && isset($_GET['id']) && is_numeric($_GET['id']) && $publicBr
                 'detail' => ['name' => $file['original_name'] ?? $file['filename']],
             ], true);
         }
+        datadock_render_status_page(404, 'File missing', 'This file is no longer on the server.');
     }
 }
 

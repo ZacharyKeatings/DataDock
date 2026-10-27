@@ -14,7 +14,7 @@ if (strlen($token) !== 64 || !ctype_xdigit($token)) {
     http_response_code(404);
     $pageTitle = 'Share not found';
     require_once __DIR__ . '/includes/header.php';
-    echo '<div class="page-section"><p>Invalid or missing share link.</p></div>';
+    echo '<div class="page-section"><h2 class="page-title">Share not found</h2><div class="empty-state"><p>This link is missing or not valid.</p></div></div>';
     require_once __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -26,7 +26,7 @@ if (!$bundle) {
     http_response_code(404);
     $pageTitle = 'Share not found';
     require_once __DIR__ . '/includes/header.php';
-    echo '<div class="page-section"><p>This share link was not found.</p></div>';
+    echo '<div class="page-section"><h2 class="page-title">Share not found</h2><div class="empty-state"><p>This share link was not found.</p></div></div>';
     require_once __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -38,7 +38,7 @@ if ($exp !== null && $exp !== '') {
         http_response_code(410);
         $pageTitle = 'Share expired';
         require_once __DIR__ . '/includes/header.php';
-        echo '<div class="page-section"><p>This share link has expired.</p></div>';
+        echo '<div class="page-section"><h2 class="page-title">Share expired</h2><div class="empty-state"><p>This share link has expired.</p></div></div>';
         require_once __DIR__ . '/includes/footer.php';
         exit;
     }
@@ -71,11 +71,10 @@ require_once __DIR__ . '/includes/header.php';
     <?php endif; ?>
 
     <?php if (empty($rows)): ?>
-        <p>No files in this share.</p>
+        <div class="empty-state"><p>No files in this share.</p></div>
     <?php else: ?>
-        <div class="file-list" style="margin-top:1rem;">
+        <div class="file-list file-list-share">
             <div class="file-row file-header">
-                <div class="file-preview-cell">Preview</div>
                 <div>File</div>
                 <div>Size</div>
                 <div>Download</div>
@@ -83,24 +82,23 @@ require_once __DIR__ . '/includes/header.php';
             <?php foreach ($rows as $r):
                 $fid = (int) $r['id'];
                 $dl = 'download.php?sf=' . rawurlencode($token) . '&id=' . $fid;
+                $hasThumb = !empty($r['thumbnail_path']) && str_starts_with((string) $r['filetype'], 'image/');
                 ?>
-                <div class="file-row-expandable">
-                    <div class="file-row file-row-primary">
-                        <div class="file-preview-cell">
-                            <?php if (!empty($r['thumbnail_path']) && str_starts_with((string) $r['filetype'], 'image/')): ?>
-                                <img src="thumbnail.php?id=<?= $fid ?>&amp;sf=<?= sanitize_data($token) ?>" alt="" class="thumbnail-small">
+                <div class="share-file">
+                    <div class="file-row">
+                        <div class="file-name-cell">
+                            <?php if ($hasThumb): ?>
+                                <img src="thumbnail.php?id=<?= $fid ?>&amp;sf=<?= sanitize_data($token) ?>" alt="" class="thumbnail-inline">
                             <?php else: ?>
-                                —
+                                <?= render_file_icon(get_file_icon($r['filetype'], $r['original_name'] ?? '')) ?>
                             <?php endif; ?>
+                            <span><?= sanitize_data($r['original_name'] ?? $r['filename']) ?></span>
                         </div>
-                        <div><?= render_file_icon(get_file_icon($r['filetype'], $r['original_name'] ?? '')) ?> <?= sanitize_data($r['original_name'] ?? $r['filename']) ?></div>
                         <div><?= format_filesize((int) ($r['filesize'] ?? 0)) ?></div>
-                        <div><a href="<?= sanitize_data($dl) ?>" class="btn btn-small">Download</a></div>
+                        <div><a href="<?= sanitize_data($dl) ?>" class="btn btn-primary btn-small">Download</a></div>
                     </div>
                     <?php if (!empty($r['recipient_note'])): ?>
-                        <div class="file-row-details" style="padding:0.5rem 1rem;background:var(--panel-bg, #f5f5f5);border-radius:4px;margin-bottom:0.5rem;">
-                            <strong>Note:</strong> <?= nl2br(sanitize_data($r['recipient_note'])) ?>
-                        </div>
+                        <p class="share-file-note"><strong>Note:</strong> <?= nl2br(sanitize_data($r['recipient_note'])) ?></p>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>

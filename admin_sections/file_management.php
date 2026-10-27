@@ -18,17 +18,17 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
     <div class="file-mgmt-toolbar">
         <div class="file-mgmt-filter">
             <span class="file-mgmt-filter-label">Status:</span>
-            <a href="admin.php?section=files" class="btn btn-small<?= $fileStatusFilter === 'all' ? ' btn-primary' : '' ?>">All</a>
-            <a href="admin.php?section=files&status=pending" class="btn btn-small<?= $fileStatusFilter === 'pending' ? ' btn-primary' : '' ?>">Pending</a>
+            <a href="admin.php?section=files" class="btn btn-small<?= $fileStatusFilter === 'all' ? ' btn-primary' : ' btn-quiet' ?>">All</a>
+            <a href="admin.php?section=files&status=pending" class="btn btn-small<?= $fileStatusFilter === 'pending' ? ' btn-primary' : ' btn-quiet' ?>">Pending</a>
         </div>
-        <div class="file-mgmt-purge-forms" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <div class="file-mgmt-purge-forms">
         <form method="post" class="file-mgmt-purge-form">
             <input type="hidden" name="purge" value="1">
             <button type="submit" class="btn btn-primary">Purge Expired Files</button>
         </form>
         <form method="post" class="file-mgmt-purge-form">
             <input type="hidden" name="purge_trash" value="1">
-            <button type="submit" class="btn btn-small">Purge Trash</button>
+            <button type="submit" class="btn btn-danger btn-small">Purge Trash</button>
         </form>
         </div>
     </div>
@@ -38,7 +38,6 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
         <div class="file-row-file-management file-header file-row-file-management-primary">
             <div class="file-row-toggle-cell" aria-hidden="true"></div>
             <div>User</div>
-            <div>Preview</div>
             <div>Filename</div>
             <div>Size</div>
             <div>Status</div>
@@ -57,15 +56,12 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
                         </button>
                     </div>
                     <div><?= user_profile_link($file['username'] ?? null) ?></div>
-                    <div class="file-preview-cell">
-                        <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                            <img src="thumbnail.php?id=<?= $afid ?>" alt="Thumb" class="thumbnail-small">
-                        <?php else: ?>
-                            —
-                        <?php endif; ?>
-                    </div>
                     <div class="file-name-cell">
-                        <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?>
+                        <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
+                            <img src="thumbnail.php?id=<?= $afid ?>" alt="" class="thumbnail-inline">
+                        <?php else: ?>
+                            <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?>
+                        <?php endif; ?>
                         <span title="<?= sanitize_data($file['original_name']) ?>"><?= sanitize_data($file['original_name']) ?></span>
                         <?php if (!empty($file['mime_anomaly'])): ?>
                             <span class="badge badge-warning" title="Extension vs MIME mismatch – review recommended">MIME?</span>
@@ -111,10 +107,10 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
                             <form method="post" action="approve_file.php" class="inline-action">
                                 <?= datadock_csrf_field() ?>
                                 <input type="hidden" name="id" value="<?= $afid ?>">
-                                <button type="submit" class="btn btn-small">Approve</button>
+                                <button type="submit" class="btn btn-primary btn-small">Approve</button>
                             </form>
                         <?php endif; ?>
-                        <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-small">Download</a>
+                        <a href="download.php?id=<?= $file['id'] ?>" class="btn btn-quiet btn-small">Download</a>
                         <form method="post" action="delete.php" class="inline-action" onsubmit="return confirm('Delete this file?')">
                             <?= datadock_csrf_field() ?>
                             <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
@@ -143,7 +139,7 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
         <?php endforeach; ?>
     </div>
     <?php else: ?>
-    <div class="file-mgmt-empty">
+    <div class="empty-state">
         <p>No uploaded files found.</p>
     </div>
     <?php endif; ?>

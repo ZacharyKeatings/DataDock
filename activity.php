@@ -57,19 +57,19 @@ require_once __DIR__ . '/includes/header.php';
     <h2 class="page-title">Your activity</h2>
     <p class="page-description">Download history shows recent accesses to <strong>your</strong> files (approximate country when your host sends a country header, e.g. Cloudflare). Storage chart uses snapshots recorded when you use the dashboard (at most once per hour).</p>
 
-    <p><strong>Current storage (non-trashed files):</strong> <?= format_filesize($bytesNow) ?></p>
+    <p><strong>Storage in use:</strong> <?= format_filesize($bytesNow) ?></p>
 
     <?php if (count($chartLabels) > 0): ?>
-    <div style="max-width:42rem;margin:1.5rem 0;">
+    <div class="storage-chart">
         <canvas id="storageChart" height="120" aria-label="Storage over time"></canvas>
     </div>
     <?php else: ?>
-    <p class="form-hint">No storage history yet. Use the dashboard periodically to record usage over time.</p>
+    <p class="form-hint">No storage history yet. Opening your files records a snapshot at most once an hour.</p>
     <?php endif; ?>
 
-    <h3 style="margin-top:2rem;">Recent downloads of your files</h3>
+    <h3 class="section-title">Recent downloads of your files</h3>
     <?php if (empty($recentDownloads)): ?>
-        <p>No per-download log entries yet. Downloads are logged from v2.3 onward.</p>
+        <div class="empty-state"><p>No downloads logged yet.</p></div>
     <?php else: ?>
         <div class="table-scroll">
             <table class="data-table">
@@ -95,9 +95,9 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     <?php endif; ?>
 
-    <h3 style="margin-top:2rem;">Your uploads</h3>
+    <h3 class="section-title">Your uploads</h3>
     <?php if (empty($myFiles)): ?>
-        <p>No files yet.</p>
+        <div class="empty-state"><p>No files yet.</p></div>
     <?php else: ?>
         <div class="table-scroll">
             <table class="data-table">
@@ -121,7 +121,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     <?php endif; ?>
 
-    <p style="margin-top:1.5rem;"><a href="export_data.php" class="btn btn-small">Export my data (JSON)</a></p>
+    <p class="form-actions"><a href="export_data.php" class="btn btn-quiet">Export my data</a></p>
 </div>
 
 <?php if (count($chartLabels) > 0): ?>

@@ -31,7 +31,9 @@ $scriptName = rtrim($scriptName, '/');
 $signupUrl = $baseUrl . $scriptName . '/register.php?token=' . urlencode($token);
 
 $_SESSION['flash_success'][] = [
-    'msg' => 'Signup link created (valid 7 days, single use). Share with the new user: <br><input type="text" readonly class="signup-link-copy" value="' . htmlspecialchars($signupUrl) . '" style="width:100%;max-width:400px;padding:0.25rem;"><button type="button" class="btn btn-primary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent=\'Copied!\';">Copy</button>',
+    'msg' => 'Signup link created (valid 7 days, single use). Share it with the new user.'
+        . '<div class="onetimelink-box"><input type="text" readonly class="onetimelink-input" value="' . htmlspecialchars($signupUrl) . '">'
+        . '<button type="button" class="btn btn-primary btn-small btn-copy" data-copy="' . htmlspecialchars($signupUrl) . '">Copy</button></div>',
     'html' => true
 ];
 header("Location: ../admin.php?section=users");

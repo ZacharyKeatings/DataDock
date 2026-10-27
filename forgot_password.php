@@ -36,22 +36,22 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="page-section auth-form">
     <h2 class="page-title">Forgot password</h2>
+    <p class="page-description">Enter the email on your account. If it matches, a one-time reset link is shown here. Nothing is emailed.</p>
 
     <?php if ($resetLink !== null): ?>
-        <div class="flash success">
-            If an account exists for that email, use the link below to set a new password. The link is valid for 1 hour.
+        <div class="flash success persistent" role="status">
+            Use the link below within 1 hour to choose a new password.
         </div>
-        <div class="form-group" style="margin-top: 1rem;">
+        <div class="form-group">
             <label for="reset_url">Reset link</label>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                <input type="text" id="reset_url" readonly value="<?= sanitize_data($resetLink) ?>" style="flex: 1; min-width: 200px;">
-                <button type="button" class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('reset_url').value); this.textContent='Copied!'; setTimeout(function(){ this.textContent='Copy'; }.bind(this), 2000);">Copy</button>
+            <div class="onetimelink-box">
+                <input type="text" id="reset_url" class="onetimelink-input" readonly value="<?= sanitize_data($resetLink) ?>">
+                <button type="button" class="btn btn-primary btn-small btn-copy" data-copy="<?= sanitize_data($resetLink) ?>">Copy</button>
             </div>
-            <p class="settings-hint">Open this link in your browser to choose a new password. If you did not request this, you can ignore it.</p>
+            <p class="form-hint">If you did not request this, you can ignore the link.</p>
         </div>
-        <p><a href="login.php">Back to login</a></p>
+        <p class="form-hint"><a href="login.php">Back to login</a></p>
     <?php else: ?>
-        <p>Enter your account email address. If an account exists, you will receive a one-time reset link to set a new password (no email is sent; the link is shown on this page).</p>
         <form method="post" class="form">
             <div class="form-group">
                 <label for="email">Email address</label>
@@ -59,7 +59,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <button type="submit" class="btn btn-primary">Get reset link</button>
         </form>
-        <p style="margin-top: 1rem;"><a href="login.php">Back to login</a></p>
+        <p class="form-hint"><a href="login.php">Back to login</a></p>
     <?php endif; ?>
 </div>
 

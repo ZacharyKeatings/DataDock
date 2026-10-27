@@ -31,7 +31,7 @@ $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
 
     <?php if ($files): ?>
         <div class="file-list">
-            <div class="file-row-dashboard file-header">
+            <div class="file-row-dashboard file-header file-row-trash">
                 <div>Filename</div>
                 <div>Type</div>
                 <div>Size</div>
@@ -40,22 +40,22 @@ $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
             </div>
 
             <?php foreach ($files as $file): ?>
-                <div class="file-row-dashboard">
-                    <div>
+                <div class="file-row-dashboard file-row-trash">
+                    <div class="file-name-cell">
                         <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?>
-                        <?= sanitize_data($file['original_name']) ?>
+                        <span><?= sanitize_data($file['original_name']) ?></span>
                     </div>
                     <div title="<?= sanitize_data($file['filetype']) ?>">
                         <?= sanitize_data(get_friendly_filetype($file['filetype'])) ?>
                     </div>
-                    <div><?= number_format($file['filesize'] / 1024, 2) ?> KB</div>
+                    <div><?= format_filesize($file['filesize']) ?></div>
                     <div><span class="utc-datetime" data-utc="<?= sanitize_data($file['deleted_at']) ?>"></span></div>
                     <div class="file-actions">
                         <?php if (!$readOnly): ?>
                         <form method="post" action="restore_file.php" class="inline-action">
                             <?= datadock_csrf_field() ?>
                             <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
-                            <button type="submit" class="btn btn-small">Restore</button>
+                            <button type="submit" class="btn btn-quiet btn-small">Restore</button>
                         </form>
                         <form method="post" action="delete.php" class="inline-action" onsubmit="return confirm('Permanently delete this file? This cannot be undone.')">
                             <?= datadock_csrf_field() ?>
@@ -72,10 +72,12 @@ $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
             <?php endforeach; ?>
         </div>
     <?php else: ?>
-        <p>Trash is empty.</p>
+        <div class="empty-state">
+            <p>Trash is empty.</p>
+        </div>
     <?php endif; ?>
 
-    <p style="margin-top:1.5rem;"><a href="dashboard.php" class="btn btn-small">← Back to Your Files</a></p>
+    <p class="empty-state"><a href="dashboard.php" class="btn btn-quiet">Back to your files</a></p>
 </div>
 
 <script>

@@ -57,8 +57,9 @@ function datadock_paste_render_text(array $paste, bool $receipt, bool $readOnly)
     <?php if ($receipt): ?>
         <p class="page-description">Anyone with the link below can read this paste. It is not listed on the home page.</p>
         <div class="onetimelink-box">
+            <label for="pasteShareUrl" class="visually-hidden">Paste link</label>
             <input type="text" id="pasteShareUrl" class="onetimelink-input" readonly value="<?= sanitize_data($shareUrl) ?>" onclick="this.select();">
-            <button type="button" class="btn btn-small" id="pasteCopyUrl">Copy link</button>
+            <button type="button" class="btn btn-primary btn-small btn-copy" data-copy="<?= sanitize_data($shareUrl) ?>">Copy link</button>
         </div>
         <p class="settings-hint">Raw link (also counts as a view): <input type="text" id="pasteRawUrl" class="paste-url paste-url-inline" readonly value="<?= sanitize_data($rawUrl) ?>" onclick="this.select();"></p>
     <?php elseif ($burned): ?>
@@ -80,10 +81,10 @@ function datadock_paste_render_text(array $paste, bool $receipt, bool $readOnly)
         <?php endif; ?>
     </p>
     <div class="paste-actions">
-        <button type="button" class="btn btn-small" id="pasteCopyText">Copy text</button>
-        <button type="button" class="btn btn-small" id="pasteSave" data-filename="<?= sanitize_data($downloadName) ?>">Save .txt</button>
+        <button type="button" class="btn btn-quiet btn-small" id="pasteCopyText">Copy text</button>
+        <button type="button" class="btn btn-quiet btn-small" id="pasteSave" data-filename="<?= sanitize_data($downloadName) ?>">Save .txt</button>
         <?php if (!$burned): ?>
-            <a class="btn btn-small" href="paste.php?t=<?= sanitize_data($token) ?>&amp;raw=1">Raw</a>
+            <a class="btn btn-quiet btn-small" href="paste.php?t=<?= sanitize_data($token) ?>&amp;raw=1">Raw</a>
         <?php endif; ?>
         <label class="paste-wrap-toggle"><input type="checkbox" id="pasteWrap"> Wrap lines</label>
         <?php if (!$burned && datadock_paste_can_delete($paste) && !$readOnly): ?>
@@ -91,7 +92,7 @@ function datadock_paste_render_text(array $paste, bool $receipt, bool $readOnly)
                 <?= datadock_csrf_field() ?>
                 <input type="hidden" name="id" value="<?= (int) ($paste['id'] ?? 0) ?>">
                 <input type="hidden" name="return_to" value="<?= ($receipt || empty($_SESSION['user_id'])) ? 'paste.php' : 'dashboard.php' ?>">
-                <button type="submit" class="btn btn-small">Delete</button>
+                <button type="submit" class="btn btn-danger btn-small">Delete</button>
             </form>
         <?php endif; ?>
     </div>
@@ -143,14 +144,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var copyTextBtn = document.getElementById('pasteCopyText');
     if (copyTextBtn && body) {
         copyTextBtn.addEventListener('click', function () {
-            copyText(body.textContent, copyTextBtn, 'Copied!');
-        });
-    }
-    var copyUrlBtn = document.getElementById('pasteCopyUrl');
-    var shareInput = document.getElementById('pasteShareUrl');
-    if (copyUrlBtn && shareInput) {
-        copyUrlBtn.addEventListener('click', function () {
-            copyText(shareInput.value, copyUrlBtn, 'Copied!');
+            copyText(body.textContent, copyTextBtn, 'Copied');
         });
     }
     var saveBtn = document.getElementById('pasteSave');
@@ -192,7 +186,7 @@ if ($tokenParam !== '') {
         http_response_code(404);
         $pageTitle = 'Paste unavailable';
         require __DIR__ . '/includes/header.php';
-        echo '<div class="page-section"><h2 class="page-title">Paste unavailable</h2><p>This paste does not exist, has expired, or was already read.</p><p><a href="paste.php" class="btn btn-primary">New paste</a></p></div>';
+        echo '<div class="page-section"><h2 class="page-title">Paste unavailable</h2><div class="empty-state"><p>This paste does not exist, has expired, or was already read.</p><a href="paste.php" class="btn btn-primary">New paste</a></div></div>';
         require __DIR__ . '/includes/footer.php';
         exit;
     }
@@ -214,7 +208,7 @@ if ($createdParam !== '') {
         http_response_code(404);
         $pageTitle = 'Paste unavailable';
         require __DIR__ . '/includes/header.php';
-        echo '<div class="page-section"><h2 class="page-title">Paste unavailable</h2><p>This paste does not exist or has expired.</p></div>';
+        echo '<div class="page-section"><h2 class="page-title">Paste unavailable</h2><div class="empty-state"><p>This paste does not exist or has expired.</p></div></div>';
         require __DIR__ . '/includes/footer.php';
         exit;
     }
@@ -308,11 +302,11 @@ require __DIR__ . '/includes/header.php';
     <h2 class="page-title">Share text</h2>
     <p class="page-description">Paste plaintext and get a link, the way a pastebin works. The link is unlisted: only people you send it to can open it.</p>
     <?php if (!$pastesEnabled): ?>
-        <p>Plaintext sharing is turned off.</p>
+        <div class="empty-state"><p>Plaintext sharing is turned off.</p></div>
     <?php elseif ($readOnly): ?>
         <div class="flash warning persistent" role="status">Read-only mode: new pastes are disabled. Existing links still open.</div>
     <?php elseif (!$currentUserId && !$guestUploadsEnabled): ?>
-        <p><a href="login.php">Log in</a> to share text.</p>
+        <div class="empty-state"><p><a href="login.php">Log in</a> to share text.</p></div>
     <?php else: ?>
         <form method="post" action="paste.php" class="paste-form">
             <?= datadock_csrf_field() ?>

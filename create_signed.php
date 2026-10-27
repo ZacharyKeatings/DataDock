@@ -74,14 +74,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="page-section">
     <h2 class="page-title">Signed download link</h2>
-    <p>Anyone with this URL can download the file until it expires. IP restrictions from <strong>Edit file</strong> still apply. This link bypasses the optional download password (the URL itself is the secret).</p>
-    <p><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
+    <p class="page-description">Anyone with this URL can download the file until it expires. IP restrictions from Edit file still apply. This link bypasses the optional download password.</p>
+    <p class="file-label"><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
     <p class="form-hint">Expires (UTC): <span class="utc-datetime" data-utc="<?= gmdate('Y-m-d H:i:s', $exp) ?>"></span></p>
     <div class="onetimelink-box">
+        <label for="signedUrl" class="visually-hidden">Signed link</label>
         <input type="text" id="signedUrl" value="<?= sanitize_data($signedUrl) ?>" readonly class="onetimelink-input">
-        <button type="button" class="btn btn-small" onclick="navigator.clipboard.writeText(document.getElementById('signedUrl').value); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 2000)">Copy</button>
+        <button type="button" class="btn btn-primary btn-small btn-copy" data-copy="<?= sanitize_data($signedUrl) ?>">Copy</button>
     </div>
-    <p style="margin-top:1.5rem;"><a href="dashboard.php" class="btn btn-primary">Back to Your Files</a></p>
+    <p class="form-actions"><a href="dashboard.php" class="btn btn-quiet">Back to your files</a></p>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -103,9 +104,9 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="page-section">
     <h2 class="page-title">Create signed link</h2>
-    <p class="page-description">Time-limited URL validated with HMAC (no extra database row). Optional IP allowlist on the file still applies.</p>
-    <p><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
-    <form method="post" action="create_signed.php?id=<?= (int) $fileId ?>" class="settings-card" style="max-width:28rem;">
+    <p class="page-description">Time-limited URL validated with HMAC. An IP allow list on the file still applies.</p>
+    <p class="file-label"><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
+    <form method="post" action="create_signed.php?id=<?= (int) $fileId ?>" class="settings-card narrow-form">
         <div class="settings-card-body">
             <div class="form-group">
                 <label for="signed_duration">Link valid for</label>
@@ -117,7 +118,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Generate link</button>
-                <a href="dashboard.php" class="btn btn-small">Cancel</a>
+                <a href="dashboard.php" class="btn btn-quiet">Cancel</a>
             </div>
         </div>
     </form>

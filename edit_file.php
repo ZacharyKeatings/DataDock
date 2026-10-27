@@ -139,7 +139,7 @@ require_once __DIR__ . '/includes/header.php';
     <h2 class="page-title">Edit file</h2>
     <p class="page-description">Change display name, description, or expiry. The file on disk is not modified.</p>
 
-    <form method="post" action="edit_file.php?id=<?= (int)$fileId ?>" class="settings-card" style="max-width:32rem;">
+    <form method="post" action="edit_file.php?id=<?= (int)$fileId ?>" class="settings-card narrow-form">
         <div class="settings-card-body">
             <div class="form-group">
                 <label for="original_name">Display name</label>
@@ -161,7 +161,7 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="form-hint">A password is set. Enter a new password below to replace it, or check &quot;Remove download password&quot;.</p>
                 <?php endif; ?>
                 <input type="password" name="access_password_new" id="access_password_new" autocomplete="new-password" maxlength="128" placeholder="<?= !empty($file['access_password_hash']) ? 'New password (optional)' : 'Leave empty to keep unchanged' ?>">
-                <div class="settings-row-checkbox" style="margin-top:0.5rem;">
+                <div class="settings-row-checkbox">
                     <label>
                         <input type="checkbox" name="clear_access_password" value="1" id="clear_access_password">
                         Remove download password
@@ -189,7 +189,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save changes</button>
-                <a href="dashboard.php" class="btn btn-small">Cancel</a>
+                <a href="dashboard.php" class="btn btn-quiet">Cancel</a>
             </div>
         </div>
     </form>

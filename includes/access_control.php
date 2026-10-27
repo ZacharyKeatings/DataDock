@@ -175,27 +175,32 @@ function datadock_parse_ip_allowlist_text(string $text): string {
  * HTML form for download password when not logged in as owner.
  */
 function datadock_render_download_password_page(string $fileLabel, string $returnUrl, array $hiddenFields = []): void {
+    $theme = $_COOKIE['datadock_theme'] ?? 'light';
+    if (!in_array($theme, ['light', 'dark'], true)) {
+        $theme = 'light';
+    }
     header('Content-Type: text/html; charset=UTF-8');
     http_response_code(403);
     $title = 'Download password required';
-    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . htmlspecialchars($title) . '</title>';
+    echo '<!DOCTYPE html><html lang="en" data-theme="' . htmlspecialchars($theme, ENT_QUOTES, 'UTF-8') . '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . htmlspecialchars($title) . '</title>';
     echo '<link rel="stylesheet" href="' . htmlspecialchars(app_asset_url('assets/style.css'), ENT_QUOTES, 'UTF-8') . '">';
-    echo '</head><body><div class="page-wrapper"><main class="container page-section">';
+    echo '<link rel="stylesheet" href="' . htmlspecialchars(app_asset_url('assets/themes/' . $theme . '.css'), ENT_QUOTES, 'UTF-8') . '">';
+    echo '</head><body><div class="page-wrapper"><main class="container"><div class="page-section auth-form">';
     echo '<h2 class="page-title">' . htmlspecialchars($title) . '</h2>';
-    echo '<p>This file requires a password to download.</p><p><strong>File:</strong> ' . htmlspecialchars($fileLabel) . '</p>';
-    echo '<form method="post" action="' . htmlspecialchars(app_script_url('download.php')) . '" class="settings-card" style="max-width:22rem">';
+    echo '<p class="page-description">Enter the password to download this file.</p><p class="file-label"><strong>File:</strong> ' . htmlspecialchars($fileLabel) . '</p>';
+    echo '<form method="post" action="' . htmlspecialchars(app_script_url('download.php')) . '" class="form">';
     echo '<input type="hidden" name="download_access" value="1">';
     foreach ($hiddenFields as $k => $v) {
         echo '<input type="hidden" name="' . htmlspecialchars((string) $k) . '" value="' . htmlspecialchars((string) $v) . '">';
     }
-    echo '<div class="settings-card-body"><div class="form-group">';
+    echo '<div class="form-group">';
     echo '<label for="access_password">Password</label>';
     echo '<input type="password" name="access_password" id="access_password" required autocomplete="off">';
-    echo '</div><div class="form-actions"><button type="submit" class="btn btn-primary">Continue</button></div></div>';
+    echo '</div><div class="form-actions"><button type="submit" class="btn btn-primary">Continue</button></div>';
     echo '</form>';
     if ($returnUrl !== '') {
-        echo '<p><a href="' . htmlspecialchars($returnUrl) . '">Back</a></p>';
+        echo '<p class="form-hint"><a href="' . htmlspecialchars($returnUrl) . '">Back</a></p>';
     }
-    echo '</main></div></body></html>';
+    echo '</div></main></div></body></html>';
     exit;
 }

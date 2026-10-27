@@ -103,24 +103,25 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-section">
-    <h2 class="page-title">Share File</h2>
-    <p><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
-    <p><a href="dashboard.php" class="btn btn-small">← Back to Your Files</a></p>
+    <h2 class="page-title">Share file</h2>
+    <p class="file-label"><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
+    <p><a href="dashboard.php" class="btn btn-quiet">Back to your files</a></p>
 
-    <h3>Add share</h3>
-    <form method="post" class="form" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:1.5rem;">
+    <h3 class="section-title">Add someone</h3>
+    <form method="post" class="inline-form">
         <input type="hidden" name="action" value="add">
-        <input type="text" name="username" placeholder="Username" required minlength="2" autocomplete="off">
-        <button type="submit" class="btn btn-primary">Share with user</button>
+        <label for="share-username" class="visually-hidden">Username</label>
+        <input type="text" name="username" id="share-username" placeholder="Username" required minlength="2" autocomplete="off">
+        <button type="submit" class="btn btn-primary">Share</button>
     </form>
 
-    <h3>Shared with</h3>
+    <h3 class="section-title">Shared with</h3>
     <?php if ($shares): ?>
         <ul class="share-list">
             <?php foreach ($shares as $s): ?>
             <li>
                 <?= user_profile_link($s['username']) ?>
-                <form method="post" style="display:inline;" onsubmit="return confirm('Remove share with <?= htmlspecialchars($s['username']) ?>?')">
+                <form method="post" class="inline-form" onsubmit="return confirm('Remove share with <?= htmlspecialchars($s['username']) ?>?')">
                     <input type="hidden" name="action" value="remove">
                     <input type="hidden" name="user_id" value="<?= (int)$s['shared_with_user_id'] ?>">
                     <button type="submit" class="btn btn-small btn-danger">Remove</button>
@@ -129,7 +130,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
         </ul>
     <?php else: ?>
-        <p>Not shared with anyone yet.</p>
+        <div class="empty-state"><p>Not shared with anyone yet.</p></div>
     <?php endif; ?>
 </div>
 

@@ -41,14 +41,32 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="page-section">
-    <h2 class="page-title">Welcome to <?= sanitize_data($siteName) ?></h2>
+    <div class="dash-heading">
+        <h2 class="page-title">Welcome to <?= sanitize_data($siteName) ?></h2>
+        <div class="home-actions">
+            <?php if ($userId): ?>
+                <a href="dashboard.php" class="btn btn-quiet">Your files</a>
+                <?php if (!$readOnly): ?>
+                <a href="upload.php" class="btn btn-primary">Upload</a>
+                <?php endif; ?>
+            <?php else: ?>
+                <?php if ($guestUploadsEnabled && !$readOnly): ?>
+                <a href="upload.php" class="btn btn-primary">Upload</a>
+                <?php endif; ?>
+                <a href="login.php" class="btn btn-quiet">Login</a>
+                <?php if (!$readOnly): ?>
+                <a href="register.php" class="btn btn-primary">Register</a>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </div>
     <?php
     $welcomeMessage = trim($settings['welcome_message'] ?? '');
     if (!empty($welcomeMessage)):
     ?>
     <div class="welcome-banner"><?= nl2br(sanitize_data($welcomeMessage)) ?></div>
     <?php endif; ?>
-    <p class="page-description">This site allows registered users to upload files and manage them securely.<?= $publicBrowsingEnabled ? ' Below are publicly shared files:' : ' Below are the most recent uploads:' ?></p>
+    <p class="page-description"><?= $publicBrowsingEnabled ? 'Public files are listed below.' : 'Recent uploads are listed below. Download links stay off until public browsing is enabled.' ?></p>
     <?php if ($pastesEnabled && !$readOnly && ($userId || $guestUploadsEnabled)): ?>
     <p class="page-description"><a href="paste.php">Share plaintext</a> with an unlisted link.</p>
     <?php endif; ?>
@@ -57,13 +75,13 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="file-list file-list-index file-list-expandable<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
             <div class="file-row file-header">
                 <div class="file-row-toggle-cell" aria-hidden="true"></div>
-                <div class="file-preview-cell">Preview</div>
                 <div>Filename</div>
                 <div>Size</div>
                 <?php if ($publicBrowsingEnabled): ?><div>Download</div><?php endif; ?>
             </div>
             <?php foreach ($recentFiles as $file):
                 $rid = (int) $file['id'];
+                $hasThumb = !empty($file['thumbnail_path']) && str_starts_with((string) ($file['filetype'] ?? ''), 'image/');
             ?>
                 <div class="file-row-expandable">
                     <div class="file-row file-row-primary">
@@ -72,20 +90,20 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <span class="file-row-toggle-icon" aria-hidden="true">▸</span>
                             </button>
                         </div>
-                        <div class="file-preview-cell">
-                            <?php if ($file['thumbnail_path'] && str_starts_with($file['filetype'], 'image/')): ?>
-                                <img src="thumbnail.php?id=<?= $rid ?>" alt="Thumbnail" class="thumbnail-small">
+                        <div class="file-name-cell">
+                            <?php if ($hasThumb): ?>
+                                <img src="thumbnail.php?id=<?= $rid ?>" alt="" class="thumbnail-inline">
                             <?php else: ?>
-                                —
+                                <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?>
                             <?php endif; ?>
+                            <span><?= sanitize_data($file['original_name']) ?></span>
                         </div>
-                        <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name']) ?></div>
                         <div><?= format_filesize($file['filesize']) ?></div>
                         <?php if ($publicBrowsingEnabled): ?>
-                        <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
-                            <a href="download.php?id=<?= $rid ?>" class="btn btn-small">Download</a>
+                        <div class="file-actions">
+                            <a href="download.php?id=<?= $rid ?>" class="btn btn-primary btn-small">Download</a>
                             <?php if (!empty($userId) && (int) ($file['user_id'] ?? 0) !== (int) $userId): ?>
-                                <a href="report_file.php?id=<?= $rid ?>&amp;return_to=index.php" class="btn btn-small">Report</a>
+                                <a href="report_file.php?id=<?= $rid ?>&amp;return_to=index.php" class="btn btn-quiet btn-small">Report</a>
                             <?php endif; ?>
                         </div>
                         <?php endif; ?>
@@ -108,7 +126,16 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php endforeach; ?>
         </div>
     <?php else: ?>
-        <p>No files uploaded yet.</p>
+        <div class="empty-state">
+            <p>No files yet.</p>
+            <?php if ($userId && !$readOnly): ?>
+            <a href="upload.php" class="btn btn-primary">Upload files</a>
+            <?php elseif (!$userId && $guestUploadsEnabled && !$readOnly): ?>
+            <a href="upload.php" class="btn btn-primary">Upload files</a>
+            <?php elseif (!$userId && !$readOnly): ?>
+            <a href="register.php" class="btn btn-primary">Create an account</a>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 </div>
 

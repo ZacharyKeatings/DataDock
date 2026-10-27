@@ -396,6 +396,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // render page
 require_once __DIR__ . '/includes/header.php';
+
+$uploadFolderId = '';
+if (!empty($_SESSION['user_id']) && isset($_GET['folder']) && is_numeric($_GET['folder']) && (int) $_GET['folder'] > 0) {
+    $uploadFolderId = (string) (int) $_GET['folder'];
+}
+$filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolderId : 'dashboard.php';
 ?>
 
 <div class="page-section upload-page">
@@ -403,6 +409,9 @@ require_once __DIR__ . '/includes/header.php';
     <div class="upload-hero-icon"><?= icon_svg('upload') ?></div>
     <h2 class="page-title">Upload Files</h2>
     <p class="upload-subtitle">Drag files into the zone below or click to select</p>
+    <?php if (!empty($currentUserId)): ?>
+    <p class="upload-subtitle"><a href="<?= sanitize_data($filesBackHref) ?>" class="btn btn-quiet btn-small">Back to your files</a></p>
+    <?php endif; ?>
   </div>
 
   <?php if (! $formDisabled): ?>
@@ -418,12 +427,6 @@ require_once __DIR__ . '/includes/header.php';
       <?php endif; ?>
       <!-- application‐level max -->
       <input type="hidden" name="MAX_FILE_SIZE" value="<?= $appMaxFileSize ?>">
-      <?php
-        $uploadFolderId = '';
-        if (!empty($_SESSION['user_id']) && isset($_GET['folder']) && is_numeric($_GET['folder']) && (int) $_GET['folder'] > 0) {
-            $uploadFolderId = (string) (int) $_GET['folder'];
-        }
-      ?>
       <?php if ($uploadFolderId !== ''): ?>
       <input type="hidden" name="folder_id" value="<?= sanitize_data($uploadFolderId) ?>">
       <?php endif; ?>

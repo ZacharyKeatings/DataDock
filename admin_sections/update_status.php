@@ -43,9 +43,7 @@ curl_close($ch);
 ?>
 
 <h2 class="page-title">Update Checker</h2>
-
-<p><strong>Current Version:</strong> v<?= sanitize_data($currentVersion) ?></p>
-<p><strong>Latest Version:</strong> <?= sanitize_data($latestTag ?? 'N/A') ?></p>
+<p class="page-description">Current version v<?= sanitize_data($currentVersion) ?>. Latest version <?= sanitize_data($latestTag ?? 'unavailable') ?>.</p>
 
 <?php if (!$isLatest): ?>
     <?php
@@ -69,10 +67,10 @@ curl_close($ch);
     }
     </script>
 <?php else: ?>
-    <div class="success"><?= icon_svg('check') ?> You are running the latest version.</div>
+    <div class="flash success persistent" role="status"><?= icon_svg('check') ?> You are running the latest version.</div>
 <?php endif; ?>
 
-<h3>Latest Release Notes</h3>
+<h3 class="section-title">Latest release notes</h3>
 <div class="release-notes"><?= basic_markdown($releaseNotes, $markdownBaseUrl) ?></div>
 
 <?php if ($changelog): 
@@ -83,6 +81,6 @@ curl_close($ch);
         $changelogSection = $changelog;
     }
 ?>
-    <h3>Recent Changelog</h3>
+    <h3 class="section-title">Recent changelog</h3>
     <div class="release-notes"><?= basic_markdown($changelogSection, $markdownBaseUrl) ?></div>
 <?php endif; ?>

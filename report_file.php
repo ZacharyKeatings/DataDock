@@ -117,7 +117,7 @@ $pageTitle = 'Report file';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="page-section" style="max-width:42rem;">
+<div class="page-section narrow-page">
     <h2 class="page-title">Report file</h2>
     <p class="page-description">
         Report <code><?= sanitize_data($file['original_name'] ?? $file['filename'] ?? ('#' . $fileId)) ?></code> for moderation review.
@@ -143,9 +143,9 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
 
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <div class="form-actions">
             <button type="submit" class="btn btn-primary">Submit report</button>
-            <a href="<?= sanitize_data($returnTo) ?>" class="btn btn-small">Cancel</a>
+            <a href="<?= sanitize_data($returnTo) ?>" class="btn btn-quiet">Cancel</a>
         </div>
     </form>
 </div>

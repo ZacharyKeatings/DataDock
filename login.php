@@ -153,13 +153,14 @@ require_once __DIR__ . '/includes/header.php';
         <div class="form-group settings-row-checkbox">
             <label>
                 <input type="checkbox" name="remember_device" value="1">
-                Remember this device (keeps you signed in across browser restarts until idle timeout or logout; not a separate login token)
+                Remember this device
             </label>
+            <p class="form-hint">Keeps you signed in after you close the browser, until you log out or the session goes idle.</p>
         </div>
         <?php endif; ?>
 
         <button type="submit" class="btn btn-primary">Login</button>
-        <p style="margin-top: 1rem;"><a href="forgot_password.php">Forgot password?</a></p>
+        <p class="form-hint"><a href="forgot_password.php">Forgot password?</a></p>
     </form>
 </div>
 

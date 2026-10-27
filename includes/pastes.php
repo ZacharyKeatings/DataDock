@@ -251,7 +251,7 @@ function datadock_echo_owned_pastes(PDO $pdo, bool $readOnly, string $returnTo =
     echo '<div class="paste-list-heading">';
     echo '<h3 class="paste-list-title">Your pastes</h3>';
     if ($allowCreate && !$readOnly) {
-        echo '<a href="paste.php" class="btn btn-small">New paste</a>';
+        echo '<a href="paste.php" class="btn btn-quiet btn-small">New paste</a>';
     }
     echo '</div><ul>';
     foreach ($rows as $row) {
@@ -283,7 +283,7 @@ function datadock_echo_owned_pastes(PDO $pdo, bool $readOnly, string $returnTo =
             echo datadock_csrf_field();
             echo '<input type="hidden" name="id" value="' . (int) ($row['id'] ?? 0) . '">';
             echo '<input type="hidden" name="return_to" value="' . sanitize_data($returnTo) . '">';
-            echo '<button type="submit" class="btn btn-small">Delete</button>';
+            echo '<button type="submit" class="btn btn-danger btn-small">Delete</button>';
             echo '</form>';
         }
         echo '</div>';

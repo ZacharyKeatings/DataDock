@@ -38,7 +38,7 @@ $stmt->execute();
 $expiringSoon = (int) $stmt->fetchColumn();
 ?>
 <section class="stats-overview">
-    <h3 class="page-title">Site Statistics</h3>
+    <h2 class="page-title">Site Statistics</h2>
 
     <div class="stats-grid">
         <div class="stat-card">
@@ -67,13 +67,13 @@ $expiringSoon = (int) $stmt->fetchColumn();
     <?php endif; ?>
 
     <?php foreach ($opsAlerts as $oa): ?>
-    <div class="stats-alert" style="<?= ($oa['severity'] ?? '') === 'danger' ? 'border-color:#c0392b;' : '' ?>">
+    <div class="stats-alert<?= ($oa['severity'] ?? '') === 'danger' ? ' is-danger' : '' ?>">
         <?= icon_svg('warning') ?> <?= sanitize_data($oa['message'] ?? '') ?>
     </div>
     <?php endforeach; ?>
 
     <?php if (!empty($fileTypeBreakdown)): ?>
-    <h4 class="stat-subtitle">File Types (Top 10)</h4>
+    <h3 class="section-title">File types (top 10)</h3>
     <div class="stat-table-wrap">
         <table class="stat-table">
             <thead>

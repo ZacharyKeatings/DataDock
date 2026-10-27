@@ -11,17 +11,19 @@ $siteName = "DataDock";
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($pageTitle) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(app_asset_url('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_asset_url('assets/themes/light.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body>
-    <div class="page-wrapper">
-        <header class="site-header" style="margin-bottom: 2rem;">
+        <div class="page-wrapper">
+        <header class="site-header">
             <div class="site-title">
                 <a href="index.php"><?= htmlspecialchars($siteName) ?></a>
             </div>
         </header>
-
+        <main class="container">
         <div class="page-section">
             <h2 class="page-title">Install DataDock</h2>
 
@@ -77,9 +79,9 @@ $siteName = "DataDock";
                             // If there are admin errors, display them and halt installation
                             if (!empty($admin_errors)) {
                                 foreach ($admin_errors as $err) {
-                                    echo "<div class='error'>• " . htmlspecialchars($err) . "</div>";
+                                    echo '<div class="flash error persistent"><div>' . htmlspecialchars($err) . '</div></div>';
                                 }
-                                echo "<div class='error'>Installation failed due to admin user errors. Please fix and try again.</div>";
+                                echo '<div class="flash error persistent"><div>Installation failed because the admin account could not be created. Fix the fields and try again.</div></div>';
                             } else {
                                 require_once __DIR__ . '/config/db.php';
 
@@ -88,68 +90,83 @@ $siteName = "DataDock";
                                 $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')");
                                 $stmt->execute([$admin_username, $admin_email, $admin_hash]);
 
-                                echo "<span class='success'>✅ Installation complete.<br>
-                                    ✅ Database tables created.<br>
-                                    ✅ <code>config/db.php</code> and <code>config/settings.php</code> generated.<br>
-                                    ✅ <code>uploads/</code> and <code>thumbnails/</code> folders ready.<br>
-                                    ✅ Admin user created.<br>
-                                    <strong>Please delete this file (install.php) now for security.</strong>
-                                    🔗 <a href='index.php'>Go to your site homepage</a></span>";
+                                echo '<div class="flash success persistent"><div>Installation complete. Database tables, config files, upload folders, and the admin user are ready.<br><strong>Delete install.php now.</strong> <a href="index.php">Go to your site</a></div></div>';
                             }
                         } else {
-                            echo "<span class='error'>❌ Installation failed: $result</span>";
+                            echo '<div class="flash error persistent"><div>Installation failed: ' . htmlspecialchars((string) $result) . '</div></div>';
                         }
                     ?>
                 </div>
             <?php else:
                 $dd_db_prefill = install_db_form_prefill();
                 ?>
-                <form method="post" class="form" onsubmit="return validateForm()">
-                    <h3>Site Settings</h3>
-                    <label for="site_name">Site Name</label>
-                    <input type="text" id="site_name" name="site_name" value="DataDock" required>
-                    <small>This is the name of your site (e.g., "My File Hub"). Choose any name you prefer.</small>
+                <form method="post" class="form settings-form" onsubmit="return validateForm()">
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">Site</h3>
+                        <div class="settings-card-body">
+                            <div class="settings-row">
+                                <label for="site_name">Site name</label>
+                                <input type="text" id="site_name" name="site_name" value="DataDock" required>
+                            </div>
+                            <p class="settings-hint">Shown in the header and the browser title.</p>
+                        </div>
+                    </div>
 
-                    <h3>Database Settings</h3>
-                    <?php if (is_readable(__DIR__ . '/config/.db-runtime.php')): ?>
-                        <p><small>Database fields are prefilled from your Docker <code>DATADOCK_DB_*</code> environment (via <code>config/.db-runtime.php</code>). You can change them before installing.</small></p>
-                    <?php endif; ?>
-                    <label for="db_host">Database Host</label>
-                    <input type="text" id="db_host" name="db_host" value="<?= htmlspecialchars($dd_db_prefill['host'], ENT_QUOTES, 'UTF-8') ?>" required>
-                    <small>The hostname of your MySQL server. Typically "localhost" on shared hosting; use your DB service name (e.g. <code>db</code>) in Docker Compose.</small>
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">Database</h3>
+                        <div class="settings-card-body">
+                            <?php if (is_readable(__DIR__ . '/config/.db-runtime.php')): ?>
+                                <p class="settings-hint">These fields are filled from the Docker database environment. You can change them before installing.</p>
+                            <?php endif; ?>
+                            <div class="settings-row">
+                                <label for="db_host">Host</label>
+                                <input type="text" id="db_host" name="db_host" value="<?= htmlspecialchars($dd_db_prefill['host'], ENT_QUOTES, 'UTF-8') ?>" required>
+                            </div>
+                            <p class="settings-hint">Usually localhost. In Docker Compose, use the database service name.</p>
+                            <div class="settings-row">
+                                <label for="db_user">Username</label>
+                                <input type="text" id="db_user" name="db_user" value="<?= htmlspecialchars($dd_db_prefill['user'], ENT_QUOTES, 'UTF-8') ?>" required>
+                            </div>
+                            <div class="settings-row">
+                                <label for="db_pass">Password</label>
+                                <span class="settings-input-with-unit">
+                                    <input type="password" id="db_pass" name="db_pass" value="<?= htmlspecialchars($dd_db_prefill['pass'], ENT_QUOTES, 'UTF-8') ?>">
+                                    <button type="button" class="btn btn-quiet btn-small" id="toggle-db-pass">Show</button>
+                                </span>
+                            </div>
+                            <div class="settings-row">
+                                <label for="db_name">Database name</label>
+                                <input type="text" id="db_name" name="db_name" value="<?= htmlspecialchars($dd_db_prefill['name'], ENT_QUOTES, 'UTF-8') ?>" required>
+                            </div>
+                            <p class="settings-hint">Created automatically if it does not exist.</p>
+                        </div>
+                    </div>
 
-                    <label for="db_user">Database Username</label>
-                    <input type="text" id="db_user" name="db_user" value="<?= htmlspecialchars($dd_db_prefill['user'], ENT_QUOTES, 'UTF-8') ?>" required>
-                    <small>Your MySQL username. This is provided by your hosting provider or set up in your control panel.</small>
-
-                    <label for="db_pass">Database Password <span class="toggle-password" onclick="togglePassword()">[show]</span></label>
-                    <input type="password" id="db_pass" name="db_pass" value="<?= htmlspecialchars($dd_db_prefill['pass'], ENT_QUOTES, 'UTF-8') ?>">
-                    <small>The password associated with your MySQL username.</small>
-
-                    <label for="db_name">Database Name</label>
-                    <input type="text" id="db_name" name="db_name" value="<?= htmlspecialchars($dd_db_prefill['name'], ENT_QUOTES, 'UTF-8') ?>" required>
-                    <small>The name of the database to use for this site. It will be created automatically if it doesn't exist.</small>
-
-                    <h3>Admin User Settings</h3>
-                    <label for="admin_username">Admin Username</label>
-                    <input type="text" id="admin_username" name="admin_username" required>
-                    <small>This will be the username for your administrator account.</small>
-
-                    <label for="admin_email">Admin Email</label>
-                    <input type="email" id="admin_email" name="admin_email" required>
-                    <small>Enter a valid email address for the admin account (used for notifications and recovery).</small>
-
-                    <label for="admin_password">Admin Password</label>
-                    <input type="password" id="admin_password" name="admin_password" required>
-                    <small>Choose a secure password (minimum 6 characters).</small>
-
-                    <label for="admin_confirm">Confirm Admin Password</label>
-                    <input type="password" id="admin_confirm" name="admin_confirm" required>
-                    <small>Re-enter the admin password for confirmation.</small>
-
-                    <div id="errorMsg" class="error"></div>
-
-                    <button type="submit">Install</button>
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">Admin account</h3>
+                        <div class="settings-card-body">
+                            <div class="settings-row">
+                                <label for="admin_username">Username</label>
+                                <input type="text" id="admin_username" name="admin_username" required>
+                            </div>
+                            <div class="settings-row">
+                                <label for="admin_email">Email</label>
+                                <input type="email" id="admin_email" name="admin_email" required>
+                            </div>
+                            <div class="settings-row">
+                                <label for="admin_password">Password</label>
+                                <input type="password" id="admin_password" name="admin_password" required minlength="6">
+                            </div>
+                            <div class="settings-row">
+                                <label for="admin_confirm">Confirm password</label>
+                                <input type="password" id="admin_confirm" name="admin_confirm" required minlength="6">
+                            </div>
+                            <p class="form-hint" id="errorMsg" hidden></p>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Install</button>
+                            </div>
+                        </div>
+                    </div>
                 </form>
                 <script>
                     function validateForm() {
@@ -160,40 +177,38 @@ $siteName = "DataDock";
                         let valid = true;
                         let errorBox = document.getElementById('errorMsg');
                         errorBox.textContent = '';
+                        errorBox.hidden = true;
 
                         requiredFields.forEach(id => {
                             const input = document.getElementById(id);
                             if (!input.value.trim()) {
                                 valid = false;
-                                errorBox.textContent = "Please fill in all required fields.";
+                                errorBox.textContent = 'Fill in every required field.';
+                                errorBox.hidden = false;
                             }
                         });
 
-                        // Check if admin passwords match
                         const adminPassword = document.getElementById('admin_password').value;
                         const adminConfirm = document.getElementById('admin_confirm').value;
                         if (adminPassword !== adminConfirm) {
                             valid = false;
-                            errorBox.textContent = "Admin passwords do not match.";
+                            errorBox.textContent = 'Admin passwords do not match.';
+                            errorBox.hidden = false;
                         }
 
                         return valid;
                     }
 
-                    function togglePassword() {
+                    document.getElementById('toggle-db-pass').addEventListener('click', function () {
                         const passField = document.getElementById('db_pass');
-                        const toggle = document.querySelector('.toggle-password');
-                        if (passField.type === "password") {
-                            passField.type = "text";
-                            toggle.textContent = "[hide]";
-                        } else {
-                            passField.type = "password";
-                            toggle.textContent = "[show]";
-                        }
-                    }
+                        const show = passField.type === 'password';
+                        passField.type = show ? 'text' : 'password';
+                        this.textContent = show ? 'Hide' : 'Show';
+                    });
                 </script>
             <?php endif; ?>
         </div>
+        </main>
         <footer>
             <p>&copy; <?= date('Y') ?> DataDock. All rights reserved.</p>
         </footer>

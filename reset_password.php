@@ -42,11 +42,12 @@ require_once __DIR__ . '/includes/header.php';
     <h2 class="page-title">Reset password</h2>
 
     <?php if (!$validToken): ?>
-        <div class="error-box">
+        <div class="flash warning persistent" role="status">
             This reset link is invalid or has expired. <a href="forgot_password.php">Request a new link</a> or <a href="login.php">log in</a>.
         </div>
     <?php else: ?>
-        <form method="post" class="form" onsubmit="return document.getElementById('new_password').value === document.getElementById('confirm_password').value;">
+        <p class="page-description">Choose a new password of at least 6 characters.</p>
+        <form method="post" class="form" onsubmit="return validateResetForm()">
             <input type="hidden" name="token" value="<?= sanitize_data($tokenParam) ?>">
             <div class="form-group">
                 <label for="new_password">New password</label>
@@ -56,8 +57,19 @@ require_once __DIR__ . '/includes/header.php';
                 <label for="confirm_password">Confirm new password</label>
                 <input type="password" name="confirm_password" id="confirm_password" required>
             </div>
+            <p class="form-hint" id="reset-mismatch" hidden>Passwords do not match.</p>
             <button type="submit" class="btn btn-primary">Set new password</button>
         </form>
+        <script>
+        function validateResetForm() {
+            var password = document.getElementById('new_password');
+            var confirm = document.getElementById('confirm_password');
+            var hint = document.getElementById('reset-mismatch');
+            var mismatch = password.value !== confirm.value;
+            if (hint) hint.hidden = !mismatch;
+            return !mismatch;
+        }
+        </script>
     <?php endif; ?>
 </div>
 

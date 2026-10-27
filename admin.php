@@ -608,23 +608,34 @@ require_once __DIR__ . '/includes/header.php';
 
     <div class="admin-layout">
         <aside class="admin-sidebar">
-            <nav class="sidebar-nav">
+            <nav class="sidebar-nav" aria-label="Admin sections">
                 <ul>
                     <li><a href="?section=overview"<?= $section === 'overview' ? ' class="active"' : '' ?>>Overview</a></li>
+                </ul>
+                <p class="sidebar-label">Site</p>
+                <ul>
                     <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
                     <li><a href="?section=storage"<?= $section === 'storage' ? ' class="active"' : '' ?>>Storage partitions</a></li>
+                </ul>
+                <p class="sidebar-label">People and files</p>
+                <ul>
                     <li><a href="?section=users"<?= $section === 'users' ? ' class="active"' : '' ?>>User Management</a></li>
                     <li><a href="?section=files"<?= $section === 'files' ? ' class="active"' : '' ?>>File Management</a></li>
+                    <li><a href="?section=reports"<?= $section === 'reports' ? ' class="active"' : '' ?>>Reports &amp; moderation</a></li>
+                </ul>
+                <p class="sidebar-label">Operations</p>
+                <ul>
                     <li><a href="?section=hotlinks"<?= $section === 'hotlinks' ? ' class="active"' : '' ?>>Hotlink log</a></li>
                     <li><a href="?section=audit"<?= $section === 'audit' ? ' class="active"' : '' ?>>Activity log</a></li>
-                    <li><a href="?section=reports"<?= $section === 'reports' ? ' class="active"' : '' ?>>Reports &amp; moderation</a></li>
                     <li><a href="?section=ops"<?= $section === 'ops' ? ' class="active"' : '' ?>>Backup &amp; integrity</a></li>
-                    <li><a href="?section=updater"<?= $section === 'updater' ? ' class="active"' : '' ?>>Updater & Changelog</a></li>
-                    <li><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
+                    <li><a href="?section=updater"<?= $section === 'updater' ? ' class="active"' : '' ?>>Updater &amp; Changelog</a></li>
+                </ul>
+                <ul>
+                    <li class="sidebar-nav-danger"><a href="?section=reset"<?= $section === 'reset' ? ' class="active"' : '' ?>>Reset Site</a></li>
                 </ul>
             </nav>
             <?php $adminEmail = trim($settings['admin_contact_email'] ?? ''); if (!empty($adminEmail)): ?>
-            <div class="admin-contact" style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border-color, #ddd);font-size:0.875rem;">
+            <div class="admin-contact">
                 <strong>Admin Contact:</strong><br>
                 <a href="mailto:<?= sanitize_data($adminEmail) ?>"><?= sanitize_data($adminEmail) ?></a>
             </div>

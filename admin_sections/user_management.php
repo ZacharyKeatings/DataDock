@@ -3,11 +3,11 @@
 <?php
 $inviteOnly = !empty($settings['invite_only_registration'] ?? false);
 if ($inviteOnly): ?>
-<div class="settings-card" style="margin-bottom: 1.5rem;">
+<div class="settings-card stack-gap">
     <h3 class="settings-card-title">Signup tokens (invite-only registration)</h3>
     <div class="settings-card-body">
         <p class="settings-hint">Generate a one-time signup link to share with new users. Token is valid for 7 days.</p>
-        <form method="post" action="admin_sections/admin_generate_signup_token.php" style="margin-top: 0.5rem;">
+        <form method="post" action="admin_sections/admin_generate_signup_token.php" class="inline-form compact">
             <button type="submit" class="btn btn-primary">Generate signup link</button>
         </form>
     </div>
@@ -15,7 +15,7 @@ if ($inviteOnly): ?>
 <?php endif; ?>
 
 <?php if ($users): ?>
-    <div class="file-list">
+    <div class="file-list file-list-users">
         <div class="file-row-user-management file-header">
             <div>Registered</div>
             <div>Username</div>
@@ -36,9 +36,9 @@ if ($inviteOnly): ?>
                 <div><?= sanitize_data($user['file_count']) ?></div>
                 <div><?= format_filesize($user['total_size']) ?></div>
                 <div>
-                    <form method="post" action="admin_sections/admin_set_user_partition.php" style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;">
+                    <form method="post" action="admin_sections/admin_set_user_partition.php" class="inline-form compact">
                         <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
-                        <select name="storage_partition_id" aria-label="Storage partition" style="max-width:10rem;font-size:0.85rem;">
+                        <select name="storage_partition_id" aria-label="Storage partition" class="select-compact">
                             <option value="">Default</option>
                             <?php foreach ($storagePartitionsList ?? [] as $sp): ?>
                                 <option value="<?= (int) $sp['id'] ?>"<?= ((int) ($user['storage_partition_id'] ?? 0) === (int) $sp['id']) ? ' selected' : '' ?>><?= sanitize_data($sp['name']) ?></option>
@@ -49,29 +49,29 @@ if ($inviteOnly): ?>
                 </div>
                 <div>
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
-                        <form method="post" action="admin_sections/admin_change_role.php" onsubmit="return confirm('Change this user’s role?')" style="display: flex; gap: 0.5rem;">
+                        <form method="post" action="admin_sections/admin_change_role.php" class="inline-form compact" onsubmit="return confirm('Change this user’s role?')">
                             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                             <select name="role">
                                 <option value="user" <?= $user['role'] === 'user' ? 'selected' : '' ?>>User</option>
                                 <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
                             </select>
-                            <button type="submit" class="btn btn-primary">Update</button>
+                            <button type="submit" class="btn btn-primary btn-small">Update</button>
                         </form>
                     <?php else: ?>
                         <?= sanitize_data($user['role']) ?> (You)
                     <?php endif; ?>
                 </div>
                 <div>
-                    <form method="post" action="admin_sections/admin_generate_password_reset.php" style="display: inline;">
+                    <form method="post" action="admin_sections/admin_generate_password_reset.php" class="inline-form compact">
                         <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
-                        <button type="submit" class="btn btn-small">Copy reset link</button>
+                        <button type="submit" class="btn btn-quiet btn-small">Copy reset link</button>
                     </form>
                 </div>
                 <div>
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                         <form method="post" action="admin_sections/admin_delete_user.php" onsubmit="return confirm('Delete this user?');">
                             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                            <button type="submit" class="btn btn-primary">Delete</button>
+                            <button type="submit" class="btn btn-danger btn-small">Delete</button>
                         </form>
                     <?php else: ?>
                         —
@@ -81,5 +81,7 @@ if ($inviteOnly): ?>
         <?php endforeach; ?>
     </div>
 <?php else: ?>
-    <p>No users found.</p>
+    <div class="empty-state">
+        <p>No users found.</p>
+    </div>
 <?php endif; ?>

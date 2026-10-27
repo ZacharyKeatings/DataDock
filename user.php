@@ -90,7 +90,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php endif; ?>
         </div>
     </div>
-    <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
+    <div class="settings-card profile-stats-card stack-card">
         <h3 class="settings-card-title">Profile</h3>
         <div class="settings-card-body">
             <p><strong>Member since</strong> <?= format_datetime_display($user['created_at']) ?></p>
@@ -98,7 +98,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <?php if (!empty(trim($user['bio'] ?? ''))): ?>
-    <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
+    <div class="settings-card profile-stats-card stack-card">
         <h3 class="settings-card-title">Bio</h3>
         <div class="settings-card-body profile-public-bio">
             <?= nl2br(sanitize_data($user['bio'])) ?>
@@ -106,7 +106,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <?php endif; ?>
 
-    <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
+    <div class="settings-card profile-stats-card stack-card">
         <h3 class="settings-card-title">Public file stats</h3>
         <div class="settings-card-body profile-stats-grid">
             <div class="profile-stat">
@@ -136,13 +136,13 @@ require_once __DIR__ . '/includes/header.php';
         <div class="file-list file-list-index file-list-expandable<?= $publicBrowsingEnabled ? ' file-list-has-download' : '' ?>">
             <div class="file-row file-header">
                 <div class="file-row-toggle-cell" aria-hidden="true"></div>
-                <div class="file-preview-cell">Preview</div>
                 <div>Filename</div>
                 <div>Size</div>
                 <?php if ($publicBrowsingEnabled): ?><div>Download</div><?php endif; ?>
             </div>
             <?php foreach ($publicFiles as $file):
                 $pfid = (int) $file['id'];
+                $hasThumb = !empty($file['thumbnail_path']) && str_starts_with((string) ($file['filetype'] ?? ''), 'image/');
             ?>
                 <div class="file-row-expandable">
                     <div class="file-row file-row-primary">
@@ -151,17 +151,17 @@ require_once __DIR__ . '/includes/header.php';
                                 <span class="file-row-toggle-icon" aria-hidden="true">▸</span>
                             </button>
                         </div>
-                        <div class="file-preview-cell">
-                            <?php if (!empty($file['thumbnail_path']) && str_starts_with($file['filetype'] ?? '', 'image/')): ?>
-                                <img src="thumbnail.php?id=<?= $pfid ?>" alt="Thumbnail" class="thumbnail-small">
+                        <div class="file-name-cell">
+                            <?php if ($hasThumb): ?>
+                                <img src="thumbnail.php?id=<?= $pfid ?>" alt="" class="thumbnail-inline">
                             <?php else: ?>
-                                —
+                                <?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?>
                             <?php endif; ?>
+                            <span><?= sanitize_data($file['original_name'] ?? $file['id']) ?></span>
                         </div>
-                        <div><?= render_file_icon(get_file_icon($file['filetype'], $file['original_name'] ?? '')) ?> <?= sanitize_data($file['original_name'] ?? $file['id']) ?></div>
                         <div><?= format_filesize((int) ($file['filesize'] ?? 0)) ?></div>
                         <?php if ($publicBrowsingEnabled): ?>
-                        <div><a href="download.php?id=<?= $pfid ?>" class="btn btn-small">Download</a></div>
+                        <div><a href="download.php?id=<?= $pfid ?>" class="btn btn-primary btn-small">Download</a></div>
                         <?php endif; ?>
                     </div>
                     <div class="file-row-details" id="user-details-<?= $pfid ?>" role="region" aria-labelledby="user-toggle-<?= $pfid ?>" hidden>
@@ -181,11 +181,11 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
     <?php else: ?>
-    <p class="profile-no-files">No public files yet.</p>
+    <div class="empty-state"><p>No public files yet.</p></div>
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['user_id']) && $_SESSION['user_id'] == $user['id']): ?>
-    <p style="margin-top: 1.5rem;"><a href="profile.php" class="btn btn-primary">Edit your profile</a></p>
+    <p class="form-actions"><a href="profile.php" class="btn btn-quiet">Edit your profile</a></p>
     <?php endif; ?>
 </div>
 

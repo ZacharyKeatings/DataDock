@@ -233,7 +233,7 @@ $pageTitle = "Profile";
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="page-section auth-form">
+<div class="page-section">
     <h2 class="page-title">Your profile</h2>
 
     <?php if ($profileIncomplete): ?>
@@ -242,7 +242,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <?php endif; ?>
 
-    <div class="settings-card profile-stats-card" style="margin-bottom: 1.5rem;">
+    <div class="settings-card profile-stats-card stack-card">
         <h3 class="settings-card-title">Your statistics</h3>
         <div class="settings-card-body profile-stats-grid">
             <div class="profile-stat">
@@ -299,7 +299,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php endif; ?>
         </div>
         <?php if (!empty($topFileTypes) || !empty($topExtensions)): ?>
-        <div class="settings-card-body" style="border-top: 1px solid var(--color-border, #ccc); margin-top: 0.5rem; padding-top: 1rem;">
+        <div class="settings-card-body settings-card-follow">
             <?php if (!empty($topFileTypes)): ?>
             <h4 class="profile-stats-subtitle">Most common file types (by MIME)</h4>
             <ul class="profile-stats-list">
@@ -320,7 +320,7 @@ require_once __DIR__ . '/includes/header.php';
         <?php endif; ?>
     </div>
 
-    <div class="settings-card" style="margin-bottom: 1.5rem;">
+    <div class="settings-card stack-card">
         <h3 class="settings-card-title">Account details</h3>
         <div class="settings-card-body">
             <p><strong>Role:</strong> <?= sanitize_data($user['role']) ?></p>
@@ -328,7 +328,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <div class="settings-card" style="margin-bottom: 1.5rem;">
+    <div class="settings-card stack-card">
         <h3 class="settings-card-title">Edit profile</h3>
         <div class="settings-card-body">
             <form method="post" class="form" enctype="multipart/form-data">
@@ -381,7 +381,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <div class="settings-card">
+    <div class="settings-card stack-card">
         <h3 class="settings-card-title">Change password</h3>
         <div class="settings-card-body">
             <form method="post" class="form" onsubmit="return validatePasswordForm()">

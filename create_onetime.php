@@ -89,20 +89,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="page-section">
     <h2 class="page-title">Share link</h2>
-    <p>Share this link. It expires after the configured number of downloads and/or when the time window ends (whichever comes first).</p>
-    <p><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
-    <ul class="form-hint" style="margin-bottom:1rem;">
+    <p class="page-description">This link stops working after the download limit or when the time window ends, whichever comes first.</p>
+    <p class="file-label"><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
+    <ul class="form-hint">
         <li><strong>Max downloads:</strong> <?= (int) $maxUses ?></li>
         <li><strong>Link expiry:</strong> <?= $expiresAt ? '<span class="utc-datetime" data-utc="' . sanitize_data($expiresAt) . '"></span>' : 'No time limit' ?></li>
     </ul>
     <div class="onetimelink-box">
+        <label for="oneTimeUrl" class="visually-hidden">Share link</label>
         <input type="text" id="oneTimeUrl" value="<?= sanitize_data($oneTimeUrl) ?>" readonly class="onetimelink-input">
-        <button type="button" class="btn btn-small" onclick="navigator.clipboard.writeText(document.getElementById('oneTimeUrl').value); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 2000)">Copy</button>
+        <button type="button" class="btn btn-primary btn-small btn-copy" data-copy="<?= sanitize_data($oneTimeUrl) ?>">Copy</button>
     </div>
-    <h3 style="margin-top:1.5rem;">QR Code</h3>
-    <p>Scan to download (uses the link above):</p>
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=<?= urlencode($oneTimeUrl) ?>" alt="QR Code" class="qr-image">
-    <p style="margin-top:1.5rem;"><a href="dashboard.php" class="btn btn-primary">Back to Your Files</a></p>
+    <h3 class="section-title">QR code</h3>
+    <p>Scan to open the same link.</p>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=<?= urlencode($oneTimeUrl) ?>" alt="QR code for the share link" class="qr-image">
+    <p class="form-actions"><a href="dashboard.php" class="btn btn-quiet">Back to your files</a></p>
 </div>
 
 <script>
@@ -127,9 +128,9 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="page-section">
     <h2 class="page-title">Create share link</h2>
-    <p>Generate a link that works for a limited number of downloads and/or until a time limit. Optional file password and IP rules from <strong>Edit file</strong> still apply.</p>
-    <p><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
-    <form method="post" action="create_onetime.php?id=<?= (int) $fileId ?>" class="settings-card" style="max-width:28rem;">
+    <p class="page-description">Generate a link that works for a limited number of downloads and until a time limit. A file password and IP rules from Edit file still apply.</p>
+    <p class="file-label"><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
+    <form method="post" action="create_onetime.php?id=<?= (int) $fileId ?>" class="settings-card narrow-form">
         <div class="settings-card-body">
             <div class="form-group">
                 <label for="link_expires">Link expires (time)</label>
@@ -146,7 +147,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Create link</button>
-                <a href="dashboard.php" class="btn btn-small">Cancel</a>
+                <a href="dashboard.php" class="btn btn-quiet">Cancel</a>
             </div>
         </div>
     </form>

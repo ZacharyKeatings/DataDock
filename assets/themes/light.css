@@ -1,9 +1,9 @@
 :root {
     --color-header-background: #038c96;
-    --color-background: #fefefe;
+    --color-background: #f7f6f4;
     --color-text: #111111;
-    --color-primary: #0077cc;
-    --color-secondary: #e0e0e0;
+    --color-primary: #038c96;
+    --color-secondary: #e7e4e0;
     --color-accent: #ffbc42;
     --color-border: #cccccc;
     --color-error: #c62828;
@@ -25,7 +25,7 @@
   }
   
   a:hover {
-    color: var(--color-accent);
+    color: #026b73;
   }
   
   .container {
@@ -40,7 +40,7 @@
   }
   
   button:hover {
-    background-color: var(--color-accent);
+    background-color: #026b73;
   }
   
   /* .error {

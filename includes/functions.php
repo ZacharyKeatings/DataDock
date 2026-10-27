@@ -10,6 +10,14 @@ function sanitize_data($data) {
 }
 
 /**
+ * Drop a leading status emoji so flashes stay plain text.
+ */
+function datadock_plain_flash(string $message): string {
+    $stripped = preg_replace('/^(?:[\x{2600}-\x{27BF}\x{1F300}-\x{1FAFF}](?:\x{FE0F})?\s*)+/u', '', $message);
+    return is_string($stripped) ? $stripped : $message;
+}
+
+/**
  * Output a username as a link to the public profile, or plain text for Guest/empty.
  *
  * @param string|null $username Username to display and link
@@ -963,6 +971,19 @@ function basic_markdown($text, ?string $baseUrl = null) {
     }
 
     return implode("\n", $lines);
+}
+
+/**
+ * Full-page notice for download and link errors.
+ */
+function datadock_render_status_page(int $code, string $title, string $message): void {
+    http_response_code($code);
+    $pageTitle = $title;
+    require __DIR__ . '/header.php';
+    echo '<div class="page-section"><h2 class="page-title">' . sanitize_data($title) . '</h2>';
+    echo '<div class="empty-state"><p>' . sanitize_data($message) . '</p></div></div>';
+    require __DIR__ . '/footer.php';
+    exit;
 }
 
 require_once __DIR__ . '/storage.php';
