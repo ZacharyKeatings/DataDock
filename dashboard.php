@@ -11,6 +11,8 @@ $readOnly = datadock_read_only_enabled($settings);
 require_once __DIR__ . '/includes/pastes.php';
 require_once __DIR__ . '/includes/dashboard_actions.php';
 require_once __DIR__ . '/includes/user_trust.php';
+require_once __DIR__ . '/includes/notices.php';
+require_once __DIR__ . '/includes/access_control.php';
 
 datadock_process_dashboard_post($pdo);
 datadock_maybe_record_storage_snapshot($pdo, (int) $_SESSION['user_id']);
@@ -131,6 +133,86 @@ try {
     $shareFoldersList = [];
 }
 
+$expiringSoonFiles = [];
+$expiringSoonCount = 0;
+try {
+    $expCount = $pdo->prepare('
+        SELECT COUNT(*) FROM files
+        WHERE user_id = ? AND deleted_at IS NULL
+          AND expiry_date IS NOT NULL
+          AND expiry_date > UTC_TIMESTAMP()
+          AND expiry_date <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 DAY)
+    ');
+    $expCount->execute([$userId]);
+    $expiringSoonCount = (int) $expCount->fetchColumn();
+    $expStmt = $pdo->prepare('
+        SELECT id, original_name, filename, expiry_date
+        FROM files
+        WHERE user_id = ? AND deleted_at IS NULL
+          AND expiry_date IS NOT NULL
+          AND expiry_date > UTC_TIMESTAMP()
+          AND expiry_date <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 DAY)
+        ORDER BY expiry_date ASC
+        LIMIT 8
+    ');
+    $expStmt->execute([$userId]);
+    $expiringSoonFiles = $expStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $expiringSoonFiles = [];
+    $expiringSoonCount = 0;
+}
+
+$liveTokenLinks = [];
+$liveSignedLinks = [];
+try {
+    $tok = $pdo->prepare('
+        SELECT dt.id, dt.token, dt.expires_at, dt.max_uses, dt.use_count, f.original_name, f.filename
+        FROM download_tokens dt
+        JOIN files f ON f.id = dt.file_id
+        WHERE f.user_id = ? AND f.deleted_at IS NULL
+          AND (dt.expires_at IS NULL OR dt.expires_at > UTC_TIMESTAMP())
+          AND (dt.max_uses = 0 OR dt.use_count < dt.max_uses)
+        ORDER BY dt.id DESC
+        LIMIT 20
+    ');
+    $tok->execute([$userId]);
+    $liveTokenLinks = $tok->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $liveTokenLinks = [];
+}
+try {
+    $sigStmt = $pdo->prepare('
+        SELECT s.id, s.file_id, s.expires_at, f.original_name, f.filename
+        FROM signed_links s
+        JOIN files f ON f.id = s.file_id
+        WHERE s.user_id = ? AND s.revoked_at IS NULL AND s.expires_at > UTC_TIMESTAMP() AND f.deleted_at IS NULL
+        ORDER BY s.id DESC
+        LIMIT 20
+    ');
+    $sigStmt->execute([$userId]);
+    $liveSignedLinks = $sigStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $liveSignedLinks = [];
+}
+
+$folderById = [];
+foreach ($allFoldersFlat as $folderRow) {
+    $folderById[(int) $folderRow['id']] = $folderRow;
+}
+$folderOptions = [];
+foreach ($allFoldersFlat as $folderRow) {
+    $parts = [];
+    $cur = $folderRow;
+    $guard = 0;
+    while ($cur && $guard < 20) {
+        array_unshift($parts, (string) ($cur['name'] ?? ''));
+        $parentId = (int) ($cur['parent_id'] ?? 0);
+        $cur = ($parentId > 0 && isset($folderById[$parentId])) ? $folderById[$parentId] : null;
+        $guard++;
+    }
+    $folderOptions[] = ['id' => (int) $folderRow['id'], 'label' => implode(' / ', $parts)];
+}
+
 $dashQueryBase = [];
 if (!empty($_GET['q'])) {
     $dashQueryBase['q'] = $_GET['q'];
@@ -174,6 +256,7 @@ foreach (['date_from', 'date_to', 'type', 'visibility', 'expiry', 'tag'] as $fil
         $activeFilterCount++;
     }
 }
+datadock_refresh_account_notices($pdo, (int) $userId, $settings, $expiringSoonCount, $storagePercent, $storageQuotaEnabled);
 ?>
 
 
@@ -204,6 +287,20 @@ if ($foldersEnabled && $currentFolderId > 0) {
 
     <?php if (!empty($readOnly)): ?>
     <div class="flash warning persistent" role="status"><strong>Read-only mode:</strong> Uploads and file changes are disabled; downloads still work.</div>
+    <?php endif; ?>
+
+    <?php if ($expiringSoonCount > 0): ?>
+    <div class="stats-alert">
+        <?= icon_svg('warning') ?> <strong><?= (int) $expiringSoonCount ?></strong>
+        file<?= $expiringSoonCount === 1 ? '' : 's' ?> expire within 7 days.
+        <?php
+        $expNames = [];
+        foreach ($expiringSoonFiles as $expFile) {
+            $expNames[] = (string) ($expFile['original_name'] ?? $expFile['filename'] ?? 'file');
+        }
+        ?>
+        <span class="expiring-names"><?= sanitize_data(implode(', ', $expNames)) ?></span>
+    </div>
     <?php endif; ?>
 
     <?php if ($foldersEnabled): ?>
@@ -340,10 +437,21 @@ if ($foldersEnabled && $currentFolderId > 0) {
                 <option value="public">Make selected public</option>
                 <option value="private">Make selected private</option>
                 <?php endif; ?>
+                <?php if ($foldersEnabled && empty($readOnly)): ?>
+                <option value="move">Move to folder…</option>
+                <?php endif; ?>
                 <?php if (empty($readOnly)): ?>
                 <option value="delete">Delete selected</option>
                 <?php endif; ?>
             </select>
+            <?php if ($foldersEnabled && empty($readOnly)): ?>
+            <select id="bulkFolderSelect" class="bulk-folder-select" hidden>
+                <option value="0">All files</option>
+                <?php foreach ($folderOptions as $folderOption): ?>
+                    <option value="<?= (int) $folderOption['id'] ?>"><?= sanitize_data($folderOption['label']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php endif; ?>
             <button type="button" class="btn btn-primary btn-small" id="bulkApplyBtn" disabled>Apply</button>
         </div>
         <div class="file-list">
@@ -482,6 +590,61 @@ if ($foldersEnabled && $currentFolderId > 0) {
 
     <?php datadock_echo_owned_pastes($pdo, !empty($readOnly), 'dashboard.php', datadock_pastes_enabled($settings)); ?>
 
+    <?php if (!empty($liveTokenLinks) || !empty($liveSignedLinks)): ?>
+    <div class="share-links-panel">
+        <h3>Outstanding links</h3>
+        <ul>
+            <?php
+            $linkBase = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+            $linkDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+            $linkDir = ($linkDir === '/' || $linkDir === '\\') ? '' : rtrim($linkDir, '/');
+            foreach ($liveTokenLinks as $tokenLink) {
+                $tokenUrl = $linkBase . $linkDir . '/download.php?token=' . rawurlencode((string) ($tokenLink['token'] ?? ''));
+                $tokenName = (string) ($tokenLink['original_name'] ?? $tokenLink['filename'] ?? 'File');
+                $usesLeft = ((int) ($tokenLink['max_uses'] ?? 0)) > 0
+                    ? ((int) $tokenLink['max_uses'] - (int) $tokenLink['use_count']) . ' uses left'
+                    : 'unlimited uses';
+                $tokenExp = $tokenLink['expires_at'] ?? null;
+                $tokenExpLabel = ($tokenExp === null || $tokenExp === '') ? 'no expiry' : 'expires ' . $tokenExp . ' UTC';
+                echo '<li>' . sanitize_data($tokenName) . ' — share link, ' . sanitize_data($usesLeft) . ', ' . sanitize_data($tokenExpLabel);
+                if (empty($readOnly)) {
+                    echo ' <form method="post" action="revoke_link.php" class="inline-form compact" onsubmit="return confirm(\'Revoke this link?\');">';
+                    echo '<input type="hidden" name="type" value="token"><input type="hidden" name="id" value="' . (int) $tokenLink['id'] . '">';
+                    echo '<button type="submit" class="btn btn-danger btn-small">Revoke</button></form>';
+                }
+                echo '<div class="share-link-row"><input type="text" class="share-link-input" readonly value="' . sanitize_data($tokenUrl) . '" onclick="this.select();">';
+                echo '<button type="button" class="btn-copy" data-copy="' . sanitize_data($tokenUrl) . '" title="Copy link">' . icon_svg('copy') . '</button></div></li>';
+            }
+            foreach ($liveSignedLinks as $signedLink) {
+                $signedName = (string) ($signedLink['original_name'] ?? $signedLink['filename'] ?? 'File');
+                $signedExp = (string) ($signedLink['expires_at'] ?? '');
+                $signedUnix = $signedExp !== '' ? strtotime($signedExp . ' UTC') : false;
+                $signedUrl = '';
+                if ($signedUnix !== false) {
+                    $signedSig = datadock_signed_download_build_v2($pdo, (int) $signedLink['id'], (int) $signedLink['file_id'], (int) $signedUnix);
+                    $signedUrl = $linkBase . $linkDir . '/download.php?id=' . (int) $signedLink['file_id'] . '&exp=' . (int) $signedUnix . '&sig=' . rawurlencode($signedSig) . '&sid=' . (int) $signedLink['id'];
+                }
+                echo '<li>' . sanitize_data($signedName) . ' — signed link';
+                if ($signedExp !== '') {
+                    echo ', expires ' . sanitize_data($signedExp) . ' UTC';
+                }
+                if (empty($readOnly)) {
+                    echo ' <form method="post" action="revoke_link.php" class="inline-form compact" onsubmit="return confirm(\'Revoke this link?\');">';
+                    echo '<input type="hidden" name="type" value="signed"><input type="hidden" name="id" value="' . (int) $signedLink['id'] . '">';
+                    echo '<button type="submit" class="btn btn-danger btn-small">Revoke</button></form>';
+                }
+                if ($signedUrl !== '') {
+                    echo '<div class="share-link-row"><input type="text" class="share-link-input" readonly value="' . sanitize_data($signedUrl) . '" onclick="this.select();">';
+                    echo '<button type="button" class="btn-copy" data-copy="' . sanitize_data($signedUrl) . '" title="Copy link">' . icon_svg('copy') . '</button></div>';
+                }
+                echo '</li>';
+            }
+            ?>
+        </ul>
+        <p class="settings-hint">Revoking a signed link stops that URL only. Other signed links keep working.</p>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($shareFoldersList)): ?>
     <div class="share-links-panel">
         <h3>Active share folder links</h3>
@@ -589,8 +752,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var checkboxes = document.querySelectorAll('.zip-checkbox');
     var bulkSelect = document.getElementById('bulkActionSelect');
     var bulkApplyBtn = document.getElementById('bulkApplyBtn');
+    var bulkFolder = document.getElementById('bulkFolderSelect');
     function updateBulkState() {
         var n = document.querySelectorAll('.zip-checkbox:checked').length;
+        if (bulkFolder) {
+            bulkFolder.hidden = !bulkSelect || bulkSelect.value !== 'move';
+        }
         bulkApplyBtn.disabled = n === 0 || !bulkSelect.value;
     }
     if (selectAll && checkboxes.length) {
@@ -621,6 +788,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 pubInput.name = 'public';
                 pubInput.value = action === 'public' ? '1' : '0';
                 form.appendChild(pubInput);
+                ids.forEach(function (id) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'ids[]';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+            } else if (action === 'move') {
+                var form = document.createElement('form');
+                form.method = 'post';
+                form.action = 'bulk_move.php';
+                var folderInput = document.createElement('input');
+                folderInput.type = 'hidden';
+                folderInput.name = 'folder_id';
+                folderInput.value = bulkFolder ? bulkFolder.value : '0';
+                form.appendChild(folderInput);
                 ids.forEach(function (id) {
                     var input = document.createElement('input');
                     input.type = 'hidden';

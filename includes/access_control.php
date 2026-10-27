@@ -37,9 +37,50 @@ function datadock_signed_download_build(PDO $pdo, int $fileId, int $expUnix): st
     return hash_hmac('sha256', $msg, $secret);
 }
 
-function datadock_signed_download_verify(PDO $pdo, int $fileId, int $expUnix, string $sigHex): bool {
-    if ($expUnix < time()) {
+function datadock_signed_download_build_v2(PDO $pdo, int $linkId, int $fileId, int $expUnix): string {
+    $msg = 'v2|' . $linkId . '|' . $fileId . '|' . $expUnix;
+    return hash_hmac('sha256', $msg, datadock_hmac_secret($pdo));
+}
+
+/**
+ * Store a revocable signed link and return its id plus HMAC.
+ *
+ * @return array{id:int,sig:string}|null
+ */
+function datadock_signed_link_create(PDO $pdo, int $fileId, int $userId, int $expUnix): ?array {
+    try {
+        $stmt = $pdo->prepare('INSERT INTO signed_links (file_id, user_id, expires_at) VALUES (?, ?, ?)');
+        $stmt->execute([$fileId, $userId, gmdate('Y-m-d H:i:s', $expUnix)]);
+        $id = (int) $pdo->lastInsertId();
+        if ($id <= 0) {
+            return null;
+        }
+        return [
+            'id' => $id,
+            'sig' => datadock_signed_download_build_v2($pdo, $id, $fileId, $expUnix),
+        ];
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+function datadock_signed_download_verify(PDO $pdo, int $fileId, int $expUnix, string $sigHex, ?int $linkId = null): bool {
+    if ($expUnix < time() || $sigHex === '') {
         return false;
+    }
+    if ($linkId !== null && $linkId > 0) {
+        try {
+            $stmt = $pdo->prepare('SELECT revoked_at FROM signed_links WHERE id = ? AND file_id = ? LIMIT 1');
+            $stmt->execute([$linkId, $fileId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return false;
+        }
+        if (!$row || !empty($row['revoked_at'])) {
+            return false;
+        }
+        $expect = datadock_signed_download_build_v2($pdo, $linkId, $fileId, $expUnix);
+        return hash_equals($expect, $sigHex);
     }
     $expect = datadock_signed_download_build($pdo, $fileId, $expUnix);
     return hash_equals($expect, $sigHex);

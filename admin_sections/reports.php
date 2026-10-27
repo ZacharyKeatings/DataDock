@@ -130,6 +130,24 @@ $reportsListQuery = static function (array $parts): string {
                                 <dl class="file-details-grid admin-reports-details-dl">
                                     <dt>Details</dt>
                                     <dd class="admin-reports-details-text"><?= $details !== '' ? nl2br(sanitize_data($details)) : '—' ?></dd>
+                                    <dt>Purge hold</dt>
+                                    <dd>
+                                        <?php if ($fileId > 0): ?>
+                                            <?php if (!empty($row['purge_hold'])): ?>
+                                                <p class="settings-hint">Expiry and trash retention skip this file.</p>
+                                            <?php endif; ?>
+                                            <form method="post" action="<?= sanitize_data($reportsListQuery($modActionQs)) ?>" class="inline-form compact">
+                                                <input type="hidden" name="report_id" value="<?= $reportId ?>">
+                                                <?php if (!empty($row['purge_hold'])): ?>
+                                                    <button type="submit" name="moderation_report_action" value="clear_hold" class="btn btn-quiet btn-small">Clear purge hold</button>
+                                                <?php else: ?>
+                                                    <button type="submit" name="moderation_report_action" value="hold" class="btn btn-quiet btn-small">Hold from purge</button>
+                                                <?php endif; ?>
+                                            </form>
+                                        <?php else: ?>
+                                            —
+                                        <?php endif; ?>
+                                    </dd>
                                     <dt>Moderation</dt>
                                     <dd class="admin-reports-moderation-dd">
                                         <?php if ($isOpen): ?>

@@ -24,6 +24,7 @@ if ($inviteOnly): ?>
             <div>Storage</div>
             <div>Partition</div>
             <div>Role</div>
+            <div>Access</div>
             <div>Reset password</div>
             <div>Delete</div>
         </div>
@@ -59,6 +60,20 @@ if ($inviteOnly): ?>
                         </form>
                     <?php else: ?>
                         <?= sanitize_data($user['role']) ?> (You)
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <?php if (!empty($user['suspended'])): ?>
+                        <span class="badge">Suspended</span>
+                    <?php endif; ?>
+                    <?php if ($user['id'] !== $_SESSION['user_id']): ?>
+                        <form method="post" action="admin_sections/admin_suspend_user.php" class="inline-form compact" onsubmit="return confirm('<?= !empty($user['suspended']) ? 'Allow this account to log in again?' : 'Suspend this account? Login and new shares will be blocked.' ?>');">
+                            <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
+                            <input type="hidden" name="suspended" value="<?= !empty($user['suspended']) ? '0' : '1' ?>">
+                            <button type="submit" class="btn btn-small<?= !empty($user['suspended']) ? '' : ' btn-quiet' ?>"><?= !empty($user['suspended']) ? 'Unsuspend' : 'Suspend' ?></button>
+                        </form>
+                    <?php else: ?>
+                        —
                     <?php endif; ?>
                 </div>
                 <div>

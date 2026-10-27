@@ -7,6 +7,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
 require_once __DIR__ . '/includes/audit_log.php';
+require_once __DIR__ . '/includes/notices.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     $_SESSION['flash_error'][] = "❌ Invalid file.";
@@ -43,11 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (strtolower($username) === strtolower($_SESSION['username'])) {
             $_SESSION['flash_error'][] = "❌ You cannot share with yourself.";
         } else {
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt = $pdo->prepare("SELECT id, suspended FROM users WHERE username = ?");
             $stmt->execute([$username]);
             $targetUser = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$targetUser) {
                 $_SESSION['flash_error'][] = "❌ User « " . sanitize_data($username) . " » not found.";
+            } elseif (!empty($targetUser['suspended'])) {
+                $_SESSION['flash_error'][] = "❌ That account is suspended and cannot receive new shares.";
             } else {
                 try {
                     $ins = $pdo->prepare("INSERT INTO file_shares (file_id, shared_with_user_id, shared_by_user_id) VALUES (?, ?, ?)");
@@ -58,6 +61,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'related_user_id' => (int) $targetUser['id'],
                         'detail' => ['with_username' => $username, 'filename' => $file['original_name'] ?? ''],
                     ]);
+                    $fileLabel = (string) ($file['original_name'] ?? 'a file');
+                    datadock_add_notice(
+                        $pdo,
+                        (int) $targetUser['id'],
+                        'share_received',
+                        $_SESSION['username'] . ' shared a file with you',
+                        $fileLabel,
+                        'dashboard.php'
+                    );
                     $_SESSION['flash_success'][] = "✅ File shared with " . sanitize_data($username) . ".";
                 } catch (PDOException $e) {
                     if ($e->getCode() == 23000) { // duplicate

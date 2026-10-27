@@ -691,7 +691,8 @@ body {
 }
 
 .file-row-user-management {
-    grid-template-columns: 8.5rem minmax(6rem, 1fr) minmax(8rem, 1.4fr) 3.5rem 5rem minmax(9rem, 1.3fr) minmax(8rem, 1.1fr) auto auto;
+    min-width: 76rem;
+    grid-template-columns: 8.5rem minmax(6rem, 1fr) minmax(8rem, 1.4fr) 3.5rem 5rem minmax(9rem, 1.3fr) minmax(7rem, 1fr) auto auto auto;
     display: grid;
     gap: 0.5rem;
     align-items: center;
@@ -2551,6 +2552,48 @@ a.btn-small {
 
 .stats-alert a {
     margin-left: 0.5rem;
+}
+
+.expiring-names {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.9rem;
+}
+
+.bulk-folder-select {
+    max-width: 16rem;
+}
+
+.notice-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.notice-item {
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.notice-item.is-unread .notice-title {
+    font-weight: 600;
+}
+
+.notice-title,
+.notice-body,
+.notice-meta {
+    margin: 0;
+}
+
+.notice-body,
+.notice-meta {
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.privacy-text {
+    white-space: normal;
+    line-height: 1.5;
 }
 
 .changelog-box,

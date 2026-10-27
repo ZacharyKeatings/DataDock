@@ -68,6 +68,27 @@ function hotlink_referer_is_trusted(?string $referer, array $trustedHosts): bool
  *
  * @param array<string, mixed> $settings
  */
+/**
+ * When blocking is on, deny requests whose Referer host is not trusted.
+ * Empty referers (direct visits and downloads) stay allowed.
+ *
+ * @param array<string, mixed> $settings
+ */
+function datadock_deny_untrusted_hotlink(array $settings): void {
+    if (empty($settings['hotlink_block_enabled'])) {
+        return;
+    }
+    $referer = $_SERVER['HTTP_REFERER'] ?? '';
+    $trusted = hotlink_trusted_hosts_for_request($settings);
+    if (hotlink_referer_is_trusted(is_string($referer) ? $referer : '', $trusted)) {
+        return;
+    }
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=UTF-8');
+    echo "Hotlinking is not allowed.\n";
+    exit;
+}
+
 function datadock_log_hotlink_if_external(PDO $pdo, array $settings, string $resource, ?int $fileId = null, ?int $targetUserId = null): void {
     $loggingOn = !array_key_exists('hotlink_logging_enabled', $settings) || !empty($settings['hotlink_logging_enabled']);
     if (!$loggingOn) {

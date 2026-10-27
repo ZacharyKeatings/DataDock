@@ -9,7 +9,7 @@ require_once __DIR__ . '/storage.php';
  */
 function datadock_purge_expired_files(PDO $pdo): array {
     $now = date('Y-m-d H:i:s');
-    $stmt = $pdo->prepare('SELECT * FROM files WHERE deleted_at IS NULL AND expiry_date IS NOT NULL AND expiry_date < ?');
+    $stmt = $pdo->prepare('SELECT * FROM files WHERE deleted_at IS NULL AND purge_hold = 0 AND expiry_date IS NOT NULL AND expiry_date < ?');
     $stmt->execute([$now]);
     $expiredFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -39,10 +39,10 @@ function datadock_purge_expired_files(PDO $pdo): array {
  */
 function datadock_purge_trash_by_retention(PDO $pdo, int $retentionDays): array {
     if ($retentionDays > 0) {
-        $stmt = $pdo->prepare('SELECT * FROM files WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)');
+        $stmt = $pdo->prepare('SELECT * FROM files WHERE deleted_at IS NOT NULL AND purge_hold = 0 AND deleted_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)');
         $stmt->execute([$retentionDays]);
     } else {
-        $stmt = $pdo->query('SELECT * FROM files WHERE deleted_at IS NOT NULL');
+        $stmt = $pdo->query('SELECT * FROM files WHERE deleted_at IS NOT NULL AND purge_hold = 0');
     }
     $trashedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

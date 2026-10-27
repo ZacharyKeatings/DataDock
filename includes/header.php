@@ -36,6 +36,11 @@ $themeCssUrl = app_asset_url('assets/' . $themePath);
 $loggedIn = !empty($_SESSION['user_id']);
 $isAdmin = $loggedIn && (($_SESSION['role'] ?? '') === 'admin');
 $homeHref = $loggedIn ? 'dashboard.php' : 'index.php';
+$noticeUnread = 0;
+if ($loggedIn && isset($pdo) && $pdo instanceof PDO) {
+    require_once __DIR__ . '/notices.php';
+    $noticeUnread = datadock_notice_unread_count($pdo, (int) $_SESSION['user_id']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="<?= sanitize_data($theme) ?>">
@@ -82,6 +87,7 @@ $homeHref = $loggedIn ? 'dashboard.php' : 'index.php';
                             </summary>
                             <div class="nav-account-menu">
                                 <a href="profile.php"<?= $currentPage === 'profile.php' ? ' class="active"' : '' ?>>Profile</a>
+                                <a href="notices.php"<?= $currentPage === 'notices.php' ? ' class="active"' : '' ?>>Notices<?php if ($noticeUnread > 0): ?> (<?= (int) $noticeUnread ?>)<?php endif; ?></a>
                                 <a href="activity.php"<?= $currentPage === 'activity.php' ? ' class="active"' : '' ?>>Activity</a>
                                 <a href="trash.php"<?= $currentPage === 'trash.php' ? ' class="active"' : '' ?>>Trash</a>
                                 <?php if (!empty($pastesEnabled)): ?>

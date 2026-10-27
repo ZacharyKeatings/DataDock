@@ -335,7 +335,15 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'tags_enabled' => true,\n" .
         "    'pastes_enabled' => true,\n" .
         "    'hotlink_logging_enabled' => true,\n" .
+        "    'hotlink_block_enabled' => false,\n" .
         "    'hotlink_trusted_hosts' => '',\n" .
+        "    'admin_ip_allowlist' => '',\n" .
+        "    'password_rules' => [\n" .
+        "        'min_length' => 6,\n" .
+        "        'complexity' => false\n" .
+        "    ],\n" .
+        "    'privacy_enabled' => false,\n" .
+        "    'privacy_text' => '',\n" .
         "    'ops_alerts' => [\n" .
         "        'storage_partition_percent_enabled' => false,\n" .
         "        'storage_partition_percent_threshold' => 85,\n" .

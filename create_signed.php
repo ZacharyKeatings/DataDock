@@ -56,11 +56,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $k = '1_day';
     }
     $exp = time() + $durations[$k];
-    $sig = datadock_signed_download_build($pdo, $fileId, $exp);
+    $link = datadock_signed_link_create($pdo, $fileId, (int) $userId, $exp);
+    if ($link === null) {
+        $_SESSION['flash_error'][] = '❌ Could not create a signed link.';
+        header('Location: create_signed.php?id=' . $fileId);
+        exit;
+    }
+    $sig = $link['sig'];
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
     $scriptDir = ($scriptDir === '/' || $scriptDir === '\\') ? '' : $scriptDir;
-    $signedUrl = $baseUrl . rtrim($scriptDir, '/') . '/download.php?id=' . $fileId . '&exp=' . $exp . '&sig=' . rawurlencode($sig);
+    $signedUrl = $baseUrl . rtrim($scriptDir, '/') . '/download.php?id=' . $fileId . '&exp=' . $exp . '&sig=' . rawurlencode($sig) . '&sid=' . (int) $link['id'];
 
     datadock_log_activity($pdo, 'signed_link_created', [
         'actor_user_id' => $userId,

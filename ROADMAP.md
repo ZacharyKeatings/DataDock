@@ -50,8 +50,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Invite-only registration | Signups only via link/token created by admin. |
 | ✓ | Password reset flow | Admin-initiated or token-based reset for forgotten passwords. |
 | ✓ | User-to-user file sharing | Share files with specific usernames; "Shared with You" on dashboard. |
-| — | Suspend user | Admin can disable an account so login and new shares are blocked while files, quotas, and the audit trail stay in place. |
-| — | Close your own account | Password-confirmed self-service deletion. Files are trashed or purged, an audit row is written, and the last admin cannot be removed. |
+| ✓ | Suspend user | Admin can disable an account so login and new shares are blocked while files, quotas, and the audit trail stay in place. |
+| ✓ | Close your own account | Password-confirmed self-service deletion. Files are purged, an audit row is written, and the last active admin cannot be removed. |
 | — | Claim a guest upload | One-time claim token so a guest upload can be attached to an account at registration or login and counted against that user's quota. |
 
 ---
@@ -87,9 +87,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | SHA-256 deduplication | Optional per storage partition (`storage_objects`); identical content shares one blob; refs decremented on delete/purge. |
 | ✓ | Partition-aware storage paths | `includes/storage.php` resolves paths for downloads, thumbnails, ZIP, one-time links, uploads, delete/purge across partitions. |
 | ✓ | Plaintext pastes | Unlisted pastebin-style text sharing (`paste.php`): expiry, one-time view, raw/download, dashboard list. Toggle in Site Settings. |
-| — | Expiring soon on the dashboard | Owner warning for files expiring within seven days, matching the admin Overview notice. |
+| ✓ | Expiring soon on the dashboard | Owner warning for files expiring within seven days, matching the admin Overview notice. |
 | — | Safe inline preview | Viewer for full images, audio, video, and plain text. HTML, SVG, and script types stay forced downloads. |
-| — | Bulk move to folder | Dashboard bulk action to move the selection into a folder. |
+| ✓ | Bulk move to folder | Dashboard bulk action to move the selection into a folder. |
 | — | Replace file contents | Upload new bytes for an existing file and keep the id, shares, and links. The previous blob follows trash retention. |
 | — | Chunked upload | Client sends slices; the server reassembles into the user's partition, then runs MIME, quarantine, deduplication, and quota checks once. |
 | — | Paste passwords | Optional password gate on pastes, including raw and download URLs, using the same idea as per-file download passwords. |
@@ -119,7 +119,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Hotlink log | Optional referer logging for downloads, ZIP, thumbnails, avatars from other hostnames; Admin → Hotlink log; Site Settings → Hotlink monitoring. |
 | ✓ | Storage partitions | Admin UI: multiple roots, default partition, per-user assignment; usage listing. |
 | — | Transfer file ownership | Move a user's files to another account before deletion, respecting storage partitions. |
-| — | Audit log download | CSV or JSON export of the activity log from Admin, beside the existing backup action. |
+| ✓ | Audit log download | CSV or JSON export of the activity log from Admin, beside the existing backup action. |
 
 ---
 
@@ -135,7 +135,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Responsive layout | Sections and file tables scale; horizontal scroll on small screens. |
 | — | Localization/multilanguage support | Multiple languages; string extraction and locale selection. |
 | — | Mobile responsiveness refinements | Extra polish on small screens. |
-| — | Editable privacy page | Site setting for a public privacy notice, separate from the repository `PRIVACY.md`. |
+| ✓ | Editable privacy page | Site setting for a public privacy notice, separate from the repository `PRIVACY.md`. |
 | — | Public thumbnail grid | Optional grid layout for the public file index when public browsing is on. |
 | ✓ | Accessibility (WCAG) improvements | Improve accessibility. |
 | ✓ | Custom file icons | Flat SVG icons per type; custom URLs in settings. |
@@ -150,7 +150,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | — | Email notifications on upload, expiry, etc. | Notify users or admin on events. |
 | — | SMTP configuration | Host, port, user, pass, encryption. |
 | — | Email registration confirmation | Confirm email on signup. |
-| — | In-app notices | Per-user list for shares received, report reviews, quota warnings, and files expiring soon. Works with SMTP off; email can deliver the same events later. |
+| ✓ | In-app notices | Per-user list for shares received, report reviews, quota warnings, and files expiring soon. Works with SMTP off; email can deliver the same events later. |
 
 ---
 
@@ -166,8 +166,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | — | CAPTCHA on login/register forms | Reduce automated abuse. |
 | ✓ | Rate limiting on uploads | Throttle upload frequency per user or IP. |
 | ✓ | Session timeout duration setting | Configurable session lifetime. |
-| — | Block hotlinks | Optional deny when the referer is another host and is not in the trusted-host list. Applies to downloads, ZIP, thumbnails, and avatars. |
-| — | Admin IP allowlist | Optional IP and CIDR list for the admin panel and other destructive actions, using the same style as per-file download allowlists. |
+| ✓ | Block hotlinks | Optional deny when the referer is another host and is not in the trusted-host list. Applies to downloads, ZIP, thumbnails, and avatars. |
+| ✓ | Admin IP allowlist | Optional IP and CIDR list for the admin panel and other destructive actions, using the same style as per-file download allowlists. |
 
 ---
 
@@ -187,7 +187,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 |--------|---------|-------------|
 | ✓ | Users can report files | Report files for malicious or inappropriate content. |
 | ✓ | Admin handling of reports | Review, dismiss, and take moderation action. |
-| — | Purge hold | Flag so expiry and trash retention skip a file until an admin clears it. Set from the report queue when a file should stay available for review. |
+| ✓ | Purge hold | Flag so expiry and trash retention skip a file until an admin clears it. Set from the report queue when a file should stay available for review. |
 
 ---
 
@@ -201,7 +201,7 @@ Improvements that keep access control simple while adding stronger options (v2.3
 | ✓ | IP-restricted downloads | Restrict anonymous downloads to listed IPs/CIDR (JSON on `files.ip_allowlist`). Owners and logged-in shared access bypass. |
 | ✓ | Download expiration by count + time | `download_tokens`: `max_uses`, `use_count`, `expires_at`. **Share link (token)** flow (`create_onetime.php`). |
 | ✓ | Signed URLs | Time-limited HMAC (`download.php?id=&exp=&sig=`), secret in `app_secrets`. **Signed link** (`create_signed.php`). |
-| — | Outstanding links | Dashboard list of live token links (uses left, expiry, file) with revoke. Signed links gain an id so one URL can be revoked without rotating the site secret. |
+| ✓ | Outstanding links | Dashboard list of live token links (uses left, expiry, file) with revoke. Signed links gain an id so one URL can be revoked without rotating the site secret. |
 
 ---
 
@@ -317,7 +317,7 @@ Beyond the health check planned in **System Maturity**.
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| — | Password rules | Site setting for minimum length and a simple complexity toggle. |
+| ✓ | Password rules | Site setting for minimum length and a simple complexity toggle. |
 | — | TOTP two-factor authentication | Authenticator-app 2FA; typically admin-first, then optional for all users. |
 | — | Session / device management | e.g. list active sessions and revoke others (optional; schedule with 2FA or later). |
 | — | OIDC login | Optional OpenID Connect sign-in against a self-hosted provider such as Authentik (also Authelia, Keycloak, and similar). Map a group or role claim onto DataDock roles. Local accounts stay available so an admin can still sign in if the provider is down. |

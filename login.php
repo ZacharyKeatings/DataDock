@@ -89,6 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (empty($_SESSION['flash_error'])) {
                     if (password_verify($password, $user['password_hash'])) {
+                        if (!empty($user['suspended'])) {
+                            $_SESSION['flash_error'][] = '❌ This account is suspended.';
+                        } else {
                         $maintenanceMode = $settings['maintenance_mode'] ?? false;
                         if ($maintenanceMode && ($user['role'] ?? 'user') !== 'admin') {
                             $_SESSION['flash_error'][] = "❌ Site is under maintenance. Only admins can log in at this time.";
@@ -103,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['flash_success'][] = "🎉 Login successful. Welcome, " . $user['username'] . "!";
                             header("Location: dashboard.php");
                             exit;
+                        }
                         }
                     } else {
                         if ($bruteEnabled) {

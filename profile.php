@@ -8,6 +8,8 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
 require_once __DIR__ . '/includes/read_only.php';
+require_once __DIR__ . '/includes/accounts.php';
+require_once __DIR__ . '/includes/audit_log.php';
 
 $userId = $_SESSION['user_id'];
 $stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at FROM users WHERE id = ?");
@@ -144,10 +146,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $passwordError = datadock_password_error($newPass, $settings);
         if (!password_verify($current, $row['password_hash'])) {
             $_SESSION['flash_error'][] = "❌ Current password is incorrect.";
-        } elseif (strlen($newPass) < 6) {
-            $_SESSION['flash_error'][] = "❌ New password must be at least 6 characters.";
+        } elseif ($passwordError !== null) {
+            $_SESSION['flash_error'][] = "❌ " . $passwordError;
         } elseif ($newPass !== $confirm) {
             $_SESSION['flash_error'][] = "❌ New passwords do not match.";
         } else {
@@ -156,6 +159,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_success'][] = "✅ Password changed.";
             header("Location: profile.php");
             exit;
+        }
+    }
+
+    if ($action === 'close_account') {
+        if (datadock_read_only_enabled($settings)) {
+            $_SESSION['flash_error'][] = '❌ Read-only mode: account changes are disabled.';
+        } else {
+            $confirm = $_POST['confirm_password'] ?? '';
+            $error = datadock_close_own_account($pdo, (int) $userId, (string) $confirm);
+            if ($error !== null) {
+                $_SESSION['flash_error'][] = '❌ ' . $error;
+            } else {
+                unset(
+                    $_SESSION['user_id'],
+                    $_SESSION['username'],
+                    $_SESSION['role'],
+                    $_SESSION['datadock_remember_device']
+                );
+                $_SESSION['flash_success'][] = 'Your account has been closed and your files were removed.';
+                header('Location: index.php');
+                exit;
+            }
         }
     }
 }
@@ -392,7 +417,8 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
                 <div class="form-group">
                     <label for="new_password">New password</label>
-                    <input type="password" name="new_password" id="new_password" required minlength="6">
+                    <input type="password" name="new_password" id="new_password" required minlength="<?= (int) datadock_password_policy($settings)['min_length'] ?>">
+                    <p class="form-hint"><?= sanitize_data(datadock_password_hint($settings)) ?></p>
                 </div>
                 <div class="form-group">
                     <label for="confirm_password">Confirm new password</label>
@@ -411,6 +437,21 @@ require_once __DIR__ . '/includes/header.php';
                 return true;
             }
             </script>
+        </div>
+    </div>
+
+    <div class="settings-card stack-card">
+        <h3 class="settings-card-title">Close account</h3>
+        <div class="settings-card-body">
+            <p class="page-description">This permanently removes your account and deletes your files. The last admin account cannot be closed.</p>
+            <form method="post" class="form" onsubmit="return confirm('Close your account and delete your files? This cannot be undone.');">
+                <input type="hidden" name="action" value="close_account">
+                <div class="form-group">
+                    <label for="close_password">Current password</label>
+                    <input type="password" name="confirm_password" id="close_password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-danger">Close account</button>
+            </form>
         </div>
     </div>
 </div>

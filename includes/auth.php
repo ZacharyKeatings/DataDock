@@ -154,20 +154,23 @@ function datadock_sync_session_user(): void {
         return;
     }
     try {
-        $stmt = $pdo->prepare('SELECT username, role FROM users WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT username, role, suspended FROM users WHERE id = ?');
         $stmt->execute([(int) $_SESSION['user_id']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
         return;
     }
     $done = true;
-    if (!$row) {
+    if (!$row || !empty($row['suspended'])) {
         unset(
             $_SESSION['user_id'],
             $_SESSION['username'],
             $_SESSION['role'],
             $_SESSION['datadock_remember_device']
         );
+        if ($row && !empty($row['suspended'])) {
+            $_SESSION['flash_error'][] = 'This account is suspended.';
+        }
         return;
     }
     $_SESSION['role'] = (($row['role'] ?? '') === 'admin') ? 'admin' : 'user';
@@ -270,10 +273,35 @@ function require_login(): void {
 /**
  * Require user to be an admin. Redirect if not.
  */
+function datadock_admin_request_ip_allowed(): bool {
+    if (!function_exists('datadock_load_settings')) {
+        require_once __DIR__ . '/settings_loader.php';
+    }
+    $settings = datadock_load_settings();
+    $raw = trim((string) ($settings['admin_ip_allowlist'] ?? ''));
+    if ($raw === '') {
+        return true;
+    }
+    if (!function_exists('datadock_ip_allowlist_allows')) {
+        require_once __DIR__ . '/access_control.php';
+    }
+    if (!function_exists('get_client_ip')) {
+        require_once __DIR__ . '/rate_limit.php';
+    }
+    $json = datadock_parse_ip_allowlist_text($raw);
+    return datadock_ip_allowlist_allows($json, get_client_ip());
+}
+
 function require_admin(): void {
     datadock_sync_session_user();
     if (empty($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header('Location: index.php');
+        exit;
+    }
+    if (!datadock_admin_request_ip_allowed()) {
+        http_response_code(403);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo "This admin panel is limited to specific IP addresses.\n";
         exit;
     }
 }

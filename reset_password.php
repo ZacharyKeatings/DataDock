@@ -5,6 +5,7 @@ init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/settings_loader.php';
+require_once __DIR__ . '/includes/accounts.php';
 $settings = datadock_load_settings();
 
 $tokenParam = trim($_GET['token'] ?? $_POST['token'] ?? '');
@@ -20,8 +21,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
     $newPass = $_POST['new_password'] ?? '';
     $confirm = $_POST['confirm_password'] ?? '';
 
-    if (strlen($newPass) < 6) {
-        $_SESSION['flash_error'][] = "❌ Password must be at least 6 characters.";
+    $passwordError = datadock_password_error($newPass, $settings);
+    if ($passwordError !== null) {
+        $_SESSION['flash_error'][] = "❌ " . $passwordError;
     } elseif ($newPass !== $confirm) {
         $_SESSION['flash_error'][] = "❌ Passwords do not match.";
     } else {
@@ -46,12 +48,12 @@ require_once __DIR__ . '/includes/header.php';
             This reset link is invalid or has expired. <a href="forgot_password.php">Request a new link</a> or <a href="login.php">log in</a>.
         </div>
     <?php else: ?>
-        <p class="page-description">Choose a new password of at least 6 characters.</p>
+        <p class="page-description"><?= sanitize_data(datadock_password_hint($settings)) ?></p>
         <form method="post" class="form" onsubmit="return validateResetForm()">
             <input type="hidden" name="token" value="<?= sanitize_data($tokenParam) ?>">
             <div class="form-group">
                 <label for="new_password">New password</label>
-                <input type="password" name="new_password" id="new_password" required minlength="6">
+                <input type="password" name="new_password" id="new_password" required minlength="<?= (int) datadock_password_policy($settings)['min_length'] ?>">
             </div>
             <div class="form-group">
                 <label for="confirm_password">Confirm new password</label>

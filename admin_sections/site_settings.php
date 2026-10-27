@@ -340,6 +340,47 @@
                     <input type="text" name="hotlink_trusted_hosts" id="hotlink_trusted_hosts" value="<?= sanitize_data($hotlinkTrustedHosts) ?>" placeholder="e.g. cdn.example.com, app.example.com">
                 </div>
                 <p class="settings-hint">Comma- or space-separated. The current site host is always trusted. Use this if assets are legitimately loaded from a CDN or second domain.</p>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="hotlink_block_enabled" <?= !empty($hotlinkBlockEnabled) ? 'checked' : '' ?>>
+                        Block hotlinks from other hosts
+                    </label>
+                </div>
+                <p class="settings-hint">When enabled, downloads, ZIP files, thumbnails, and avatars are denied if the referer is another host and is not in the trusted list. Direct visits with no referer still work.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h4 class="settings-card-title">Password rules</h4>
+            <div class="settings-card-body">
+                <div class="settings-row">
+                    <label for="password_min_length">Minimum password length</label>
+                    <input type="number" name="password_min_length" id="password_min_length" class="input-compact" value="<?= (int) ($passwordMinLength ?? 6) ?>" min="6" max="128">
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="password_complexity" <?= !empty($passwordComplexity) ? 'checked' : '' ?>>
+                        Require an uppercase letter, a lowercase letter, and a number
+                    </label>
+                </div>
+                <p class="settings-hint">Applies to registration, password changes, and password resets. Existing passwords are not forced to change.</p>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h4 class="settings-card-title">Admin IP allowlist</h4>
+            <div class="settings-card-body">
+                <div class="settings-row">
+                    <label for="admin_ip_allowlist">Allowed IPs and CIDR blocks</label>
+                    <textarea name="admin_ip_allowlist" id="admin_ip_allowlist" rows="3" placeholder="Leave empty to allow every address"><?= sanitize_data($adminIpAllowlist ?? '') ?></textarea>
+                </div>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="admin_ip_allowlist_confirm" value="1">
+                        Save even if my current IP is not in this list
+                    </label>
+                </div>
+                <p class="settings-hint">One address or IPv4 CIDR per line, or separated by commas. Empty means the admin panel is not restricted. The same check applies to destructive admin actions.</p>
             </div>
         </div>
 
@@ -488,6 +529,23 @@
                     <label for="tos_text">ToS / Acceptable Use text</label>
                     <textarea name="tos_text" id="tos_text" rows="4" placeholder="Enter your Terms of Service..."><?= sanitize_data($tosText ?? '') ?></textarea>
                 </div>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h4 class="settings-card-title">Privacy notice</h4>
+            <div class="settings-card-body">
+                <div class="settings-row settings-row-checkbox">
+                    <label>
+                        <input type="checkbox" name="privacy_enabled" id="privacy_enabled" <?= !empty($privacyEnabled) ? 'checked' : '' ?>>
+                        Publish a privacy page
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <label for="privacy_text">Privacy notice</label>
+                    <textarea name="privacy_text" id="privacy_text" rows="4" placeholder="Shown on privacy.php and linked from the footer"><?= sanitize_data($privacyText ?? '') ?></textarea>
+                </div>
+                <p class="settings-hint">This is the public page for this site. It is separate from the repository PRIVACY.md file.</p>
             </div>
         </div>
 

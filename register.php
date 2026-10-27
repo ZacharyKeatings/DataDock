@@ -4,6 +4,7 @@ init_session();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/settings_loader.php';
+require_once __DIR__ . '/includes/accounts.php';
 $settings = datadock_load_settings();
 require_once __DIR__ . '/includes/read_only.php';
 if (datadock_read_only_enabled($settings)) {
@@ -51,8 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['flash_error'][] = "❌ Invalid email address.";
         }
-        if (strlen($password) < 6) {
-            $_SESSION['flash_error'][] = "❌ Password must be at least 6 characters.";
+        $passwordError = datadock_password_error($password, $settings);
+        if ($passwordError !== null) {
+            $_SESSION['flash_error'][] = "❌ " . $passwordError;
         }
         if ($password !== $confirm) {
             $_SESSION['flash_error'][] = "❌ Passwords do not match.";
@@ -136,7 +138,8 @@ require_once __DIR__ . '/includes/header.php';
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" name="password" id="password" required>
+                <input type="password" name="password" id="password" required minlength="<?= (int) datadock_password_policy($settings)['min_length'] ?>">
+                <p class="form-hint"><?= sanitize_data(datadock_password_hint($settings)) ?></p>
             </div>
 
             <div class="form-group">

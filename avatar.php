@@ -58,6 +58,7 @@ $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 $mimes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
 $mime = $mimes[$ext] ?? 'application/octet-stream';
 datadock_log_hotlink_if_external($pdo, $settings, 'avatar', null, (int) $userId);
+datadock_deny_untrusted_hotlink($settings);
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . filesize($path));
 header('Cache-Control: public, max-age=86400');

@@ -480,4 +480,53 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    // Account suspension, purge hold, revocable signed links, in-app notices
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'suspended'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE users ADD COLUMN suspended TINYINT(1) NOT NULL DEFAULT 0 AFTER role');
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM files LIKE 'purge_hold'");
+        if ($stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE files ADD COLUMN purge_hold TINYINT(1) NOT NULL DEFAULT 0 AFTER deleted_at');
+        }
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS signed_links (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                file_id INT NOT NULL,
+                user_id INT NOT NULL,
+                expires_at DATETIME NOT NULL,
+                revoked_at DATETIME DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_signed_links_user (user_id),
+                INDEX idx_signed_links_expires (expires_at)
+            )
+        ");
+    } catch (PDOException $e) {}
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS user_notices (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                kind VARCHAR(32) NOT NULL,
+                title VARCHAR(200) NOT NULL,
+                body VARCHAR(1000) DEFAULT NULL,
+                link_url VARCHAR(500) DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                read_at DATETIME DEFAULT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_notices_user (user_id, read_at, created_at)
+            )
+        ");
+    } catch (PDOException $e) {}
 }

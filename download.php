@@ -34,6 +34,7 @@ function datadock_send_file_stream(PDO $pdo, array $file, array $settings, strin
     ];
     $hot = $resourceMap[$logAction] ?? 'download';
     datadock_log_hotlink_if_external($pdo, $settings, $hot, $fileId);
+    datadock_deny_untrusted_hotlink($settings);
     datadock_log_activity($pdo, $logAction, $logOpts);
     $pdo->prepare("UPDATE files SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?")->execute([$fileId]);
     if ($logDownloadEventForOwner) {
@@ -122,12 +123,13 @@ if (isset($_GET['sf'], $_GET['id']) && $_GET['sf'] !== '' && is_numeric($_GET['i
     datadock_render_status_page(404, 'File not found', 'This file was not found, or the link is not valid.');
 }
 
-// HMAC-signed temporary URL (no DB token row)
+// HMAC-signed temporary URL. sid= identifies a revocable link; older links omit it.
 if (isset($_GET['id'], $_GET['exp'], $_GET['sig']) && is_numeric($_GET['id']) && is_numeric($_GET['exp'])) {
     $fileId = (int) $_GET['id'];
     $exp = (int) $_GET['exp'];
     $sig = (string) $_GET['sig'];
-    if (!datadock_signed_download_verify($pdo, $fileId, $exp, $sig)) {
+    $sid = isset($_GET['sid']) && is_numeric($_GET['sid']) ? (int) $_GET['sid'] : null;
+    if (!datadock_signed_download_verify($pdo, $fileId, $exp, $sig, $sid)) {
         datadock_render_status_page(403, 'Link expired', 'This download link is invalid or has expired.');
     }
     $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND deleted_at IS NULL AND (quarantine_status = 'approved' OR quarantine_status IS NULL) AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");

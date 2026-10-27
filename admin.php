@@ -85,7 +85,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tagsEnabledSetting = !empty($_POST['tags_enabled']);
         $pastesEnabledSetting = !empty($_POST['pastes_enabled']);
         $hotlinkLoggingEnabled = isset($_POST['hotlink_logging_enabled']);
+        $hotlinkBlockEnabled = isset($_POST['hotlink_block_enabled']);
         $hotlinkTrustedHosts = trim((string) ($_POST['hotlink_trusted_hosts'] ?? ''));
+        $adminIpAllowlist = trim((string) ($_POST['admin_ip_allowlist'] ?? ''));
+        if (strlen($adminIpAllowlist) > 4000) {
+            $adminIpAllowlist = substr($adminIpAllowlist, 0, 4000);
+        }
+        $passwordMinLength = (int) ($_POST['password_min_length'] ?? 6);
+        if ($passwordMinLength < 6) {
+            $passwordMinLength = 6;
+        }
+        if ($passwordMinLength > 128) {
+            $passwordMinLength = 128;
+        }
+        $passwordComplexity = isset($_POST['password_complexity']);
+        $privacyEnabled = isset($_POST['privacy_enabled']);
+        $privacyText = trim((string) ($_POST['privacy_text'] ?? ''));
 
         $opsStoragePartitionPercentEnabled = isset($_POST['ops_storage_partition_percent_enabled']);
         $opsStoragePartitionPercentThreshold = (int) ($_POST['ops_storage_partition_percent_threshold'] ?? 85);
@@ -149,6 +164,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($theme, $validThemes, true)) {
             $theme = 'light';
         }
+        if ($adminIpAllowlist !== '') {
+            require_once __DIR__ . '/includes/access_control.php';
+            $adminIpJson = datadock_parse_ip_allowlist_text($adminIpAllowlist);
+            if (!datadock_ip_allowlist_allows($adminIpJson, get_client_ip()) && empty($_POST['admin_ip_allowlist_confirm'])) {
+                $_SESSION['flash_error'][] = '❌ Your current IP is not on the admin allowlist. Confirm that you want to save it anyway.';
+            }
+        }
         $fileIcons = [];
         if (!empty($fileIconsJson)) {
             $decoded = json_decode($fileIconsJson, true);
@@ -195,6 +217,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'file_icons' => " . var_export($fileIcons, true) . ",\n" .
                 "    'tos_enabled' => " . ($tosEnabled ? 'true' : 'false') . ",\n" .
                 "    'tos_text' => " . var_export($tosText, true) . ",\n" .
+                "    'privacy_enabled' => " . ($privacyEnabled ? 'true' : 'false') . ",\n" .
+                "    'privacy_text' => " . var_export($privacyText, true) . ",\n" .
+                "    'password_rules' => [\n" .
+                "        'min_length' => $passwordMinLength,\n" .
+                "        'complexity' => " . ($passwordComplexity ? 'true' : 'false') . "\n" .
+                "    ],\n" .
                 "    'storage_base_path' => " . var_export($storageBasePath, true) . ",\n" .
                 "    'trusted_proxies' => " . var_export($trustedProxies, true) . ",\n" .
                 "    'public_browsing_enabled' => " . ($publicBrowsingEnabled ? 'true' : 'false') . ",\n" .
@@ -220,7 +248,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'tags_enabled' => " . ($tagsEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'pastes_enabled' => " . ($pastesEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'hotlink_logging_enabled' => " . ($hotlinkLoggingEnabled ? 'true' : 'false') . ",\n" .
+                "    'hotlink_block_enabled' => " . ($hotlinkBlockEnabled ? 'true' : 'false') . ",\n" .
                 "    'hotlink_trusted_hosts' => " . var_export($hotlinkTrustedHosts, true) . ",\n" .
+                "    'admin_ip_allowlist' => " . var_export($adminIpAllowlist, true) . ",\n" .
                 "    'ops_alerts' => [\n" .
                 "        'storage_partition_percent_enabled' => " . ($opsStoragePartitionPercentEnabled ? 'true' : 'false') . ",\n" .
                 "        'storage_partition_percent_threshold' => $opsStoragePartitionPercentThreshold,\n" .
@@ -397,6 +427,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->exec('DELETE FROM pastes');
             } catch (PDOException $e) {
             }
+            try {
+                $pdo->exec('DELETE FROM user_notices');
+            } catch (PDOException $e) {
+            }
+            try {
+                $pdo->exec('DELETE FROM signed_links');
+            } catch (PDOException $e) {
+            }
 
             datadock_clear_all_partition_files_on_disk($pdo);
 
@@ -470,7 +508,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $adminUid = (int) ($_SESSION['user_id'] ?? 0);
 
-        if ($reportId <= 0 || !in_array($action, ['dismiss', 'quarantine', 'delete'], true)) {
+        if ($reportId <= 0 || !in_array($action, ['dismiss', 'quarantine', 'delete', 'hold', 'clear_hold'], true)) {
             $_SESSION['flash_error'][] = '❌ Invalid moderation action.';
             header('Location: admin.php?section=reports');
             exit;
@@ -490,14 +528,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: admin.php?section=reports');
             exit;
         }
+
+        require_once __DIR__ . '/includes/notices.php';
+        $fileId = (int) ($report['file_id'] ?? 0);
+        $fileName = (string) ($report['original_name'] ?? $report['filename'] ?? ('#' . $fileId));
+        $reporterId = (int) ($report['reporter_user_id'] ?? 0);
+
+        if ($action === 'hold' || $action === 'clear_hold') {
+            if ($fileId > 0) {
+                $pdo->prepare('UPDATE files SET purge_hold = ? WHERE id = ?')->execute([$action === 'hold' ? 1 : 0, $fileId]);
+            }
+            datadock_log_activity($pdo, $action === 'hold' ? 'purge_hold_set' : 'purge_hold_cleared', [
+                'actor_user_id' => $adminUid > 0 ? $adminUid : null,
+                'file_id' => $fileId > 0 ? $fileId : null,
+                'related_user_id' => $reporterId > 0 ? $reporterId : null,
+                'detail' => ['report_id' => $reportId, 'name' => $fileName],
+            ]);
+            if ($action === 'hold' && $reporterId > 0) {
+                datadock_add_notice($pdo, $reporterId, 'report_reviewed', 'A file you reported is held for review', $fileName, 'dashboard.php');
+            }
+            $_SESSION['flash_success'][] = $action === 'hold'
+                ? '✅ File will be skipped by expiry and trash purge until the hold is cleared.'
+                : '✅ Purge hold cleared.';
+            header('Location: admin.php?section=reports');
+            exit;
+        }
+
         if (($report['status'] ?? 'open') !== 'open') {
             $_SESSION['flash_warning'][] = '⚠️ This report is already closed.';
             header('Location: admin.php?section=reports');
             exit;
         }
 
-        $fileId = (int) ($report['file_id'] ?? 0);
-        $fileName = (string) ($report['original_name'] ?? $report['filename'] ?? ('#' . $fileId));
         $actionTaken = null;
 
         if ($action === 'dismiss') {
@@ -518,6 +580,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'related_user_id' => (int) ($report['reporter_user_id'] ?? 0),
                 'detail' => ['report_id' => $reportId, 'name' => $fileName],
             ]);
+            if ($reporterId > 0) {
+                datadock_add_notice($pdo, $reporterId, 'report_reviewed', 'Your report was reviewed', 'Report on ' . $fileName . ' was dismissed.', 'dashboard.php');
+            }
             $_SESSION['flash_success'][] = '✅ Report dismissed.';
             header('Location: admin.php?section=reports');
             exit;
@@ -547,6 +612,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'related_user_id' => (int) ($report['reporter_user_id'] ?? 0),
             'detail' => ['report_id' => $reportId, 'action' => $actionTaken, 'name' => $fileName],
         ]);
+        if ($reporterId > 0) {
+            datadock_add_notice($pdo, $reporterId, 'report_reviewed', 'Your report was reviewed', 'Action on ' . $fileName . ': ' . (string) $actionTaken . '.', 'dashboard.php');
+        }
         $_SESSION['flash_success'][] = '✅ Report action applied.';
         header('Location: admin.php?section=reports');
         exit;
@@ -727,6 +795,14 @@ require_once __DIR__ . '/includes/header.php';
                 $fileIconsJson = !empty($fileIcons) ? json_encode($fileIcons, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '';
                 $tosEnabled = $fileSettings['tos_enabled'] ?? false;
                 $tosText = trim($fileSettings['tos_text'] ?? '');
+                $privacyEnabled = !empty($fileSettings['privacy_enabled']);
+                $privacyText = trim((string) ($fileSettings['privacy_text'] ?? ''));
+                $passwordRules = is_array($fileSettings['password_rules'] ?? null) ? $fileSettings['password_rules'] : [];
+                $passwordMinLength = (int) ($passwordRules['min_length'] ?? 6);
+                if ($passwordMinLength < 6) {
+                    $passwordMinLength = 6;
+                }
+                $passwordComplexity = !empty($passwordRules['complexity']);
 
                 $storageBasePath = trim($fileSettings['storage_base_path'] ?? '');
                 $trustedProxies = trim((string) ($fileSettings['trusted_proxies'] ?? ''));
@@ -736,7 +812,9 @@ require_once __DIR__ . '/includes/header.php';
                 $tagsEnabledSetting = !isset($fileSettings['tags_enabled']) || !empty($fileSettings['tags_enabled']);
                 $pastesEnabledSetting = !isset($fileSettings['pastes_enabled']) || !empty($fileSettings['pastes_enabled']);
                 $hotlinkLoggingEnabled = !isset($fileSettings['hotlink_logging_enabled']) || !empty($fileSettings['hotlink_logging_enabled']);
+                $hotlinkBlockEnabled = !empty($fileSettings['hotlink_block_enabled']);
                 $hotlinkTrustedHosts = trim($fileSettings['hotlink_trusted_hosts'] ?? '');
+                $adminIpAllowlist = trim((string) ($fileSettings['admin_ip_allowlist'] ?? ''));
 
                 $opsAl = $fileSettings['ops_alerts'] ?? [];
                 $opsStoragePartitionPercentEnabled = !empty($opsAl['storage_partition_percent_enabled']);
@@ -750,12 +828,12 @@ require_once __DIR__ . '/includes/header.php';
             case 'users':
                 // Fetch user stats
                 $stmt = $pdo->query("
-                    SELECT u.id, u.username, u.email, u.role, u.created_at, u.storage_partition_id,
+                    SELECT u.id, u.username, u.email, u.role, u.suspended, u.created_at, u.storage_partition_id,
                         COUNT(f.id) AS file_count,
                         COALESCE(SUM(f.filesize), 0) AS total_size
                     FROM users u
                     LEFT JOIN files f ON u.id = f.user_id AND f.deleted_at IS NULL
-                    GROUP BY u.id, u.username, u.email, u.role, u.created_at, u.storage_partition_id
+                    GROUP BY u.id, u.username, u.email, u.role, u.suspended, u.created_at, u.storage_partition_id
                     ORDER BY u.created_at DESC
                 ");
                 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -820,7 +898,8 @@ require_once __DIR__ . '/includes/header.php';
                                 f.original_name,
                                 f.filename,
                                 f.deleted_at,
-                                f.quarantine_status
+                                f.quarantine_status,
+                                f.purge_hold
                          FROM file_reports r
                          LEFT JOIN users ru ON r.reporter_user_id = ru.id
                          LEFT JOIN users au ON r.reviewed_by_user_id = au.id

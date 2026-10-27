@@ -64,7 +64,15 @@ $settings = [
 
     // Log requests with Referer from another host (Admin → Hotlink log)
     'hotlink_logging_enabled' => true,
+    'hotlink_block_enabled' => false,      // Deny downloads, ZIP, thumbnails, and avatars when Referer is an untrusted host
     'hotlink_trusted_hosts' => '',         // Extra trusted hostnames (comma/space); HTTP_HOST always trusted
+    'admin_ip_allowlist' => '',            // IPs/CIDRs allowed to use the admin panel. Empty = no restriction.
+    'password_rules' => [
+        'min_length' => 6,
+        'complexity' => false              // Require upper, lower, and a digit
+    ],
+    'privacy_enabled' => false,
+    'privacy_text' => '',                  // Public privacy notice (privacy.php), separate from PRIVACY.md
 
     'guest_uploads' => [
         'enabled' => false,

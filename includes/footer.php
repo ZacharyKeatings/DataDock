@@ -22,6 +22,9 @@ $adminContactEmail = trim($settings['admin_contact_email'] ?? '');
             <?php if ($version): ?>
                 v<?= sanitize_data($version) ?> DataDock
             <?php endif; ?>
+            <?php if (!empty($settings['privacy_enabled']) && trim((string) ($settings['privacy_text'] ?? '')) !== ''): ?>
+                · <a href="privacy.php">Privacy</a>
+            <?php endif; ?>
             <?php if (!empty($adminContactEmail)): ?>
                 · <a href="mailto:<?= sanitize_data($adminContactEmail) ?>">Contact Admin</a>
             <?php endif; ?>

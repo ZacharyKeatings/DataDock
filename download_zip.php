@@ -63,6 +63,7 @@ foreach ($files as $file) {
 $zip->close();
 
 datadock_log_hotlink_if_external($pdo, $settings, 'download_zip');
+datadock_deny_untrusted_hotlink($settings);
 datadock_log_activity($pdo, 'download_zip', [
     'actor_user_id' => $userId,
     'detail' => [
