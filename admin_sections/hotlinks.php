@@ -10,7 +10,7 @@
     <h2 class="page-title">Hotlink log</h2>
     <p class="page-description">
         Entries appear when something is requested with a Referer from another host, such as another site embedding or linking a file, thumbnail, or avatar URL.
-        Same-site navigation and direct opens with no referer are not logged. Configure logging and extra trusted hosts under <a href="admin.php?section=site">Site Settings</a>.
+        Same-site navigation and direct opens with no referer are not logged. Configure logging and extra trusted hosts under <a href="admin.php?section=site&amp;group=security">Security</a>.
     </p>
 
     <?php if ($hotlinkError !== null): ?>

@@ -10,7 +10,7 @@
     <h2 class="page-title">Activity log</h2>
     <p class="page-description">
         Uploads, downloads, sharing, deletes, and other actions recorded for operations and auditing.
-        Configure storage and quota alerts under <a href="admin.php?section=site">Site Settings</a>.
+        Configure storage and quota alerts under <a href="admin.php?section=site&amp;group=maintenance">Maintenance</a>.
     </p>
 
     <?php if ($activityError !== null): ?>
