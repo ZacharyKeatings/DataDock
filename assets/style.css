@@ -44,8 +44,12 @@
     outline-offset: 2px;
   }
 
+html {
+    background-color: var(--color-background);
+    min-height: 100%;
+}
+
 html, body {
-    height: 100%;
     margin: 0;
     padding: 0;
 }
@@ -54,6 +58,8 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-height: 100dvh;
+    background-color: var(--color-background);
     font-family: system-ui, "Segoe UI", sans-serif;
     line-height: 1.45;
 }

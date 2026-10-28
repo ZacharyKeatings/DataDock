@@ -1,5 +1,6 @@
 /* Dark theme: same structure as light, green accent kept, white → dark */
 :root {
+    color-scheme: dark;
     --color-header-background: #0f3d42;
     --color-background: #1e2426;
     --color-text: #e7eeef;
