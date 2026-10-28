@@ -9,6 +9,7 @@ if ($currentScript !== 'install.php' && (!file_exists($settingsPath) || !file_ex
 }
 
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/themes.php';
 require_once __DIR__ . '/settings_loader.php';
 require_once __DIR__ . '/pastes.php';
 $settings = file_exists($settingsPath) ? datadock_load_settings() : [];
@@ -21,18 +22,11 @@ $siteName = get_site_name();
 $pageTitle = $pageTitle ?? $siteName;
 $currentPage = get_current_page();
 $guestUploadsEnabled = $settings['guest_uploads']['enabled'] ?? false;
-$defaultTheme = $settings['theme'] ?? 'light';
 $logoUrl = trim($settings['logo_url'] ?? '');
 $faviconUrl = trim($settings['favicon_url'] ?? '');
 
-// User cookie overrides default theme
-$theme = $_COOKIE['datadock_theme'] ?? $defaultTheme;
-if (!in_array($theme, ['light', 'dark'], true)) {
-    $theme = $defaultTheme;
-}
-$themeMap = ['light' => 'themes/light.css', 'dark' => 'themes/dark.css'];
-$themePath = $themeMap[$theme] ?? 'themes/light.css';
-$themeCssUrl = app_asset_url('assets/' . $themePath);
+$theme = datadock_resolve_theme($settings);
+$themeCssUrl = datadock_theme_stylesheet_url($theme);
 $loggedIn = !empty($_SESSION['user_id']);
 $isAdmin = $loggedIn && (($_SESSION['role'] ?? '') === 'admin');
 $homeHref = $loggedIn ? 'dashboard.php' : 'index.php';
@@ -97,10 +91,6 @@ if ($loggedIn && isset($pdo) && $pdo instanceof PDO) {
                                 <?php if ($isAdmin): ?>
                                 <a href="admin.php"<?= $currentPage === 'admin.php' ? ' class="active"' : '' ?>>Admin</a>
                                 <?php endif; ?>
-                                <div class="nav-theme" role="group" aria-label="Color theme">
-                                    <a href="set_theme.php?theme=light" class="theme-btn<?= $theme === 'light' ? ' active' : '' ?>" data-theme-choice="light" data-theme-css="<?= sanitize_data(app_asset_url('assets/themes/light.css')) ?>" title="Light mode" aria-label="Switch to light mode"><?= icon_svg('sun') ?></a>
-                                    <a href="set_theme.php?theme=dark" class="theme-btn<?= $theme === 'dark' ? ' active' : '' ?>" data-theme-choice="dark" data-theme-css="<?= sanitize_data(app_asset_url('assets/themes/dark.css')) ?>" title="Dark mode" aria-label="Switch to dark mode"><?= icon_svg('moon') ?></a>
-                                </div>
                                 <a href="logout.php">Logout</a>
                             </div>
                         </details>
@@ -116,10 +106,6 @@ if ($loggedIn && isset($pdo) && $pdo instanceof PDO) {
                         <?php if (empty($readOnlyMode)): ?>
                         <a class="nav-link<?= $currentPage === 'register.php' ? ' active' : '' ?>" href="register.php">Register</a>
                         <?php endif; ?>
-                        <span class="theme-toggle nav-theme" role="group" aria-label="Color theme">
-                            <a href="set_theme.php?theme=light" class="theme-btn<?= $theme === 'light' ? ' active' : '' ?>" data-theme-choice="light" data-theme-css="<?= sanitize_data(app_asset_url('assets/themes/light.css')) ?>" title="Light mode" aria-label="Switch to light mode"><?= icon_svg('sun') ?></a>
-                            <a href="set_theme.php?theme=dark" class="theme-btn<?= $theme === 'dark' ? ' active' : '' ?>" data-theme-choice="dark" data-theme-css="<?= sanitize_data(app_asset_url('assets/themes/dark.css')) ?>" title="Dark mode" aria-label="Switch to dark mode"><?= icon_svg('moon') ?></a>
-                        </span>
                     <?php endif; ?>
                     </div>
                 </nav>
@@ -148,7 +134,7 @@ if ($loggedIn && isset($pdo) && $pdo instanceof PDO) {
                         <?php
                         $isHtml = is_array($msg) && !empty($msg['html']);
                         $text = datadock_plain_flash($isHtml ? (string) ($msg['msg'] ?? '') : (string) $msg);
-                        $persistent = $isHtml && (str_contains($text, 'onetimelink') || str_contains($text, 'btn-copy'));
+                        $persistent = ($isHtml && !empty($msg['persistent'])) || ($isHtml && (str_contains($text, 'onetimelink') || str_contains($text, 'btn-copy')));
                         ?>
                         <div class="flash <?= $type ?><?= $persistent ? ' persistent' : '' ?>" role="alert" aria-live="polite">
                             <button type="button" class="close-btn" onclick="this.parentElement.remove()" aria-label="Dismiss"><?= icon_svg('close') ?></button>

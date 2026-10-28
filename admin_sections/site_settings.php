@@ -36,6 +36,13 @@
                 </div>
                 <div class="settings-row settings-row-checkbox">
                     <label>
+                        <input type="checkbox" name="email_verification_enabled" <?= !empty($emailVerificationEnabled) ? 'checked' : '' ?>>
+                        Require email verification for new accounts
+                    </label>
+                </div>
+                <p class="settings-hint">Outbound mail is not configured yet. When this is on, new signups stay signed out until they open the confirmation link shown after registration, or an admin confirms them in User Management. Existing accounts stay confirmed.</p>
+                <div class="settings-row settings-row-checkbox">
+                    <label>
                         <input type="checkbox" name="enforce_unique_email" <?= $enforceUniqueEmail ? 'checked' : '' ?>>
                         Enforce Unique Email (strict mode; uncheck for relaxed)
                     </label>
@@ -294,6 +301,20 @@
                     </label>
                 </div>
                 <p class="settings-hint">For public instances: new uploads are pending until approved in File Management.</p>
+                <div class="settings-row">
+                    <label for="filetype_policy_mode">File type policy</label>
+                    <select name="filetype_policy_mode" id="filetype_policy_mode">
+                        <option value="off"<?= ($filetypeMode ?? 'off') === 'off' ? ' selected' : '' ?>>Off (block only dangerous types)</option>
+                        <option value="allow"<?= ($filetypeMode ?? '') === 'allow' ? ' selected' : '' ?>>Allow only the extensions below</option>
+                        <option value="deny"<?= ($filetypeMode ?? '') === 'deny' ? ' selected' : '' ?>>Block the extensions below</option>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <label for="filetype_policy_extensions">Extensions</label>
+                    <textarea name="filetype_policy_extensions" id="filetype_policy_extensions" rows="3" placeholder="apk, pdf, png"><?= sanitize_data($filetypeExtensions ?? '') ?></textarea>
+                </div>
+                <p class="settings-hint" id="filetype-policy-warning" hidden></p>
+                <p class="settings-hint">Separate extensions with commas or spaces. Executable and server-script types such as php, exe, and js stay blocked even if you allow them.</p>
             </div>
         </div>
 
@@ -504,10 +525,12 @@
                 <div class="settings-row">
                     <label for="theme">Default Theme</label>
                     <select name="theme" id="theme">
-                        <option value="light"<?= ($theme ?? 'light') === 'light' ? ' selected' : '' ?>>Light</option>
-                        <option value="dark"<?= ($theme ?? '') === 'dark' ? ' selected' : '' ?>>Dark</option>
+                        <?php foreach (datadock_theme_catalog() as $themeSlug => $themeMeta): ?>
+                            <option value="<?= sanitize_data($themeSlug) ?>"<?= ($theme ?? 'light') === $themeSlug ? ' selected' : '' ?>><?= sanitize_data($themeMeta['label']) ?><?= !empty($themeMeta['custom']) ? ' (custom)' : '' ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
+                <p class="settings-hint">Add more themes under <a href="admin.php?section=themes">Themes</a>. Guests always use this theme. Signed-in users can choose their own on their profile.</p>
                 <div class="settings-row">
                     <label for="file_icons">Custom File Icons (JSON)</label>
                     <textarea name="file_icons" id="file_icons" rows="3" placeholder='{"pdf":"https://example.com/pdf.svg"}'><?= sanitize_data($fileIconsJson ?? '') ?></textarea>
@@ -702,5 +725,30 @@
     toggleInputs('user_max_storage_enabled', ['user_max_storage', 'user_max_storage_unit']);
     toggleInputs('guest_uploads_enabled', ['guest_max_files', 'guest_max_storage', 'guest_max_storage_unit']);
     toggleInputs('brute_force_enabled', ['max_attempts', 'lockout_minutes', 'lockout_window']);
+
+    const caution = ['html','htm','xhtml','svg','xml','swf','apk','ipa','aab','jar','deb','rpm','dmg','iso','pkg','app','wasm','ps1','command'];
+    const alwaysBlocked = ['php','phtml','phar','exe','js','mjs','sh','bat','py','pl','cgi','asp','aspx','jsp','vbs','dll','msi','hta'];
+    const policyBox = document.getElementById('filetype_policy_extensions');
+    const policyMode = document.getElementById('filetype_policy_mode');
+    const policyWarn = document.getElementById('filetype-policy-warning');
+    const refreshPolicyWarn = () => {
+        if (!policyBox || !policyWarn || !policyMode || policyMode.value === 'off') {
+            if (policyWarn) policyWarn.hidden = true;
+            return;
+        }
+        const listed = policyBox.value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+        const risky = caution.filter(ext => listed.includes(ext));
+        const blocked = alwaysBlocked.filter(ext => listed.includes(ext));
+        const parts = [];
+        if (risky.length) parts.push('Potentially unsafe: ' + risky.join(', ') + '. These can contain active or executable content.');
+        if (blocked.length) parts.push('Still blocked by the server: ' + blocked.join(', ') + '.');
+        policyWarn.hidden = parts.length === 0;
+        policyWarn.textContent = parts.join(' ');
+    };
+    if (policyBox && policyMode) {
+        policyBox.addEventListener('input', refreshPolicyWarn);
+        policyMode.addEventListener('change', refreshPolicyWarn);
+        refreshPolicyWarn();
+    }
 })();
 </script>

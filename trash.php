@@ -9,6 +9,7 @@ require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
 $readOnly = datadock_read_only_enabled($settings);
 
+require_once __DIR__ . '/includes/pagination.php';
 $pageTitle = "Trash";
 require_once __DIR__ . '/includes/header.php';
 
@@ -18,7 +19,10 @@ $userId = $_SESSION['user_id'];
     'trashed_only' => true,
     'exclude_trashed' => false,
 ]);
-$stmt = $pdo->prepare("SELECT * FROM files f WHERE $where ORDER BY f.deleted_at DESC");
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM files f WHERE $where");
+$countStmt->execute($params);
+$trashPager = datadock_page_clamp(datadock_page_request('p', 25), (int) $countStmt->fetchColumn());
+$stmt = $pdo->prepare("SELECT * FROM files f WHERE $where ORDER BY f.deleted_at DESC LIMIT {$trashPager['per_page']} OFFSET {$trashPager['offset']}");
 $stmt->execute($params);
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -71,6 +75,7 @@ $trashRetentionDays = (int) ($settings['trash_retention_days'] ?? 30);
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php datadock_render_pager($trashPager); ?>
     <?php else: ?>
         <div class="empty-state">
             <p>Trash is empty.</p>

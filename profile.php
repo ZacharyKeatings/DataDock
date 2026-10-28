@@ -12,7 +12,7 @@ require_once __DIR__ . '/includes/accounts.php';
 require_once __DIR__ . '/includes/audit_log.php';
 
 $userId = $_SESSION['user_id'];
-$stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at FROM users WHERE id = ?");
+$stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at, preferred_theme FROM users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$user) {
@@ -26,9 +26,31 @@ $email = $user['email'];
 $displayName = $user['display_name'] ?? '';
 $avatar = $user['avatar'] ?? '';
 $bio = $user['bio'] ?? '';
+$preferredTheme = trim((string) ($user['preferred_theme'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    if ($action === 'theme') {
+        require_once __DIR__ . '/includes/themes.php';
+        $chosen = trim((string) ($_POST['preferred_theme'] ?? ''));
+        if ($chosen !== '' && !datadock_theme_is_known($chosen)) {
+            $_SESSION['flash_error'][] = 'That theme is not available.';
+        } else {
+            $pdo->prepare('UPDATE users SET preferred_theme = ? WHERE id = ?')->execute([
+                $chosen === '' ? null : $chosen,
+                $userId,
+            ]);
+            if ($chosen === '') {
+                datadock_clear_theme_cookie();
+            } else {
+                datadock_set_theme_cookie($chosen);
+            }
+            $_SESSION['flash_success'][] = 'Default theme saved.';
+        }
+        header('Location: profile.php');
+        exit;
+    }
 
     if ($action === 'profile') {
         if (datadock_read_only_enabled($settings)) {
@@ -376,6 +398,26 @@ require_once __DIR__ . '/includes/header.php';
             <?php endif; ?>
         </div>
         <?php endif; ?>
+    </div>
+
+    <div class="settings-card stack-card">
+        <h3 class="settings-card-title">Default theme</h3>
+        <div class="settings-card-body">
+            <form method="post" class="form">
+                <input type="hidden" name="action" value="theme">
+                <div class="form-group">
+                    <label for="preferred_theme">Theme</label>
+                    <select name="preferred_theme" id="preferred_theme">
+                        <option value=""<?= $preferredTheme === '' ? ' selected' : '' ?>>Site default</option>
+                        <?php foreach (datadock_theme_catalog() as $themeSlug => $themeMeta): ?>
+                            <option value="<?= sanitize_data($themeSlug) ?>"<?= $preferredTheme === $themeSlug ? ' selected' : '' ?>><?= sanitize_data($themeMeta['label']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="form-hint">Applied while you are signed in. Choose Site default to follow the theme set by an admin.</p>
+                </div>
+                <button type="submit" class="btn btn-primary">Save theme</button>
+            </form>
+        </div>
     </div>
 
     <div class="settings-card stack-card">

@@ -13,6 +13,7 @@ require_once __DIR__ . '/includes/dashboard_actions.php';
 require_once __DIR__ . '/includes/user_trust.php';
 require_once __DIR__ . '/includes/notices.php';
 require_once __DIR__ . '/includes/access_control.php';
+require_once __DIR__ . '/includes/pagination.php';
 
 datadock_process_dashboard_post($pdo);
 datadock_maybe_record_storage_snapshot($pdo, (int) $_SESSION['user_id']);
@@ -68,21 +69,30 @@ if ($tagsEnabled && !empty($_GET['tag']) && is_numeric($_GET['tag'])) {
     }
 }
 [$where, $params] = build_files_list_where($listOptions);
-$stmt = $pdo->prepare("SELECT * FROM files f WHERE $where ORDER BY f.upload_date DESC");
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM files f WHERE $where");
+$countStmt->execute($params);
+$filePager = datadock_page_clamp(datadock_page_request('p', 25), (int) $countStmt->fetchColumn());
+$stmt = $pdo->prepare("SELECT * FROM files f WHERE $where ORDER BY f.upload_date DESC LIMIT {$filePager['per_page']} OFFSET {$filePager['offset']}");
 $stmt->execute($params);
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch files shared with user (exclude quarantined and trashed)
+$sharedWhere = "
+    fs.shared_with_user_id = ?
+    AND f.deleted_at IS NULL
+    AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
+    AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
+";
+$sharedCount = $pdo->prepare("SELECT COUNT(*) FROM files f JOIN file_shares fs ON f.id = fs.file_id WHERE $sharedWhere");
+$sharedCount->execute([$userId]);
+$sharedPager = datadock_page_clamp(datadock_page_request('sp', 25), (int) $sharedCount->fetchColumn());
 $stmt = $pdo->prepare("
     SELECT f.*, u.username as shared_by_username
     FROM files f
     JOIN file_shares fs ON f.id = fs.file_id
     JOIN users u ON fs.shared_by_user_id = u.id
-    WHERE fs.shared_with_user_id = ?
-    AND f.deleted_at IS NULL
-    AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
-    AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
+    WHERE $sharedWhere
     ORDER BY f.upload_date DESC
+    LIMIT {$sharedPager['per_page']} OFFSET {$sharedPager['offset']}
 ");
 $stmt->execute([$userId]);
 $sharedFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -125,8 +135,12 @@ if ($tagsEnabled) {
 }
 
 $shareFoldersList = [];
+$shareFolderPager = datadock_page_clamp(datadock_page_request('sfp', 10), 0);
 try {
-    $sfs = $pdo->prepare('SELECT id, title, token, expires_at, created_at FROM share_folders WHERE user_id = ? ORDER BY created_at DESC LIMIT 15');
+    $sfCount = $pdo->prepare('SELECT COUNT(*) FROM share_folders WHERE user_id = ?');
+    $sfCount->execute([$userId]);
+    $shareFolderPager = datadock_page_clamp(datadock_page_request('sfp', 10), (int) $sfCount->fetchColumn());
+    $sfs = $pdo->prepare('SELECT id, title, token, expires_at, created_at FROM share_folders WHERE user_id = ? ORDER BY created_at DESC LIMIT ' . (int) $shareFolderPager['per_page'] . ' OFFSET ' . (int) $shareFolderPager['offset']);
     $sfs->execute([$userId]);
     $shareFoldersList = $sfs->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
@@ -584,6 +598,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php datadock_render_pager($filePager); ?>
     <?php else: ?>
         <div class="empty-state">
             <p><?= ($foldersEnabled && $currentFolderId > 0) ? 'This folder is empty.' : "You haven't uploaded any files yet." ?></p>
@@ -679,6 +694,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
             }
             ?>
         </ul>
+        <?php datadock_render_pager($shareFolderPager); ?>
     </div>
     <?php endif; ?>
 </div>
@@ -731,6 +747,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
             </div>
         <?php endforeach; ?>
     </div>
+    <?php datadock_render_pager($sharedPager); ?>
 </div>
 <?php endif; ?>
 

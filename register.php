@@ -79,12 +79,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
         $stmt->execute([$username, $email, $passwordHash]);
+        $newUserId = (int) $pdo->lastInsertId();
 
         if ($inviteOnly && $signupToken !== '') {
             $pdo->prepare("UPDATE signup_tokens SET used_at = UTC_TIMESTAMP() WHERE token = ?")->execute([$signupToken]);
         }
 
-        $_SESSION['user_id'] = $pdo->lastInsertId();
+        require_once __DIR__ . '/includes/email_verify.php';
+        if (datadock_email_verification_enabled($settings)) {
+            $verify = datadock_begin_email_verification($pdo, $newUserId, $email);
+            if ($verify['sent']) {
+                $_SESSION['flash_success'][] = 'Account created. Check your email for a confirmation link before signing in.';
+            } else {
+                $safeUrl = sanitize_data($verify['url']);
+                $_SESSION['flash_success'][] = [
+                    'html' => true,
+                    'msg' => 'Account created. Outbound email is not configured yet, so confirm this address with the link below. It expires in two days.<br><a href="' . $safeUrl . '">Confirm email</a>',
+                ];
+            }
+            header('Location: login.php');
+            exit;
+        }
+
+        $_SESSION['user_id'] = $newUserId;
         $_SESSION['username'] = $username;
         $_SESSION['role'] = 'user';
         datadock_finalize_login_session($settings, false);

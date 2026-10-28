@@ -1,6 +1,6 @@
 <?php
-$fileCount = count($allFiles);
-$totalSize = array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 0), 0);
+$fileCount = isset($fileTotal) ? (int) $fileTotal : count($allFiles);
+$totalSize = isset($fileTotalSize) ? (int) $fileTotalSize : array_reduce($allFiles, fn($s, $f) => $s + (int)($f['filesize'] ?? 0), 0);
 $fileStatusFilter = $fileStatusFilter ?? 'all';
 ?>
 <div class="admin-file-management">
@@ -138,6 +138,7 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
             </div>
         <?php endforeach; ?>
     </div>
+    <?php if (!empty($filePager)) { datadock_render_pager($filePager); } ?>
     <?php else: ?>
     <div class="empty-state">
         <p>No uploaded files found.</p>

@@ -6,6 +6,7 @@ require_once __DIR__ . '/includes/functions.php';
 $pageTitle = "Home";
 require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
+require_once __DIR__ . '/includes/pagination.php';
 require_once 'includes/header.php';
 
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
@@ -14,17 +15,20 @@ $readOnly = datadock_read_only_enabled($settings);
 $guestUploadsEnabled = !empty($settings['guest_uploads']['enabled']);
 $userId = $_SESSION['user_id'] ?? null;
 
+$indexPager = null;
 // Get files to display
 if ($publicBrowsingEnabled) {
-    // Show only public, approved files (quarantined/pending never visible publicly)
-    $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
-        LEFT JOIN users ON files.user_id = users.id 
-        WHERE files.is_public = 1 
+    $publicWhere = "files.is_public = 1
         AND files.deleted_at IS NULL
         AND (files.quarantine_status = 'approved' OR files.quarantine_status IS NULL)
-        AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+        AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())";
+    $publicTotal = (int) $pdo->query("SELECT COUNT(*) FROM files WHERE $publicWhere")->fetchColumn();
+    $indexPager = datadock_page_clamp(datadock_page_request('p', 24), $publicTotal);
+    $stmt = $pdo->prepare("SELECT files.*, users.username FROM files 
+        LEFT JOIN users ON files.user_id = users.id 
+        WHERE $publicWhere
         ORDER BY upload_date DESC 
-        LIMIT 20");
+        LIMIT {$indexPager['per_page']} OFFSET {$indexPager['offset']}");
     $stmt->execute();
 } else {
     // Default: latest 5 uploads (no download links for anons); only approved
@@ -160,6 +164,7 @@ $recentFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </div>
     <?php endif; ?>
+    <?php if ($indexPager !== null) { datadock_render_pager($indexPager); } ?>
 </div>
 
 <script>

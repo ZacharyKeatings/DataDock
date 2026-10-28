@@ -6,9 +6,11 @@ require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/notices.php';
+require_once __DIR__ . '/includes/pagination.php';
 
 $userId = (int) $_SESSION['user_id'];
-$notices = datadock_list_notices($pdo, $userId);
+$noticePager = datadock_page_clamp(datadock_page_request('p', 25), datadock_count_notices($pdo, $userId));
+$notices = datadock_list_notices($pdo, $userId, $noticePager['per_page'], $noticePager['offset']);
 datadock_mark_notices_read($pdo, $userId);
 
 $pageTitle = 'Notices';
@@ -41,6 +43,7 @@ require_once __DIR__ . '/includes/header.php';
                 </li>
             <?php endforeach; ?>
         </ul>
+        <?php datadock_render_pager($noticePager); ?>
     <?php endif; ?>
 </div>
 

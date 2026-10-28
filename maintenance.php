@@ -3,6 +3,7 @@
  * Maintenance mode page. Shown to non-admins when maintenance_mode is enabled.
  */
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/themes.php';
 require_once __DIR__ . '/includes/settings_loader.php';
 $siteName = 'DataDock';
 $settings = [];
@@ -10,10 +11,7 @@ if (file_exists(__DIR__ . '/config/settings.php')) {
     $settings = datadock_load_settings();
     $siteName = $settings['site_name'] ?? 'DataDock';
 }
-$theme = $_COOKIE['datadock_theme'] ?? ($settings['theme'] ?? 'light');
-if (!in_array($theme, ['light', 'dark'], true)) {
-    $theme = 'light';
-}
+$theme = datadock_resolve_theme($settings);
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="<?= htmlspecialchars($theme, ENT_QUOTES, 'UTF-8') ?>">
@@ -22,7 +20,7 @@ if (!in_array($theme, ['light', 'dark'], true)) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($siteName) ?> — Maintenance</title>
     <link rel="stylesheet" href="<?= htmlspecialchars(app_asset_url('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="stylesheet" href="<?= htmlspecialchars(app_asset_url('assets/themes/' . $theme . '.css'), ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(datadock_theme_stylesheet_url($theme), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body>
     <div class="page-wrapper">

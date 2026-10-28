@@ -56,22 +56,6 @@ $adminContactEmail = trim($settings['admin_contact_email'] ?? '');
             });
         }
 
-        document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                var theme = btn.getAttribute('data-theme-choice');
-                var css = btn.getAttribute('data-theme-css');
-                var sheet = document.getElementById('theme-stylesheet');
-                if (!theme || !css || !sheet) return;
-                e.preventDefault();
-                document.documentElement.setAttribute('data-theme', theme);
-                sheet.href = css;
-                document.cookie = 'datadock_theme=' + theme + '; path=/; max-age=31536000; samesite=lax';
-                document.querySelectorAll('[data-theme-choice]').forEach(function (el) {
-                    el.classList.toggle('active', el.getAttribute('data-theme-choice') === theme);
-                });
-            });
-        });
-
         var copiedIcon = <?= json_encode(icon_svg('check')) ?>;
         document.querySelectorAll('.btn-copy[data-copy]').forEach(function (btn) {
             if (btn.dataset.copyBound) return;

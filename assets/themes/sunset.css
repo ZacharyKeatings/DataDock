@@ -1,0 +1,32 @@
+:root {
+    color-scheme: light;
+    --color-header-background: #c4553a;
+    --color-background: #fff6ef;
+    --color-text: #2b1b16;
+    --color-primary: #c4553a;
+    --color-secondary: #ffe8dc;
+    --color-accent: #f0a202;
+    --color-border: #f0cfc2;
+    --color-box-background: #fffaf7;
+    --color-link: #a33b24;
+    --color-file-row-alt: rgba(0, 0, 0, 0.04);
+    --font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --radius: 10px;
+}
+body { background-color: var(--color-background); color: var(--color-text); font-family: var(--font-family); }
+a { color: #a33b24; }
+a:hover { color: #7a2a18; }
+.container, .page-section { background: var(--color-background); color: var(--color-text); }
+.site-header { background-color: var(--color-header-background); }
+button, .btn-primary { background-color: var(--color-primary); color: #ffffff; border: none; border-radius: var(--radius); }
+button:hover, .btn-primary:hover { background-color: #ac3d22; color: #ffffff; }
+.page-section, .settings-card, .stat-card { background: #fffaf7; border-color: var(--color-border); }
+.settings-card { background: var(--color-secondary); }
+.form-group input, .form-group textarea, .form-group select, .settings-row input, .settings-row select, .settings-row textarea {
+    background: #fffaf7; color: var(--color-text); border-color: var(--color-border); border-radius: var(--radius);
+}
+.stat-value, .profile-stat-value { color: #c4553a; }
+.sidebar-nav a { color: var(--color-text); }
+.sidebar-nav a.active, .sidebar-nav a:hover { background: var(--color-secondary); color: #c4553a; }
+.file-row, .file-row-dashboard, .file-row-user-management, .file-row-file-management { border-bottom-color: var(--color-border); }
+.welcome-banner { background: var(--color-secondary); border-left-color: var(--color-accent); }

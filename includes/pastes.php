@@ -219,8 +219,9 @@ function datadock_paste_create(PDO $pdo, array $row): array {
 /**
  * @return list<array<string, mixed>>
  */
-function datadock_owned_pastes(PDO $pdo, int $limit = 20): array {
-    $limit = max(1, min(50, $limit));
+function datadock_owned_pastes(PDO $pdo, int $limit = 20, int $offset = 0): array {
+    $limit = max(1, min(100, $limit));
+    $offset = max(0, $offset);
     $uid = $_SESSION['user_id'] ?? null;
     try {
         if ($uid) {
@@ -229,7 +230,7 @@ function datadock_owned_pastes(PDO $pdo, int $limit = 20): array {
                 FROM pastes
                 WHERE user_id = ? AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())
                 ORDER BY created_at DESC
-                LIMIT ' . $limit
+                LIMIT ' . $limit . ' OFFSET ' . $offset
             );
             $stmt->execute([(int) $uid]);
         } else {
@@ -242,7 +243,7 @@ function datadock_owned_pastes(PDO $pdo, int $limit = 20): array {
                 FROM pastes
                 WHERE guest_id = ? AND user_id IS NULL AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())
                 ORDER BY created_at DESC
-                LIMIT ' . $limit
+                LIMIT ' . $limit . ' OFFSET ' . $offset
             );
             $stmt->execute([$guest]);
         }
@@ -256,7 +257,32 @@ function datadock_echo_owned_pastes(PDO $pdo, bool $readOnly, string $returnTo =
     if (!in_array($returnTo, ['dashboard.php', 'paste.php'], true)) {
         $returnTo = 'paste.php';
     }
-    $rows = datadock_owned_pastes($pdo);
+    $pastePager = null;
+    if ($returnTo === 'paste.php') {
+        require_once __DIR__ . '/pagination.php';
+        $uid = $_SESSION['user_id'] ?? null;
+        $total = 0;
+        try {
+            if ($uid) {
+                $count = $pdo->prepare('SELECT COUNT(*) FROM pastes WHERE user_id = ? AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())');
+                $count->execute([(int) $uid]);
+                $total = (int) $count->fetchColumn();
+            } else {
+                $guest = datadock_paste_guest_id(false);
+                if ($guest !== null) {
+                    $count = $pdo->prepare('SELECT COUNT(*) FROM pastes WHERE guest_id = ? AND user_id IS NULL AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())');
+                    $count->execute([$guest]);
+                    $total = (int) $count->fetchColumn();
+                }
+            }
+        } catch (PDOException $e) {
+            $total = 0;
+        }
+        $pastePager = datadock_page_clamp(datadock_page_request('p', 20), $total);
+        $rows = datadock_owned_pastes($pdo, $pastePager['per_page'], $pastePager['offset']);
+    } else {
+        $rows = datadock_owned_pastes($pdo, 10, 0);
+    }
     if (!$rows) {
         return 0;
     }
@@ -303,7 +329,11 @@ function datadock_echo_owned_pastes(PDO $pdo, bool $readOnly, string $returnTo =
         echo '<input type="text" readonly class="paste-url" value="' . sanitize_data($url) . '" onclick="this.select();" aria-label="Share link for ' . sanitize_data($label) . '">';
         echo '</li>';
     }
-    echo '</ul></div>';
+    echo '</ul>';
+    if ($pastePager !== null) {
+        datadock_render_pager($pastePager);
+    }
+    echo '</div>';
     return count($rows);
 }
 

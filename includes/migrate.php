@@ -629,4 +629,25 @@ function run_migrations(PDO $pdo): void {
             )
         ");
     } catch (PDOException $e) {}
+
+    $userPrefCols = [
+        'preferred_theme' => 'ALTER TABLE users ADD COLUMN preferred_theme VARCHAR(40) DEFAULT NULL',
+        'email_verified' => 'ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 1',
+        'email_verify_token' => 'ALTER TABLE users ADD COLUMN email_verify_token CHAR(64) DEFAULT NULL',
+        'email_verify_expires' => 'ALTER TABLE users ADD COLUMN email_verify_expires DATETIME DEFAULT NULL',
+    ];
+    foreach ($userPrefCols as $col => $sql) {
+        try {
+            $stmt = $pdo->query('SHOW COLUMNS FROM users LIKE ' . $pdo->quote($col));
+            if ($stmt && $stmt->rowCount() === 0) {
+                $pdo->exec($sql);
+            }
+        } catch (PDOException $e) {}
+    }
+    try {
+        $stmt = $pdo->query("SHOW INDEX FROM users WHERE Key_name = 'idx_users_email_verify_token'");
+        if ($stmt && $stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE users ADD INDEX idx_users_email_verify_token (email_verify_token)');
+        }
+    } catch (PDOException $e) {}
 }

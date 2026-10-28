@@ -32,6 +32,9 @@ function datadock_ingest_local_file(PDO $pdo, array $settings, array $spec): arr
     if (in_array($extension, $forbidden, true) || upload_basename_has_dangerous_extension_segment($originalName)) {
         return ['ok' => false, 'error' => "❌ {$originalName} has a forbidden file type.", 'file_id' => null];
     }
+    if (!datadock_extension_allowed_by_policy($extension, $settings)) {
+        return ['ok' => false, 'error' => "❌ {$originalName} is not an allowed file type.", 'file_id' => null];
+    }
     $appMax = (int) ($settings['max_file_size'] ?? 0);
     if ($appMax > 0 && $fileSize > $appMax) {
         return ['ok' => false, 'error' => "❌ {$originalName} is too large. Max is " . format_filesize($appMax) . '.', 'file_id' => null];
@@ -172,6 +175,9 @@ function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, 
     }
     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
     if (in_array($extension, get_forbidden_upload_extensions(), true) || upload_basename_has_dangerous_extension_segment($originalName)) {
+        return ['ok' => false, 'error' => 'That file type is not allowed.'];
+    }
+    if (!datadock_extension_allowed_by_policy($extension, $settings)) {
         return ['ok' => false, 'error' => 'That file type is not allowed.'];
     }
     $fileSize = (int) filesize($sourcePath);

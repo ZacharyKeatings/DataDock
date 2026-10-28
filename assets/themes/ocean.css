@@ -1,0 +1,32 @@
+:root {
+    color-scheme: light;
+    --color-header-background: #0b6e8a;
+    --color-background: #f3f8fb;
+    --color-text: #10242c;
+    --color-primary: #0b6e8a;
+    --color-secondary: #e5f1f6;
+    --color-accent: #f0a202;
+    --color-border: #c5d7e0;
+    --color-box-background: #ffffff;
+    --color-link: #0b6e8a;
+    --color-file-row-alt: rgba(0, 0, 0, 0.04);
+    --font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --radius: 8px;
+}
+body { background-color: var(--color-background); color: var(--color-text); font-family: var(--font-family); }
+a { color: #0b6e8a; }
+a:hover { color: #084e63; }
+.container, .page-section { background: var(--color-background); color: var(--color-text); }
+.site-header { background-color: var(--color-header-background); }
+button, .btn-primary { background-color: var(--color-primary); color: #ffffff; border: none; border-radius: var(--radius); }
+button:hover, .btn-primary:hover { background-color: #005672; color: #ffffff; }
+.page-section, .settings-card, .stat-card { background: #ffffff; border-color: var(--color-border); }
+.settings-card { background: var(--color-secondary); }
+.form-group input, .form-group textarea, .form-group select, .settings-row input, .settings-row select, .settings-row textarea {
+    background: #ffffff; color: var(--color-text); border-color: var(--color-border); border-radius: var(--radius);
+}
+.stat-value, .profile-stat-value { color: #0b6e8a; }
+.sidebar-nav a { color: var(--color-text); }
+.sidebar-nav a.active, .sidebar-nav a:hover { background: var(--color-secondary); color: #0b6e8a; }
+.file-row, .file-row-dashboard, .file-row-user-management, .file-row-file-management { border-bottom-color: var(--color-border); }
+.welcome-banner { background: var(--color-secondary); border-left-color: var(--color-accent); }

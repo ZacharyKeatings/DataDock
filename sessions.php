@@ -4,6 +4,7 @@ init_session();
 require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/pagination.php';
 
 $userId = (int) $_SESSION['user_id'];
 $current = datadock_session_hash();
@@ -23,7 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$stmt = $pdo->prepare('SELECT id, session_hash, ip_address, user_agent, created_at, last_seen, revoked_at FROM user_sessions WHERE user_id = ? ORDER BY last_seen DESC LIMIT 50');
+$sessionCount = $pdo->prepare('SELECT COUNT(*) FROM user_sessions WHERE user_id = ?');
+$sessionCount->execute([$userId]);
+$sessionPager = datadock_page_clamp(datadock_page_request('p', 25), (int) $sessionCount->fetchColumn());
+$stmt = $pdo->prepare('SELECT id, session_hash, ip_address, user_agent, created_at, last_seen, revoked_at FROM user_sessions WHERE user_id = ? ORDER BY last_seen DESC LIMIT ' . (int) $sessionPager['per_page'] . ' OFFSET ' . (int) $sessionPager['offset']);
 $stmt->execute([$userId]);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -58,6 +62,7 @@ require __DIR__ . '/includes/header.php';
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php datadock_render_pager($sessionPager); ?>
     <?php endif; ?>
 </div>
 <?php require __DIR__ . '/includes/footer.php'; ?>

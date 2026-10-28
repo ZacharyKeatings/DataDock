@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/accounts.php';
+$userDirectory = $userDirectory ?? $users;
 ?>
 <h2 class="page-title">User Management</h2>
 
@@ -32,10 +33,10 @@ require_once __DIR__ . '/../includes/accounts.php';
     </div>
 </div>
 
-<?php if ($users): ?>
+<?php if ($userDirectory): ?>
 <?php
 $quotaForm = [];
-foreach ($users as $user) {
+foreach ($userDirectory as $user) {
     $filesRaw = $user['quota_max_files'] ?? null;
     $bytesRaw = $user['quota_max_bytes'] ?? null;
     $filesInt = ($filesRaw === null || $filesRaw === '') ? null : (int) $filesRaw;
@@ -62,7 +63,7 @@ foreach ($users as $user) {
         'unit' => $unit,
     ];
 }
-$quotaFirst = $quotaForm[(int) $users[0]['id']];
+$quotaFirst = $quotaForm[(int) $userDirectory[0]['id']];
 ?>
 <div class="settings-card stack-gap">
     <h3 class="settings-card-title">Storage quota</h3>
@@ -72,7 +73,7 @@ $quotaFirst = $quotaForm[(int) $users[0]['id']];
             <div class="form-group">
                 <label for="quota_user_id">Account</label>
                 <select name="user_id" id="quota_user_id">
-                    <?php foreach ($users as $user): ?>
+                    <?php foreach ($userDirectory as $user): ?>
                         <?php $choice = $quotaForm[(int) $user['id']]; ?>
                         <option value="<?= (int) $user['id'] ?>" data-mode="<?= sanitize_data($choice['mode']) ?>" data-files="<?= sanitize_data((string) $choice['files']) ?>" data-amount="<?= sanitize_data((string) $choice['amount']) ?>" data-unit="<?= sanitize_data($choice['unit']) ?>"><?= sanitize_data($user['username']) ?></option>
                     <?php endforeach; ?>
@@ -139,7 +140,7 @@ if ($inviteOnly): ?>
 </div>
 <?php endif; ?>
 
-<?php if ($users): ?>
+<?php if ($userDirectory): ?>
 <div class="settings-card stack-gap">
     <h3 class="settings-card-title">Transfer files</h3>
     <div class="settings-card-body">
@@ -148,7 +149,7 @@ if ($inviteOnly): ?>
             <div class="form-group">
                 <label for="source_user_id">From</label>
                 <select name="source_user_id" id="source_user_id">
-                    <?php foreach ($users as $user): ?>
+                    <?php foreach ($userDirectory as $user): ?>
                         <option value="<?= (int) $user['id'] ?>"><?= sanitize_data($user['username']) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -156,7 +157,7 @@ if ($inviteOnly): ?>
             <div class="form-group">
                 <label for="target_user_id">To</label>
                 <select name="target_user_id" id="target_user_id">
-                    <?php foreach ($users as $user): ?>
+                    <?php foreach ($userDirectory as $user): ?>
                         <option value="<?= (int) $user['id'] ?>"><?= sanitize_data($user['username']) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -167,7 +168,7 @@ if ($inviteOnly): ?>
 </div>
 <?php endif; ?>
 
-<?php if ($users): ?>
+<?php if ($userDirectory): ?>
     <div class="file-list file-list-users">
         <div class="file-row-user-management file-header">
             <div>Registered</div>
@@ -184,12 +185,21 @@ if ($inviteOnly): ?>
 
         <?php foreach ($users as $user): ?>
             <div class="file-row-user-management">
-                <div><?= format_datetime_display($user['created_at']) ?></div>
-                <div><?= user_profile_link($user['username']) ?></div>
-                <div><?= sanitize_data($user['email']) ?></div>
-                <div><?= sanitize_data($user['file_count']) ?></div>
-                <div><?= format_filesize($user['total_size']) ?></div>
-                <div>
+                <div data-label="Registered"><?= format_datetime_display($user['created_at']) ?></div>
+                <div data-label="Username"><?= user_profile_link($user['username']) ?></div>
+                <div data-label="Email">
+                    <?= sanitize_data($user['email']) ?>
+                    <?php if (isset($user['email_verified']) && (int) $user['email_verified'] === 0): ?>
+                        <span class="badge">Unverified</span>
+                        <form method="post" action="admin_sections/admin_confirm_email.php" class="inline-form compact">
+                            <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
+                            <button type="submit" class="btn btn-quiet btn-small">Confirm email</button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+                <div data-label="Files"><?= sanitize_data($user['file_count']) ?></div>
+                <div data-label="Storage"><?= format_filesize($user['total_size']) ?></div>
+                <div data-label="Partition">
                     <form method="post" action="admin_sections/admin_set_user_partition.php" class="inline-form compact">
                         <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
                         <select name="storage_partition_id" aria-label="Storage partition" class="select-compact">
@@ -201,7 +211,7 @@ if ($inviteOnly): ?>
                         <button type="submit" class="btn btn-small">Save</button>
                     </form>
                 </div>
-                <div>
+                <div data-label="Role">
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                         <form method="post" action="admin_sections/admin_change_role.php" class="inline-form compact" onsubmit="return confirm('Change this user’s role?')">
                             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
@@ -215,7 +225,7 @@ if ($inviteOnly): ?>
                         <?= sanitize_data($user['role']) ?> (You)
                     <?php endif; ?>
                 </div>
-                <div>
+                <div data-label="Access">
                     <?php if (!empty($user['suspended'])): ?>
                         <span class="badge">Suspended</span>
                     <?php endif; ?>
@@ -229,13 +239,13 @@ if ($inviteOnly): ?>
                         —
                     <?php endif; ?>
                 </div>
-                <div>
+                <div data-label="Reset password">
                     <form method="post" action="admin_sections/admin_generate_password_reset.php" class="inline-form compact">
                         <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
                         <button type="submit" class="btn btn-quiet btn-small">Copy reset link</button>
                     </form>
                 </div>
-                <div>
+                <div data-label="Delete">
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                         <form method="post" action="admin_sections/admin_delete_user.php" onsubmit="return confirm('Delete this user?');">
                             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
@@ -248,6 +258,7 @@ if ($inviteOnly): ?>
             </div>
         <?php endforeach; ?>
     </div>
+    <?php if (!empty($userPager)) { datadock_render_pager($userPager); } ?>
 <?php else: ?>
     <div class="empty-state">
         <p>No users found.</p>

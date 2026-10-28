@@ -73,10 +73,25 @@ $allowedFileTypesByCategory = [
     'Spreadsheets' => ['xls', 'xlsx', 'ods', 'csv'],
     'Presentations'=> ['ppt', 'pptx', 'odp'],
     'Archives'     => ['zip', 'rar', '7z', 'tar', 'gz'],
+    'Packages'     => ['apk', 'ipa', 'aab', 'deb', 'rpm'],
     'Audio'        => ['mp3', 'wav', 'ogg', 'flac', 'm4a'],
     'Video'        => ['mp4', 'mov', 'webm', 'mkv', 'avi'],
-    'Data & code'  => ['json', 'xml', 'html', 'htm'],
+    'Fonts'        => ['ttf', 'otf', 'woff', 'woff2'],
+    'Data & code'  => ['json', 'xml', 'html', 'htm', 'md', 'yaml', 'yml', 'sql', 'wasm'],
 ];
+$filetypePolicy = datadock_filetype_policy($settings);
+if ($filetypePolicy['mode'] === 'allow') {
+    $allowedLookup = array_flip($filetypePolicy['extensions']);
+    foreach ($allowedFileTypesByCategory as $category => $exts) {
+        $allowedFileTypesByCategory[$category] = array_values(array_filter(
+            $exts,
+            static fn(string $ext): bool => isset($allowedLookup[$ext])
+        ));
+        if ($allowedFileTypesByCategory[$category] === []) {
+            unset($allowedFileTypesByCategory[$category]);
+        }
+    }
+}
 
 // disable form if guest uploads off and no user
 $formDisabled = false;
@@ -205,6 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // process each uploaded file
     $storedCount = 0;
+    $uploadedFiles = [];
     foreach ($_FILES['upload']['name'] as $i => $originalName) {
         $error       = $_FILES['upload']['error'][$i];
         $tmpPath     = $_FILES['upload']['tmp_name'][$i];
@@ -260,6 +276,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $newFileId = (int) $stored['file_id'];
         $storedCount++;
+        $detailsUrl = $currentUserId
+            ? ('edit_file.php?id=' . $newFileId)
+            : ('download.php?id=' . $newFileId);
+        $uploadedFiles[] = [
+            'id' => $newFileId,
+            'name' => $originalName,
+            'url' => $detailsUrl,
+        ];
         if (($stored['quarantine'] ?? '') === 'pending' && ($stored['scan'] ?? '') !== '') {
             $_SESSION['flash_success'][] = $originalName . ' was saved and is waiting for review.';
         }
@@ -278,7 +302,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // on success: record rate limit events (one per file actually inserted)
     if ($storedCount > 0 && empty($_SESSION['flash_error'])) {
         record_upload_rate_limit($pdo, $clientIp, $currentUserId, $storedCount);
-        $_SESSION['flash_success'][] = "✅ File(s) uploaded successfully.";
+        foreach ($uploadedFiles as $uploadedFile) {
+            $safeName = sanitize_data((string) $uploadedFile['name']);
+            $safeUrl = sanitize_data((string) $uploadedFile['url']);
+            $_SESSION['flash_success'][] = [
+                'html' => true,
+                'persistent' => true,
+                'msg' => $safeName . ' uploaded. <a href="' . $safeUrl . '">View file details</a>',
+            ];
+        }
         if ($isGuest && !empty($guestId)) {
             require_once __DIR__ . '/includes/guest_claim.php';
             $claimToken = datadock_issue_guest_claim($pdo, (string) $guestId);
@@ -291,10 +323,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // AJAX vs normal
     if ($isAjax) {
         header('Content-Type: application/json');
-        echo json_encode([
-            'errors'  => $_SESSION['flash_error'] ?? [],
-            'success' => $_SESSION['flash_success'] ?? []
-        ]);
+        $ajaxSuccess = [];
+        foreach (($_SESSION['flash_success'] ?? []) as $msg) {
+            if (is_string($msg) && $msg !== '') {
+                $ajaxSuccess[] = $msg;
+            }
+        }
+        $payload = [
+            'errors' => $_SESSION['flash_error'] ?? [],
+            'success' => $ajaxSuccess,
+            'files' => $uploadedFiles,
+        ];
+        unset($_SESSION['flash_error'], $_SESSION['flash_success']);
+        echo json_encode($payload);
         exit;
     }
 
@@ -356,7 +397,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       <details class="upload-accepted-types">
         <summary class="upload-accepted-types-summary">Accepted file types</summary>
         <div class="upload-accepted-types-content">
-          <p class="upload-accepted-types-intro">You can upload the following types (and other file types not listed below, except those in the forbidden list).</p>
+          <p class="upload-accepted-types-intro"><?php if (($filetypePolicy['mode'] ?? 'off') === 'allow'): ?>Only the extensions below are accepted.<?php elseif (($filetypePolicy['mode'] ?? 'off') === 'deny'): ?>These types are accepted. The block list also rejects: <?= sanitize_data(implode(', ', $filetypePolicy['extensions'])) ?>.<?php else: ?>You can upload the following types, and other types that are not in the forbidden list.<?php endif; ?></p>
           <div class="upload-accepted-types-grid">
             <?php foreach ($allowedFileTypesByCategory as $category => $exts): ?>
               <div class="upload-accepted-types-category">
@@ -412,13 +453,6 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
           <input type="checkbox" name="use_chunks" id="use_chunks" value="1">
           Send large files in chunks
         </label>
-        <p class="form-hint">The server reassembles the file, then runs the same type, quota, and scan checks once.</p>
-      </div>
-      <div class="form-group settings-row-checkbox">
-        <label>
-          <input type="checkbox" name="use_chunks" id="use_chunks" value="1">
-          Send large files in chunks
-        </label>
         <p class="form-hint">The browser slices the file. The server reassembles it, then runs the usual type, quota, and scan checks once.</p>
       </div>
       <div class="upload-submit-wrap">
@@ -438,6 +472,8 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
     const uploadButton      = uploadForm.querySelector('button[type="submit"]');
     const maxSize           = <?= $appMaxFileSize ?>;
     const forbiddenExts     = <?= json_encode($forbiddenExtensions) ?>;
+    const policyMode        = <?= json_encode($filetypePolicy['mode']) ?>;
+    const policyExts        = <?= json_encode($filetypePolicy['extensions']) ?>;
 
     function openFilePicker() {
       fileInput.click();
@@ -475,36 +511,54 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       return parts.some(p => p !== '' && forbiddenExts.includes(p));
     }
 
-    function showUploadResult(errors, success) {
+    function extensionBlocked(filename) {
+      const ext = getExtension(filename);
+      if (forbiddenExts.includes(ext) || basenameHasDangerousSegment(filename)) return true;
+      if (policyMode === "allow" && !policyExts.includes(ext)) return true;
+      if (policyMode === "deny" && policyExts.includes(ext)) return true;
+      return false;
+    }
+
+    function showUploadResult(errors, success, files) {
       const resultDiv = document.getElementById("uploadResult");
       resultDiv.innerHTML = "";
       resultDiv.style.display = "block";
       if (errors && errors.length) {
         errors.forEach(msg => {
           const el = document.createElement("div");
-          el.className = "flash error";
-          el.textContent = msg;
+          el.className = "flash error persistent";
+          el.textContent = typeof msg === "string" ? msg : "";
           resultDiv.appendChild(el);
         });
       }
       if (success && success.length) {
         success.forEach(msg => {
+          if (typeof msg !== "string" || msg === "") return;
           const el = document.createElement("div");
-          el.className = "flash success";
+          el.className = "flash success persistent";
           el.textContent = msg;
           resultDiv.appendChild(el);
         });
       }
+      (files || []).forEach(file => {
+        const id = parseInt(file && file.id, 10);
+        const url = file && typeof file.url === "string" ? file.url : "";
+        if (!id || !/^((edit_file|download)\.php\?id=\d+)$/.test(url)) return;
+        const el = document.createElement("div");
+        el.className = "flash success persistent";
+        el.appendChild(document.createTextNode((file.name || "File") + " uploaded. "));
+        const link = document.createElement("a");
+        link.href = url;
+        link.textContent = "View file details";
+        el.appendChild(link);
+        resultDiv.appendChild(el);
+      });
     }
 
     function updatePreview() {
       preview.innerHTML = "";
       for (const file of fileInput.files) {
-        if (
-          forbiddenExts.includes(getExtension(file.name)) ||
-          basenameHasDangerousSegment(file.name) ||
-          (maxSize > 0 && file.size > maxSize)
-        ) {
+        if (extensionBlocked(file.name) || (maxSize > 0 && file.size > maxSize)) {
           continue;
         }
         const container = document.createElement("div");
@@ -534,6 +588,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       const files = Array.from(fileInput.files);
       const errors = [];
       const success = [];
+      const uploaded = [];
       const chunkSize = 1024 * 1024;
       let done = 0;
       const total = files.reduce((sum, file) => sum + file.size, 0) || 1;
@@ -581,24 +636,30 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
         const finishJson = await finished.json();
         if (!finishJson.ok) {
           errors.push(finishJson.error || ('Could not finish ' + file.name));
-        } else if (finishJson.message) {
-          success.push(finishJson.message);
+        } else {
+          if (finishJson.message) success.push(finishJson.message);
+          if (finishJson.file_id) {
+            uploaded.push({
+              id: finishJson.file_id,
+              name: file.name,
+              url: <?= $currentUserId ? '"edit_file.php?id="' : '"download.php?id="' ?> + finishJson.file_id
+            });
+          }
         }
       }
-      showUploadResult(errors, success);
-      if (errors.length === 0 && success.length > 0) {
-        setTimeout(() => { window.location = 'upload.php'; }, 1500);
-      } else {
-        uploadButton.disabled = false;
-        uploadButton.textContent = 'Upload';
+      showUploadResult(errors, success, uploaded);
+      uploadButton.disabled = false;
+      uploadButton.textContent = 'Upload';
+      if (errors.length === 0) {
+        fileInput.value = '';
+        preview.innerHTML = '';
       }
     }
 
     uploadForm.addEventListener("submit", function(event) {
       event.preventDefault();
       const bad = Array.from(fileInput.files).filter(f =>
-        forbiddenExts.includes(getExtension(f.name)) ||
-        basenameHasDangerousSegment(f.name) ||
+        extensionBlocked(f.name) ||
         (maxSize > 0 && f.size > maxSize)
       );
       if (bad.length) {
@@ -642,13 +703,12 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
           const resp = JSON.parse(xhr.responseText);
           const errors = resp.errors || [];
           const success = resp.success || [];
-          showUploadResult(errors, success);
-
-          if (errors.length === 0 && success.length > 0) {
-            setTimeout(() => { window.location = "upload.php"; }, 1500);
-          } else {
-            uploadButton.disabled = false;
-            uploadButton.textContent = "Upload";
+          showUploadResult(errors, success, resp.files || []);
+          uploadButton.disabled = false;
+          uploadButton.textContent = "Upload";
+          if (errors.length === 0) {
+            fileInput.value = "";
+            preview.innerHTML = "";
           }
         } catch (e) {
           showUploadResult(["❌ Upload failed: invalid response."], []);

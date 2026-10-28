@@ -1,0 +1,32 @@
+:root {
+    color-scheme: light;
+    --color-header-background: #6b5344;
+    --color-background: #f6f0e6;
+    --color-text: #2c241c;
+    --color-primary: #6b5344;
+    --color-secondary: #efe4d4;
+    --color-accent: #c47b2b;
+    --color-border: #d9cbb8;
+    --color-box-background: #fbf7f0;
+    --color-link: #6b5344;
+    --color-file-row-alt: rgba(0, 0, 0, 0.04);
+    --font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --radius: 4px;
+}
+body { background-color: var(--color-background); color: var(--color-text); font-family: var(--font-family); }
+a { color: #6b5344; }
+a:hover { color: #3e2e24; }
+.container, .page-section { background: var(--color-background); color: var(--color-text); }
+.site-header { background-color: var(--color-header-background); }
+button, .btn-primary { background-color: var(--color-primary); color: #ffffff; border: none; border-radius: var(--radius); }
+button:hover, .btn-primary:hover { background-color: #533b2c; color: #ffffff; }
+.page-section, .settings-card, .stat-card { background: #fbf7f0; border-color: var(--color-border); }
+.settings-card { background: var(--color-secondary); }
+.form-group input, .form-group textarea, .form-group select, .settings-row input, .settings-row select, .settings-row textarea {
+    background: #fbf7f0; color: var(--color-text); border-color: var(--color-border); border-radius: var(--radius);
+}
+.stat-value, .profile-stat-value { color: #6b5344; }
+.sidebar-nav a { color: var(--color-text); }
+.sidebar-nav a.active, .sidebar-nav a:hover { background: var(--color-secondary); color: #6b5344; }
+.file-row, .file-row-dashboard, .file-row-user-management, .file-row-file-management { border-bottom-color: var(--color-border); }
+.welcome-banner { background: var(--color-secondary); border-left-color: var(--color-accent); }

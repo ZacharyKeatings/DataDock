@@ -276,6 +276,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'registration_enabled' => true,\n" .
         "    'invite_only_registration' => false,\n" .
         "    'enforce_unique_email' => true,\n" .
+        "    'email_verification_enabled' => false,\n" .
         "    'max_file_size' => 5242880,\n" .
         "    'default_file_expiry' => 'never',\n" .
         "    'thumbnails_enabled' => true,\n" .
@@ -315,6 +316,10 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    ],\n" .
         "    'rewrite_file_extension' => false,\n" .
         "    'upload_quarantine_enabled' => false,\n" .
+        "    'filetype_policy' => [\n" .
+        "        'mode' => 'off',\n" .
+        "        'extensions' => ''\n" .
+        "    ],\n" .
         "    'storage_base_path' => '',\n" .
         "    'trusted_proxies' => '',\n" .
         "    'public_browsing_enabled' => false,\n" .
@@ -516,6 +521,20 @@ function mime_extension_mismatch(string $extension, string $detectedMime): bool 
             'ods' => ['application/vnd.oasis.opendocument.spreadsheet'],
             'odp' => ['application/vnd.oasis.opendocument.presentation'],
             'epub' => ['application/epub+zip'],
+            'apk' => ['application/vnd.android.package-archive', 'application/zip', 'application/java-archive'],
+            'ipa' => ['application/octet-stream', 'application/zip'],
+            'aab' => ['application/octet-stream', 'application/zip'],
+            'deb' => ['application/vnd.debian.binary-package', 'application/x-debian-package', 'application/octet-stream'],
+            'rpm' => ['application/x-rpm', 'application/octet-stream'],
+            'md' => ['text/plain', 'text/markdown'],
+            'yaml' => ['text/plain', 'text/yaml', 'application/yaml'],
+            'yml' => ['text/plain', 'text/yaml', 'application/yaml'],
+            'sql' => ['text/plain', 'application/sql'],
+            'woff' => ['font/woff', 'application/font-woff'],
+            'woff2' => ['font/woff2'],
+            'ttf' => ['font/ttf', 'application/x-font-ttf'],
+            'otf' => ['font/otf', 'application/x-font-otf'],
+            'wasm' => ['application/wasm'],
         ];
     }
     $detectedMime = strtolower(trim($detectedMime));
@@ -548,6 +567,73 @@ function get_forbidden_upload_extensions(): array {
         'vbs', 'vbe', 'wsf', 'dll', 'msi', 'hta', 'htc',
     ];
     return $list;
+}
+
+/**
+ * Extensions that stay uploadable but should be called out as risky.
+ *
+ * @return string[]
+ */
+function datadock_caution_upload_extensions(): array {
+    return [
+        'html', 'htm', 'xhtml', 'svg', 'xml', 'swf',
+        'apk', 'ipa', 'aab', 'jar', 'deb', 'rpm', 'dmg', 'iso', 'pkg', 'app',
+        'wasm', 'ps1', 'command',
+    ];
+}
+
+/**
+ * @return string[]
+ */
+function datadock_normalize_extension_list(string $raw): array {
+    $parts = preg_split('/[\s,;]+/', strtolower($raw), -1, PREG_SPLIT_NO_EMPTY);
+    if (!is_array($parts)) {
+        return [];
+    }
+    $out = [];
+    foreach ($parts as $part) {
+        $part = ltrim(trim($part), '.');
+        if ($part !== '' && preg_match('/^[a-z0-9]{1,10}$/', $part)) {
+            $out[$part] = $part;
+        }
+    }
+    return array_values($out);
+}
+
+function datadock_extension_list_to_storage(string $raw): string {
+    return implode(', ', datadock_normalize_extension_list($raw));
+}
+
+/**
+ * @return array{mode:string,extensions:string[]}
+ */
+function datadock_filetype_policy(array $settings): array {
+    $policy = is_array($settings['filetype_policy'] ?? null) ? $settings['filetype_policy'] : [];
+    $mode = strtolower(trim((string) ($policy['mode'] ?? 'off')));
+    if (!in_array($mode, ['off', 'allow', 'deny'], true)) {
+        $mode = 'off';
+    }
+    $extensions = $policy['extensions'] ?? '';
+    if (is_array($extensions)) {
+        $extensions = implode(',', $extensions);
+    }
+    return [
+        'mode' => $mode,
+        'extensions' => datadock_normalize_extension_list((string) $extensions),
+    ];
+}
+
+function datadock_extension_allowed_by_policy(string $extension, array $settings): bool {
+    $policy = datadock_filetype_policy($settings);
+    if ($policy['mode'] === 'off') {
+        return true;
+    }
+    $extension = strtolower(ltrim($extension, '.'));
+    $listed = in_array($extension, $policy['extensions'], true);
+    if ($policy['mode'] === 'allow') {
+        return $extension !== '' && $listed;
+    }
+    return !$listed;
 }
 
 /**
@@ -688,6 +774,19 @@ function get_friendly_filetype($mime) {
         'application/csv' => 'CSV Spreadsheet',
         'application/octet-stream' => 'Binary File',
         'application/epub+zip' => 'EPUB E-book',
+        'application/vnd.android.package-archive' => 'Android Package (APK)',
+        'application/vnd.debian.binary-package' => 'Debian Package',
+        'application/x-debian-package' => 'Debian Package',
+        'application/x-rpm' => 'RPM Package',
+        'font/woff' => 'Web Font',
+        'font/woff2' => 'Web Font',
+        'font/ttf' => 'TrueType Font',
+        'font/otf' => 'OpenType Font',
+        'application/wasm' => 'WebAssembly Module',
+        'text/markdown' => 'Markdown File',
+        'text/yaml' => 'YAML File',
+        'application/yaml' => 'YAML File',
+        'application/sql' => 'SQL File',
         'application/vnd.oasis.opendocument.text' => 'OpenDocument Text',
         'application/vnd.oasis.opendocument.spreadsheet' => 'OpenDocument Spreadsheet',
         'application/vnd.oasis.opendocument.presentation' => 'OpenDocument Presentation',
@@ -759,6 +858,9 @@ function get_file_icon($filetype, $filename = null) {
             'ppt' => 'file-slide', 'pptx' => 'file-slide', 'odp' => 'file-slide',
             'txt' => 'file-doc', 'json' => 'file-doc', 'xml' => 'file-doc',
             'zip' => 'file-archive', 'rar' => 'file-archive', '7z' => 'file-archive', 'tar' => 'file-archive', 'gz' => 'file-archive',
+            'apk' => 'file-archive', 'ipa' => 'file-archive', 'aab' => 'file-archive', 'deb' => 'file-archive', 'rpm' => 'file-archive',
+            'woff' => 'file-doc', 'woff2' => 'file-doc', 'ttf' => 'file-doc', 'otf' => 'file-doc',
+            'md' => 'file-doc', 'yaml' => 'file-doc', 'yml' => 'file-doc', 'sql' => 'file-doc', 'wasm' => 'file-doc',
             'mp3' => 'file-audio', 'wav' => 'file-audio', 'ogg' => 'file-audio', 'flac' => 'file-audio', 'm4a' => 'file-audio',
             'mp4' => 'file-video', 'webm' => 'file-video', 'avi' => 'file-video', 'mov' => 'file-video', 'mkv' => 'file-video',
             'jpg' => 'file-image', 'jpeg' => 'file-image', 'png' => 'file-image', 'gif' => 'file-image', 'webp' => 'file-image', 'bmp' => 'file-image', 'tiff' => 'file-image', 'tif' => 'file-image', 'ico' => 'file-image', 'svg' => 'file-image', 'heic' => 'file-image', 'avif' => 'file-image',

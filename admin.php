@@ -8,6 +8,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/audit_log.php';
 require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/purge_ops.php';
+require_once __DIR__ . '/includes/pagination.php';
 
 $pageTitle = "Admin Panel";
 
@@ -18,6 +19,49 @@ $section = $_GET['section'] ?? 'overview';
 
 // Handle POST actions first
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['save_custom_theme']) || isset($_POST['delete_custom_theme'])) {
+        require_once __DIR__ . '/includes/themes.php';
+        if (isset($_POST['delete_custom_theme'])) {
+            $slug = strtolower(trim((string) ($_POST['theme_slug'] ?? '')));
+            if (datadock_delete_custom_theme($slug)) {
+                $_SESSION['flash_success'][] = 'Custom theme deleted.';
+            } else {
+                $_SESSION['flash_error'][] = 'That theme could not be deleted.';
+            }
+        } else {
+            $font = (string) ($_POST['theme_font'] ?? 'system');
+            $tokens = [
+                'scheme' => (($_POST['theme_scheme'] ?? '') === 'dark') ? 'dark' : 'light',
+                'font' => $font,
+                'radius' => (string) ($_POST['theme_radius'] ?? '8px'),
+                'header' => (string) ($_POST['token_header'] ?? ''),
+                'background' => (string) ($_POST['token_background'] ?? ''),
+                'text' => (string) ($_POST['token_text'] ?? ''),
+                'primary' => (string) ($_POST['token_primary'] ?? ''),
+                'secondary' => (string) ($_POST['token_secondary'] ?? ''),
+                'accent' => (string) ($_POST['token_accent'] ?? ''),
+                'border' => (string) ($_POST['token_border'] ?? ''),
+                'box' => (string) ($_POST['token_box'] ?? ''),
+                'link' => (string) ($_POST['token_link'] ?? ''),
+                'link_hover' => (string) ($_POST['token_link_hover'] ?? ''),
+                'button_text' => (string) ($_POST['token_button_text'] ?? ''),
+            ];
+            $saved = datadock_save_custom_theme(
+                (string) ($_POST['theme_name'] ?? ''),
+                $tokens,
+                (string) ($_POST['theme_extra'] ?? ''),
+                strtolower(trim((string) ($_POST['theme_slug'] ?? '')))
+            );
+            if ($saved['ok']) {
+                $_SESSION['flash_success'][] = 'Theme saved. It is now available as a default theme.';
+            } else {
+                $_SESSION['flash_error'][] = $saved['error'];
+            }
+        }
+        header('Location: admin.php?section=themes');
+        exit;
+    }
+
     if (isset($_POST['section']) && $_POST['section'] === 'site') {
         // --- SITE SETTINGS FORM SUBMIT ---
         if (file_exists($settingsFile)) require $settingsFile;
@@ -27,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $registrationEnabled = isset($_POST['registration_enabled']);
         $inviteOnlyRegistration = isset($_POST['invite_only_registration']);
         $enforceUniqueEmail = isset($_POST['enforce_unique_email']);
+        $emailVerificationEnabled = isset($_POST['email_verification_enabled']);
         $maxFileSize = form_size_to_bytes($_POST['max_file_size'] ?? 0, $_POST['max_file_size_unit'] ?? 'm');
         $defaultFileExpiry = trim($_POST['default_file_expiry'] ?? 'never');
         $trashRetentionDays = (int) ($_POST['trash_retention_days'] ?? 30);
@@ -80,6 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rateLimitMaxPerUser = (int) ($_POST['rate_limit_max_per_user'] ?? 60);
         $rewriteFileExtension = isset($_POST['rewrite_file_extension']);
         $uploadQuarantineEnabled = isset($_POST['upload_quarantine_enabled']);
+        $filetypeMode = strtolower(trim((string) ($_POST['filetype_policy_mode'] ?? 'off')));
+        if (!in_array($filetypeMode, ['off', 'allow', 'deny'], true)) {
+            $filetypeMode = 'off';
+        }
+        $filetypeExtensions = datadock_extension_list_to_storage((string) ($_POST['filetype_policy_extensions'] ?? ''));
         $deduplicateStorage = !empty($_POST['deduplicate_storage']);
         $foldersEnabledSetting = !empty($_POST['folders_enabled']);
         $tagsEnabledSetting = !empty($_POST['tags_enabled']);
@@ -205,8 +255,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($logLevel, $validLogLevels, true)) {
             $logLevel = 'warning';
         }
-        $validThemes = ['light', 'dark'];
-        if (!in_array($theme, $validThemes, true)) {
+        require_once __DIR__ . '/includes/themes.php';
+        if (!datadock_theme_is_known($theme)) {
             $theme = 'light';
         }
         if ($adminIpAllowlist !== '') {
@@ -240,6 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    'registration_enabled' => " . ($registrationEnabled ? 'true' : 'false') . ",\n" .
                 "    'invite_only_registration' => " . ($inviteOnlyRegistration ? 'true' : 'false') . ",\n" .
                 "    'enforce_unique_email' => " . ($enforceUniqueEmail ? 'true' : 'false') . ",\n" .
+                "    'email_verification_enabled' => " . ($emailVerificationEnabled ? 'true' : 'false') . ",\n" .
                 "    'max_file_size' => $maxFileSize,\n" .
                 "    'default_file_expiry' => " . var_export($defaultFileExpiry, true) . ",\n" .
                 "    'thumbnails_enabled' => " . ($thumbnailsEnabled ? 'true' : 'false') . ",\n" .
@@ -330,6 +381,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    ],\n" .
                 "    'rewrite_file_extension' => " . ($rewriteFileExtension ? 'true' : 'false') . ",\n" .
                 "    'upload_quarantine_enabled' => " . ($uploadQuarantineEnabled ? 'true' : 'false') . ",\n" .
+                "    'filetype_policy' => [\n" .
+                "        'mode' => " . var_export($filetypeMode, true) . ",\n" .
+                "        'extensions' => " . var_export($filetypeExtensions, true) . "\n" .
+                "    ],\n" .
                 "    'deduplicate_storage' => " . ($deduplicateStorage ? 'true' : 'false') . ",\n" .
                 "    'folders_enabled' => " . ($foldersEnabledSetting ? 'true' : 'false') . ",\n" .
                 "    'tags_enabled' => " . ($tagsEnabledSetting ? 'true' : 'false') . ",\n" .
@@ -357,6 +412,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "    ],\n" .
                 "    'trash_retention_days' => $trashRetentionDays,\n" .
                 "];\n?>";
+
+            $listedExtensions = datadock_normalize_extension_list($filetypeExtensions);
+            $cautionHits = array_values(array_intersect($listedExtensions, datadock_caution_upload_extensions()));
+            $blockedHits = array_values(array_intersect($listedExtensions, get_forbidden_upload_extensions()));
+            if ($cautionHits !== []) {
+                $_SESSION['flash_warning'][] = 'These extensions can carry executable or active content: ' . implode(', ', $cautionHits) . '.';
+            }
+            if ($blockedHits !== []) {
+                $_SESSION['flash_warning'][] = 'These extensions stay blocked even if you list them: ' . implode(', ', $blockedHits) . '.';
+            }
 
             if (file_put_contents($settingsFile, $updatedSettings)) {
                 if ($storageBasePath === '') {
@@ -798,6 +863,7 @@ require_once __DIR__ . '/includes/header.php';
                 <p class="sidebar-label">Site</p>
                 <ul>
                     <li><a href="?section=site"<?= $section === 'site' ? ' class="active"' : '' ?>>Site Settings</a></li>
+                    <li><a href="?section=themes"<?= $section === 'themes' ? ' class="active"' : '' ?>>Themes</a></li>
                     <li><a href="?section=storage"<?= $section === 'storage' ? ' class="active"' : '' ?>>Storage partitions</a></li>
                 </ul>
                 <p class="sidebar-label">People and files</p>
@@ -839,6 +905,7 @@ require_once __DIR__ . '/includes/header.php';
                 $registrationEnabled = $fileSettings['registration_enabled'] ?? true;
                 $inviteOnlyRegistration = !empty($fileSettings['invite_only_registration']);
                 $enforceUniqueEmail = $fileSettings['enforce_unique_email'] ?? true;
+                $emailVerificationEnabled = !empty($fileSettings['email_verification_enabled']);
                 $maxFileSize = $fileSettings['max_file_size'] ?? 5242880;
                 $maxFileSizeDisplay = bytes_to_display($maxFileSize);
                 $defaultFileExpiry = $fileSettings['default_file_expiry'] ?? 'never';
@@ -877,6 +944,12 @@ require_once __DIR__ . '/includes/header.php';
                 $rateLimitMaxPerUser = (int) ($fileSettings['rate_limit_uploads']['max_per_user'] ?? 60);
                 $rewriteFileExtension = !empty($fileSettings['rewrite_file_extension']);
                 $uploadQuarantineEnabled = !empty($fileSettings['upload_quarantine_enabled']);
+                $filetypePolicy = is_array($fileSettings['filetype_policy'] ?? null) ? $fileSettings['filetype_policy'] : [];
+                $filetypeMode = (string) ($filetypePolicy['mode'] ?? 'off');
+                if (!in_array($filetypeMode, ['off', 'allow', 'deny'], true)) {
+                    $filetypeMode = 'off';
+                }
+                $filetypeExtensions = (string) ($filetypePolicy['extensions'] ?? '');
                 $guestUploadsEnabled = $fileSettings['guest_uploads']['enabled'] ?? false;
                 $guestMaxFiles = $fileSettings['guest_uploads']['max_files'] ?? 10;
                 $guestMaxStorage = $fileSettings['guest_uploads']['max_storage'] ?? 5242880;
@@ -955,18 +1028,27 @@ require_once __DIR__ . '/includes/header.php';
                 include __DIR__ . '/admin_sections/site_settings.php';
                 break;
 
+            case 'themes':
+                include __DIR__ . '/admin_sections/theme_editor.php';
+                break;
+
             case 'users':
-                // Fetch user stats
+                $userDirectory = $pdo->query('SELECT id, username, quota_max_files, quota_max_bytes FROM users ORDER BY username')->fetchAll(PDO::FETCH_ASSOC);
+                $userTotal = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+                $userPager = datadock_page_clamp(datadock_page_request('p', 25), $userTotal);
+                $userLim = (int) $userPager['per_page'];
+                $userOff = (int) $userPager['offset'];
                 $stmt = $pdo->query("
-                    SELECT u.id, u.username, u.email, u.role, u.suspended, u.created_at, u.storage_partition_id,
+                    SELECT u.id, u.username, u.email, u.role, u.suspended, u.email_verified, u.created_at, u.storage_partition_id,
                         u.quota_max_files, u.quota_max_bytes,
                         COUNT(f.id) AS file_count,
                         COALESCE(SUM(f.filesize), 0) AS total_size
                     FROM users u
                     LEFT JOIN files f ON u.id = f.user_id AND f.deleted_at IS NULL
-                    GROUP BY u.id, u.username, u.email, u.role, u.suspended, u.created_at, u.storage_partition_id,
+                    GROUP BY u.id, u.username, u.email, u.role, u.suspended, u.email_verified, u.created_at, u.storage_partition_id,
                         u.quota_max_files, u.quota_max_bytes
                     ORDER BY u.created_at DESC
+                    LIMIT {$userLim} OFFSET {$userOff}
                 ");
                 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 $storagePartitionsList = $pdo->query('SELECT id, name, is_default FROM storage_partitions ORDER BY sort_order, id')->fetchAll(PDO::FETCH_ASSOC);
@@ -1098,18 +1180,24 @@ require_once __DIR__ . '/includes/header.php';
             case 'files':
                 // Filter by quarantine status (optional: pending only); exclude trashed by default
                 $fileStatusFilter = isset($_GET['status']) && $_GET['status'] === 'pending' ? 'pending' : 'all';
-                $filesSql = "
+                $filesWhere = 'f.deleted_at IS NULL';
+                if ($fileStatusFilter === 'pending') {
+                    $filesWhere .= " AND f.quarantine_status = 'pending'";
+                }
+                $fileStats = $pdo->query("SELECT COUNT(*) AS c, COALESCE(SUM(f.filesize), 0) AS s FROM files f WHERE $filesWhere")->fetch(PDO::FETCH_ASSOC);
+                $fileTotal = (int) ($fileStats['c'] ?? 0);
+                $fileTotalSize = (int) ($fileStats['s'] ?? 0);
+                $filePager = datadock_page_clamp(datadock_page_request('p', 25), $fileTotal);
+                $fileLim = (int) $filePager['per_page'];
+                $fileOff = (int) $filePager['offset'];
+                $allFiles = $pdo->query("
                     SELECT f.*, u.username
                     FROM files f
                     LEFT JOIN users u ON f.user_id = u.id
-                    WHERE f.deleted_at IS NULL
-                ";
-                if ($fileStatusFilter === 'pending') {
-                    $filesSql .= " AND f.quarantine_status = 'pending'";
-                }
-                $filesSql .= " ORDER BY f.upload_date DESC";
-                $stmt = $pdo->query($filesSql);
-                $allFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    WHERE $filesWhere
+                    ORDER BY f.upload_date DESC
+                    LIMIT {$fileLim} OFFSET {$fileOff}
+                ")->fetchAll(PDO::FETCH_ASSOC);
 
                 $fileIds = array_values(array_filter(array_map('intval', array_column($allFiles, 'id'))));
                 $reportsByFileId = [];

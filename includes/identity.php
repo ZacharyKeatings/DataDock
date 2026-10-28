@@ -135,6 +135,12 @@ function datadock_user_needs_totp(PDO $pdo, int $userId): bool {
  * Finish a password (or directory) login. Starts a TOTP step when the account has it on.
  */
 function datadock_login_after_password(PDO $pdo, array $user, array $settings, bool $remember): void {
+    require_once __DIR__ . '/email_verify.php';
+    if (datadock_login_blocked_for_email($user, $settings)) {
+        $_SESSION['flash_error'][] = 'Confirm your email before signing in. Outbound mail is not configured yet, so use the verification link from signup or ask an admin to confirm the account.';
+        header('Location: login.php');
+        exit;
+    }
     $claim = trim((string) ($_POST['claim_code'] ?? ''));
     if ($claim !== '') {
         $_SESSION['datadock_claim_code'] = $claim;
@@ -159,6 +165,22 @@ function datadock_establish_session(PDO $pdo, array $user, array $settings, bool
     unset($_SESSION['totp_pending']);
     datadock_finalize_login_session($settings, $remember);
     datadock_session_record($pdo, (int) $user['id']);
+    require_once __DIR__ . '/themes.php';
+    $preferred = isset($user['preferred_theme']) ? trim((string) $user['preferred_theme']) : '';
+    if ($preferred === '') {
+        try {
+            $prefStmt = $pdo->prepare('SELECT preferred_theme FROM users WHERE id = ?');
+            $prefStmt->execute([(int) $user['id']]);
+            $preferred = trim((string) $prefStmt->fetchColumn());
+        } catch (Throwable $e) {
+            $preferred = '';
+        }
+    }
+    if ($preferred !== '' && datadock_theme_is_known($preferred)) {
+        datadock_set_theme_cookie($preferred);
+    } else {
+        datadock_clear_theme_cookie();
+    }
     $claim = trim((string) ($_POST['claim_code'] ?? $_SESSION['datadock_claim_code'] ?? ''));
     unset($_SESSION['datadock_claim_code']);
     if ($claim !== '') {

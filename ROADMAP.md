@@ -53,6 +53,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Suspend user | Admin can disable an account so login and new shares are blocked while files, quotas, and the audit trail stay in place. |
 | ✓ | Close your own account | Password-confirmed self-service deletion. Files are purged, an audit row is written, and the last active admin cannot be removed. |
 | ✓ | Claim a guest upload | One-time claim token so a guest upload can be attached to an account at registration or login and counted against that user's quota. |
+| ✓ | Account theme | Profile setting for a default theme, applied while signed in. Guests use the site default. |
 
 ---
 
@@ -69,7 +70,9 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Max total storage per user (quota) | Total bytes per user. |
 | ✓ | File management view for all users | Admin panel file list and actions. |
 | ✓ | Bulk actions on dashboard | Multi-select: zip download, toggle public/private, delete. |
-| ✓ | Allowed file types | Restrict by extension and/or MIME type. |
+| ✓ | Allowed file types | Admin allow-list or block-list by extension. Executable and server-script types stay blocked. Listing risky types such as apk, html, or svg warns before save. |
+| ✓ | Known file types | Friendly names and icons for packages (including .apk), fonts, Markdown, YAML, SQL, and WebAssembly, in addition to the existing image, document, and media types. |
+| ✓ | Upload result link | After a successful upload, the result stays on screen with a link to the file details page (download page for guests). |
 | ✓ | Enable/disable thumbnail generation | Site setting to turn thumbnails off. |
 | ✓ | Custom storage path support | Uploads and thumbnails outside web root. |
 | ✓ | File upload progress bar | Progress feedback during upload. |
@@ -131,13 +134,14 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Custom logo and favicon URLs | Branding in site settings. |
 | ✓ | Welcome banner or message field | Editable homepage message. |
 | ✓ | Install.php warning toggle | Turn warning off if needed. |
-| ✓ | Dark mode / light mode UI toggle | Theme switcher; preference via cookie. |
-| ✓ | Responsive layout | Sections and file tables scale; horizontal scroll on small screens. |
+| ✓ | Themes | Light, Dark, and bundled Midnight, Ocean, Forest, Sunset, High contrast, and Paper. Header switcher and Site Settings default. |
+| ✓ | Custom theme editor | Admin → Themes: color, font, and radius controls with a live sample, plus optional extra CSS. Saved names appear in the default-theme list. |
+| ✓ | Responsive layout | Sections and file tables scale from phones through tablets. Admin navigation stacks, wide account rows become labeled cards, and pagers wrap. |
 | — | Localization/multilanguage support | Multiple languages; string extraction and locale selection. |
-| — | Mobile responsiveness refinements | Extra polish on small screens. |
 | ✓ | Editable privacy page | Site setting for a public privacy notice, separate from the repository `PRIVACY.md`. |
 | ✓ | Public thumbnail grid | Optional grid layout for the public file index when public browsing is on. |
 | ✓ | Accessibility (WCAG) improvements | Improve accessibility. |
+| ✓ | Pagination | Page controls on files, shared files, share-folder links, trash, activity, notices, sessions, pastes, the public index, and admin user and file lists. |
 | ✓ | Custom file icons | Flat SVG icons per type; custom URLs in settings. |
 
 ---
@@ -148,8 +152,8 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 |--------|---------|-------------|
 | ✓ | Admin contact email field | Shown in footer and admin sidebar. |
 | — | Email notifications on upload, expiry, etc. | Notify users or admin on events. |
-| — | SMTP configuration | Host, port, user, pass, encryption. |
-| — | Email registration confirmation | Confirm email on signup. |
+| — | SMTP configuration | Host, port, user, pass, encryption. Required before verification links are emailed. |
+| ✓ | Email verification toggle | Admins can require confirmation for new local accounts. Until SMTP exists, signup shows the link and an admin can confirm the address from User Management. Existing accounts stay confirmed. |
 | ✓ | In-app notices | Per-user list for shares received, report reviews, quota warnings, and files expiring soon. Works with SMTP off; email can deliver the same events later. |
 
 ---

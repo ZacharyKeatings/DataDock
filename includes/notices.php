@@ -63,10 +63,21 @@ function datadock_notice_unread_count(PDO $pdo, int $userId): int {
 /**
  * @return list<array<string, mixed>>
  */
-function datadock_list_notices(PDO $pdo, int $userId, int $limit = 50): array {
-    $limit = max(1, min(100, $limit));
+function datadock_count_notices(PDO $pdo, int $userId): int {
     try {
-        $stmt = $pdo->prepare('SELECT * FROM user_notices WHERE user_id = ? ORDER BY id DESC LIMIT ' . $limit);
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM user_notices WHERE user_id = ?');
+        $stmt->execute([$userId]);
+        return (int) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+function datadock_list_notices(PDO $pdo, int $userId, int $limit = 50, int $offset = 0): array {
+    $limit = max(1, min(100, $limit));
+    $offset = max(0, $offset);
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM user_notices WHERE user_id = ? ORDER BY id DESC LIMIT ' . $limit . ' OFFSET ' . $offset);
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {

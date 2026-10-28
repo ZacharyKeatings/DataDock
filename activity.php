@@ -6,6 +6,7 @@ require_login();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/user_trust.php';
+require_once __DIR__ . '/includes/pagination.php';
 
 $userId = (int) $_SESSION['user_id'];
 
@@ -29,22 +30,28 @@ foreach ($chartRows as $r) {
     $chartValues[] = (int) ($r['b'] ?? 0);
 }
 
+$downloadCount = $pdo->prepare('SELECT COUNT(*) FROM file_download_events e INNER JOIN files f ON f.id = e.file_id AND f.user_id = ?');
+$downloadCount->execute([$userId]);
+$downloadPager = datadock_page_clamp(datadock_page_request('dp', 25), (int) $downloadCount->fetchColumn());
 $stmt = $pdo->prepare("
     SELECT e.downloaded_at, e.ip_address, e.country_code, f.id AS file_id, f.original_name
     FROM file_download_events e
     INNER JOIN files f ON f.id = e.file_id AND f.user_id = ?
     ORDER BY e.downloaded_at DESC
-    LIMIT 200
+    LIMIT {$downloadPager['per_page']} OFFSET {$downloadPager['offset']}
 ");
 $stmt->execute([$userId]);
 $recentDownloads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$fileCountStmt = $pdo->prepare('SELECT COUNT(*) FROM files WHERE user_id = ? AND deleted_at IS NULL');
+$fileCountStmt->execute([$userId]);
+$uploadPager = datadock_page_clamp(datadock_page_request('fp', 25), (int) $fileCountStmt->fetchColumn());
 $stmt = $pdo->prepare("
     SELECT id, original_name, download_count, upload_date
     FROM files
     WHERE user_id = ? AND deleted_at IS NULL
     ORDER BY upload_date DESC
-    LIMIT 500
+    LIMIT {$uploadPager['per_page']} OFFSET {$uploadPager['offset']}
 ");
 $stmt->execute([$userId]);
 $myFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -93,6 +100,7 @@ require_once __DIR__ . '/includes/header.php';
                 </tbody>
             </table>
         </div>
+        <?php datadock_render_pager($downloadPager); ?>
     <?php endif; ?>
 
     <h3 class="section-title">Your uploads</h3>
@@ -119,6 +127,7 @@ require_once __DIR__ . '/includes/header.php';
                 </tbody>
             </table>
         </div>
+        <?php datadock_render_pager($uploadPager); ?>
     <?php endif; ?>
 
     <p class="form-actions"><a href="export_data.php" class="btn btn-quiet">Export my data</a></p>

@@ -1,0 +1,32 @@
+:root {
+    color-scheme: light;
+    --color-header-background: #000000;
+    --color-background: #ffffff;
+    --color-text: #000000;
+    --color-primary: #000000;
+    --color-secondary: #f2f2f2;
+    --color-accent: #ffd400;
+    --color-border: #000000;
+    --color-box-background: #ffffff;
+    --color-link: #0000ee;
+    --color-file-row-alt: rgba(0, 0, 0, 0.04);
+    --font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --radius: 2px;
+}
+body { background-color: var(--color-background); color: var(--color-text); font-family: var(--font-family); }
+a { color: #0000ee; }
+a:hover { color: #551a8b; }
+.container, .page-section { background: var(--color-background); color: var(--color-text); }
+.site-header { background-color: var(--color-header-background); }
+button, .btn-primary { background-color: var(--color-primary); color: #ffffff; border: none; border-radius: var(--radius); }
+button:hover, .btn-primary:hover { background-color: #000000; color: #ffffff; }
+.page-section, .settings-card, .stat-card { background: #ffffff; border-color: var(--color-border); }
+.settings-card { background: var(--color-secondary); }
+.form-group input, .form-group textarea, .form-group select, .settings-row input, .settings-row select, .settings-row textarea {
+    background: #ffffff; color: var(--color-text); border-color: var(--color-border); border-radius: var(--radius);
+}
+.stat-value, .profile-stat-value { color: #000000; }
+.sidebar-nav a { color: var(--color-text); }
+.sidebar-nav a.active, .sidebar-nav a:hover { background: var(--color-secondary); color: #000000; }
+.file-row, .file-row-dashboard, .file-row-user-management, .file-row-file-management { border-bottom-color: var(--color-border); }
+.welcome-banner { background: var(--color-secondary); border-left-color: var(--color-accent); }
