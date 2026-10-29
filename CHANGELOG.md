@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),  
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+---
+
+
+## [v2.6.0] - 2026-10-28
+
+### File Sharing, Security, Administration & UI Improvements
+
+### Added
+
+#### File Management & Sharing
+
+- **Plaintext sharing:** Added a Paste feature for creating and sharing text through unlisted URLs, with optional titles, expiration dates, one-time viewing, raw text access, downloads, and clipboard actions.
+- **Password-protected pastes:** Added optional password protection for paste viewing, raw text access, and downloads.
+- **Guest upload claiming:** Guest uploads now generate claim codes that can be entered during registration or login to transfer files to an account, subject to available storage quotas.
+- **Inline file previews:** Added previews for images, audio, video, and plaintext files. Potentially unsafe formats, including HTML, SVG, and scripts, remain download-only.
+- **File replacement:** Users can replace the contents of an existing file while preserving its file ID, sharing permissions, and existing links. Previous file contents follow the configured trash retention policy.
+- **Chunked uploads:** Added support for uploading large files in smaller chunks. Files are reassembled server-side before validation, scanning, quota enforcement, and deduplication.
+- **Bulk file movement:** Added a dashboard action to move multiple selected files into another folder.
+- **Live folder sharing:** Added share links that dynamically reflect additions and removals within a folder. Supports expiration, password protection, and IP restrictions.
+- **Share link management:** Added a centralized view of outstanding share links and signed links, with options to revoke individual links.
+- **Individually revocable signed links:** New signed links have unique identifiers, allowing revocation without rotating the site's signing secret.
+- **Expiring file notifications:** Added dashboard warnings for files scheduled to expire within seven days.
+- **Public thumbnail grid:** Added an optional grid view for browsing publicly accessible files.
+- **Download bandwidth limits:** Added configurable download byte budgets over a defined time window.
+
+#### User Accounts & Authentication
+
+- **Account suspension:** Administrators can suspend accounts, preventing login and new sharing activity while preserving files, quotas, and audit records.
+- **Account deletion:** Users can permanently close their accounts through their profile after confirming their password. Associated files are purged and the operation is audited.
+- **Multi-factor authentication:** Added authenticator-based authentication, with site-wide policies to disable it, make it optional, or require it for administrators.
+- **Session management:** Added a page for viewing the current browser session and revoking other sessions.
+- **OpenID Connect authentication:** Added optional OIDC authentication support.
+- **LDAP authentication:** Added optional LDAP integration when the PHP LDAP extension is available.
+- **Reverse-proxy authentication:** Added support for trusted forward-auth identity headers, restricted to configured proxy IP addresses.
+- **Local authentication fallback:** Added a local account sign-in option for environments where reverse proxies inject authentication headers.
+- **Email verification:** Added optional email verification for newly registered local accounts, including manual administrator confirmation.
+- **Administrator account creation:** Added an administrative workflow for creating user accounts.
+
+#### Administration & Security
+
+- **Password policies:** Added configurable minimum password length and complexity requirements.
+- **Administrator IP restrictions:** Added an optional IP allowlist for administration access, including confirmation safeguards against accidental administrator lockout.
+- **File type policies:** Added configurable file-extension allowlists and blocklists, with protections against executable and server-script uploads.
+- **Upload malware scanning:** Added optional integration with a local scanning command or ClamAV daemon socket. Uploads that cannot pass scanning remain pending. Scanning is disabled by default and requires an externally configured scanner.
+- **Audit log exports:** Added CSV and JSON export options for administrative activity logs.
+- **Moderation purge holds:** Administrators can prevent reported files from being automatically purged until a moderation hold is cleared.
+- **File ownership transfers:** Administrators can transfer files between user accounts, including transfers across different storage partitions.
+- **Privacy notice:** Added an editable, publicly accessible privacy page that can be published through Site Settings.
+- **Hotlink protection:** Added optional blocking of unauthorized hotlinked file requests.
+- **In-app notifications:** Added account notifications for received shares, reviewed reports, quota warnings, and upcoming file expirations.
+
+#### Appearance & User Experience
+
+- **Additional themes:** Added Midnight, Ocean, Forest, Sunset, High Contrast, and Paper themes.
+- **Custom theme editor:** Added an administrative WYSIWYG theme editor supporting colour, typography, border-radius adjustments, live previews, and optional custom CSS.
+- **Custom theme management:** Administrators can save custom themes and select them as the site's default appearance.
+- **Site-wide pagination:** Added pagination across file lists, shared files, trash, pastes, activity logs, notifications, sessions, public browsing, and administrative lists.
+- **Responsive interface improvements:** Expanded responsive layouts across desktop, tablet, and mobile devices.
+- **Additional file type recognition:** Added improved file icons and descriptive labels for packages, fonts, Markdown, YAML, SQL, WebAssembly, and other recognized formats.
+
+### Changed
+
+#### Administration
+
+- Reorganized the administrative Site Settings interface into more clearly defined configuration sections.
+- Refactored administrative settings handling to improve separation of concerns and maintainability.
+- Expanded user management with account suspension, email confirmation, quota management, account creation, and file ownership transfer workflows.
+- Updated the administration interface to accommodate additional security, authentication, upload, and appearance settings.
+- Improved administrative navigation, settings presentation, and mobile responsiveness.
+
+#### File Handling
+
+- Updated the upload workflow to support chunked transfers, optional malware scanning, and file-type policy enforcement.
+- Expanded download authorization to support additional sharing restrictions and bandwidth limits.
+- Updated file sharing workflows to support improved revocation and live folder links.
+- Integrated plaintext pastes with existing account management, dashboard listings, and expiration cleanup.
+- Extended backup, retention, and purge handling for additional data and file lifecycle functionality.
+
+#### Interface & Configuration
+
+- Introduced a broader visual redesign with updated styling, layout, navigation, and responsive components.
+- Expanded theme configuration and the available customization options.
+- Updated default settings and database migrations to support new features.
+- Expanded the project roadmap to document implemented capabilities and future development plans.
+
+### Fixed
+
+- Fixed page background colours failing to extend across the full document when content becomes scrollable.
+
+### Security Notes
+
+- Legacy signed links remain supported alongside newly revocable signed links.
+- Guest upload claims are subject to account quotas and do not consume the claim code when the transfer cannot be completed.
+- Administrators cannot suspend themselves or the last active administrator.
+- Account deletion safeguards prevent removal of the last active administrator.
+- Trusted forward-auth headers are accepted only from explicitly configured proxy IP addresses.
+- Inline previews continue to prevent direct rendering of potentially dangerous HTML, SVG, and script files.
+- Upload scanning remains optional and requires an external scanning service or command.
 
 ---
 
