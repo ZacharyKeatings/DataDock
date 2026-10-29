@@ -19,4 +19,14 @@ if [ -n "${DATADOCK_DB_HOST:-}" ] && ! grep -q '__dd_rt' /var/www/html/config/db
   echo "DataDock: updated config/db.php from db.php.example (Docker DB env + .db-runtime.php). Check config/ for *.pre-docker-sync.*.bak if you had custom edits."
 fi
 php /var/www/html/scripts/generate-db-runtime.php
+# Allow the web installer to write database configuration.
+chown www-data:www-data /var/www/html/config
+chmod 750 /var/www/html/config
+
+for file in /var/www/html/config/db.php /var/www/html/config/.db-runtime.php; do
+  if [ -f "$file" ]; then
+    chown www-data:www-data "$file"
+    chmod 640 "$file"
+  fi
+done
 exec "$@"
