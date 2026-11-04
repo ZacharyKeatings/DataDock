@@ -4,6 +4,9 @@
 # and paste that on Hub — it adds DATADOCK_DB_* on web.
 #
 # After containers are up, complete setup via install.php in a browser or scripts/datadock-install.php.
+# This file bind-mounts the source tree, so install.php stays in the project directory until you delete it.
+# The published image (docker-compose.hub.example.yml) removes install.php itself and keeps settings
+# and uploads in the datadock_data volume across compose down/up and --force-recreate.
 #
 # Optional runtime overrides (see includes/settings_loader.php):
 #   DATADOCK_READ_ONLY=1
@@ -18,6 +21,8 @@ services:
       - "8080:80"
     environment:
       APACHE_RUN_USER: www-data
+      # This compose file bind-mounts the source tree. Do not relocate settings or delete install.php.
+      DATADOCK_IMAGE_MODE: "0"
       # TCP to the db service (avoid "localhost" → Unix socket in the web container).
       DATADOCK_DB_HOST: db
       DATADOCK_DB_NAME: datadock
@@ -26,7 +31,8 @@ services:
     volumes:
       - ./:/var/www/html
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:8.0
@@ -39,6 +45,12 @@ services:
       - datadock_mysql:/var/lib/mysql
     ports:
       - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
 volumes:
   datadock_mysql:

@@ -83,7 +83,15 @@ A full checklist of implemented and planned features is maintained in the **[Roa
    - Admin username and password
 
 5. **Remove the installer**  
-   Delete or rename `install.php` after setup. If it still exists, a security warning is shown to the logged-in admin on every page until the file is removed (you can disable this warning in Admin Panel → Site Settings).
+   On a normal web host, delete or rename `install.php` after setup. If it still exists, a security warning is shown to the logged-in admin on every page until the file is removed (you can disable this warning in Admin Panel → Site Settings).
+
+### Docker image
+
+Use [docker-compose.hub.example.yml](docker-compose.hub.example.yml) with the published image. Copy it to `docker-compose.yml`, set the passwords, and run `docker compose up -d`. Open `http://localhost:8080/install.php` once.
+
+When setup finishes, the container deletes `install.php`. `docker compose down` / `up` and `--force-recreate` do not bring the installer back, and they do not wipe the site: settings and uploaded files stay in the `datadock_data` volume, and the database stays in `datadock_mysql`. `docker compose down -v` deletes those volumes.
+
+[docker-compose.example.yml](docker-compose.example.yml) is for working on a checkout. It bind-mounts the repository, so `install.php` stays in the project directory until you delete it there.
 
 For detailed upgrade steps and version-specific notes, see [CHANGELOG.md](CHANGELOG.md).
 
@@ -123,7 +131,7 @@ Security-related choices: CSRF-safe form handling, `password_hash` for passwords
 - **Input handling** — User input is sanitized (e.g. `htmlspecialchars()` and project `sanitize_data()`); file uploads are validated by size and MIME type.
 - **Access control** — Admin panel and sensitive actions require an authenticated session and appropriate role.
 - **Config protection** — The `config/` directory is protected (e.g. via `.htaccess` on Apache) so credentials are not directly accessible.
-- **Installation** — Deleting `install.php` after setup is recommended; a warning is shown to the logged-in admin on every page until it is removed (toggle in Site Settings).
+- **Installation** — On a normal web host, delete `install.php` after setup. The published Docker image removes it after setup and keeps it removed when the container is recreated. A warning is shown to the logged-in admin on every page until the file is gone (toggle in Site Settings).
 - **HTTP headers (optional, v2.5+)** — In **Admin → Site Settings**, you can set `security_headers_mode` to `recommended` or `strict` so PHP sends extra headers (nosniff, referrer policy, framing, and in `strict` mode a Content-Security-Policy aligned with this app’s inline scripts and the Activity chart CDN). For TLS/HSTS and duplicate-header control, prefer your reverse proxy: copy from **`examples/nginx-security-headers.conf`** or **`examples/apache-security-headers.conf`**. Container / env: `DATADOCK_SECURITY_HEADERS=off|recommended|strict`.
 - **Sessions** — Idle timeout signs users out with a clear message on the login page. Optional **Remember this device** only extends the session cookie lifetime (still the same PHP session; idle rules apply); it is not a separate “remember me” token system.
 

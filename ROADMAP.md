@@ -270,7 +270,7 @@ Makes DataDock easier to deploy and operate in production environments.
 |--------|---------|-------------|
 | ✓ | CLI installer | `scripts/datadock-install.php` (alongside web install.php). |
 | ✓ | Environment-based config override | `DATADOCK_*` env vars via `includes/settings_loader.php`. |
-| ✓ | Docker support | `Dockerfile` and `docker-compose.example.yml`. |
+| ✓ | Docker support | `Dockerfile`, `docker-compose.hub.example.yml` (published image, `datadock_data` volume), and `docker-compose.example.yml` (source checkout). |
 | ✓ | Health check endpoint | `health.php` returns JSON for uptime monitoring. |
 | ✓ | Admin account tools | Admin → User Management: create an account, set a per-user storage quota, and review the account list. |
 

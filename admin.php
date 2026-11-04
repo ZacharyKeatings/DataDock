@@ -82,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($applied['errors'] === []) {
             extract($applied['form'], EXTR_OVERWRITE);
-            $newName = $siteName;
             foreach ($applied['warnings'] as $settingsWarning) {
                 $_SESSION['flash_warning'][] = $settingsWarning;
             }
@@ -97,134 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            $updatedSettings = "<?php\n\$settings = [\n" .
-                "    'site_name' => " . var_export($newName, true) . ",\n" .
-                "    'admin_contact_email' => " . var_export($adminContactEmail, true) . ",\n" .
-                "    'registration_enabled' => " . ($registrationEnabled ? 'true' : 'false') . ",\n" .
-                "    'invite_only_registration' => " . ($inviteOnlyRegistration ? 'true' : 'false') . ",\n" .
-                "    'enforce_unique_email' => " . ($enforceUniqueEmail ? 'true' : 'false') . ",\n" .
-                "    'email_verification_enabled' => " . ($emailVerificationEnabled ? 'true' : 'false') . ",\n" .
-                "    'max_file_size' => $maxFileSize,\n" .
-                "    'default_file_expiry' => " . var_export($defaultFileExpiry, true) . ",\n" .
-                "    'thumbnails_enabled' => " . ($thumbnailsEnabled ? 'true' : 'false') . ",\n" .
-                "    'session_timeout_minutes' => $sessionTimeoutMinutes,\n" .
-                "    'security_headers_mode' => " . var_export($securityHeadersMode, true) . ",\n" .
-                "    'remember_device' => [\n" .
-                "        'enabled' => " . ($rememberDeviceEnabled ? 'true' : 'false') . ",\n" .
-                "        'cookie_days' => $rememberDeviceCookieDays\n" .
-                "    ],\n" .
-                "    'install_warning_enabled' => " . ($installWarningEnabled ? 'true' : 'false') . ",\n" .
-                "    'maintenance_mode' => " . ($maintenanceMode ? 'true' : 'false') . ",\n" .
-                "    'read_only_mode' => " . ($readOnlyMode ? 'true' : 'false') . ",\n" .
-                "    'debug_mode' => " . ($debugMode ? 'true' : 'false') . ",\n" .
-                "    'log_path' => " . var_export($logPath, true) . ",\n" .
-                "    'log_level' => " . var_export($logLevel, true) . ",\n" .
-                "    'logo_url' => " . var_export($logoUrl, true) . ",\n" .
-                "    'favicon_url' => " . var_export($faviconUrl, true) . ",\n" .
-                "    'welcome_message' => " . var_export($welcomeMessage, true) . ",\n" .
-                "    'theme' => " . var_export($theme, true) . ",\n" .
-                "    'file_icons' => " . var_export($fileIcons, true) . ",\n" .
-                "    'tos_enabled' => " . ($tosEnabled ? 'true' : 'false') . ",\n" .
-                "    'tos_text' => " . var_export($tosText, true) . ",\n" .
-                "    'privacy_enabled' => " . ($privacyEnabled ? 'true' : 'false') . ",\n" .
-                "    'privacy_text' => " . var_export($privacyText, true) . ",\n" .
-                "    'password_rules' => [\n" .
-                "        'min_length' => $passwordMinLength,\n" .
-                "        'complexity' => " . ($passwordComplexity ? 'true' : 'false') . "\n" .
-                "    ],\n" .
-                "    'storage_base_path' => " . var_export($storageBasePath, true) . ",\n" .
-                "    'trusted_proxies' => " . var_export($trustedProxies, true) . ",\n" .
-                "    'public_browsing_enabled' => " . ($publicBrowsingEnabled ? 'true' : 'false') . ",\n" .
-                "    'public_grid_enabled' => " . ($publicGridEnabled ? 'true' : 'false') . ",\n" .
-                "    'download_quota' => [\n" .
-                "        'enabled' => " . ($downloadQuotaEnabled ? 'true' : 'false') . ",\n" .
-                "        'window_minutes' => $downloadQuotaWindow,\n" .
-                "        'max_bytes_per_user' => $downloadQuotaUserBytes,\n" .
-                "        'max_bytes_per_file' => $downloadQuotaFileBytes\n" .
-                "    ],\n" .
-                "    'upload_scan' => [\n" .
-                "        'mode' => " . var_export($uploadScanMode, true) . ",\n" .
-                "        'command' => " . var_export($uploadScanCommand, true) . ",\n" .
-                "        'socket' => " . var_export($uploadScanSocket, true) . "\n" .
-                "    ],\n" .
-                "    'identity' => [\n" .
-                "        'totp_policy' => " . var_export($totpPolicy, true) . ",\n" .
-                "        'oidc' => [\n" .
-                "            'enabled' => " . ($oidcEnabled ? 'true' : 'false') . ",\n" .
-                "            'issuer' => " . var_export($oidcIssuer, true) . ",\n" .
-                "            'client_id' => " . var_export($oidcClientId, true) . ",\n" .
-                "            'client_secret' => " . var_export($oidcClientSecret, true) . ",\n" .
-                "            'role_claim' => " . var_export($oidcRoleClaim, true) . ",\n" .
-                "            'admin_groups' => " . var_export($oidcAdminGroups, true) . "\n" .
-                "        ],\n" .
-                "        'ldap' => [\n" .
-                "            'enabled' => " . ($ldapEnabled ? 'true' : 'false') . ",\n" .
-                "            'host' => " . var_export($ldapHost, true) . ",\n" .
-                "            'port' => $ldapPort,\n" .
-                "            'encryption' => " . var_export($ldapEncryption, true) . ",\n" .
-                "            'user_dn_template' => " . var_export($ldapUserDn, true) . ",\n" .
-                "            'base_dn' => " . var_export($ldapBaseDn, true) . ",\n" .
-                "            'bind_dn' => " . var_export($ldapBindDn, true) . ",\n" .
-                "            'bind_password' => " . var_export($ldapBindPassword, true) . ",\n" .
-                "            'user_filter' => " . var_export($ldapUserFilter, true) . ",\n" .
-                "            'admin_group' => " . var_export($ldapAdminGroup, true) . "\n" .
-                "        ],\n" .
-                "        'forward_auth' => [\n" .
-                "            'enabled' => " . ($forwardEnabled ? 'true' : 'false') . ",\n" .
-                "            'trusted_proxies' => " . var_export($forwardProxies, true) . ",\n" .
-                "            'user_header' => " . var_export($forwardUserHeader, true) . ",\n" .
-                "            'group_header' => " . var_export($forwardGroupHeader, true) . ",\n" .
-                "            'admin_groups' => " . var_export($forwardAdminGroups, true) . "\n" .
-                "        ]\n" .
-                "    ],\n" .
-                "    'brute_force' => [\n" .
-                "        'enabled' => " . ($bruteForceEnabled ? 'true' : 'false') . ",\n" .
-                "        'max_attempts' => $maxAttempts,\n" .
-                "        'lockout_minutes' => $lockoutMinutes,\n" .
-                "        'lockout_window' => $lockoutWindow,\n" .
-                "        'adaptive_cooldown_enabled' => " . ($adaptiveCooldownEnabled ? 'true' : 'false') . ",\n" .
-                "        'adaptive_cooldown_ip_window_minutes' => $adaptiveCooldownWindow,\n" .
-                "        'adaptive_cooldown_steps' => [5 => 5, 15 => 15, 30 => 60]\n" .
-                "    ],\n" .
-                "    'rate_limit_uploads' => [\n" .
-                "        'enabled' => " . ($rateLimitUploadsEnabled ? 'true' : 'false') . ",\n" .
-                "        'window_minutes' => $rateLimitWindowMinutes,\n" .
-                "        'max_per_ip' => $rateLimitMaxPerIp,\n" .
-                "        'max_per_user' => $rateLimitMaxPerUser\n" .
-                "    ],\n" .
-                "    'rewrite_file_extension' => " . ($rewriteFileExtension ? 'true' : 'false') . ",\n" .
-                "    'upload_quarantine_enabled' => " . ($uploadQuarantineEnabled ? 'true' : 'false') . ",\n" .
-                "    'filetype_policy' => [\n" .
-                "        'mode' => " . var_export($filetypeMode, true) . ",\n" .
-                "        'extensions' => " . var_export($filetypeExtensions, true) . "\n" .
-                "    ],\n" .
-                "    'deduplicate_storage' => " . ($deduplicateStorage ? 'true' : 'false') . ",\n" .
-                "    'folders_enabled' => " . ($foldersEnabledSetting ? 'true' : 'false') . ",\n" .
-                "    'tags_enabled' => " . ($tagsEnabledSetting ? 'true' : 'false') . ",\n" .
-                "    'pastes_enabled' => " . ($pastesEnabledSetting ? 'true' : 'false') . ",\n" .
-                "    'hotlink_logging_enabled' => " . ($hotlinkLoggingEnabled ? 'true' : 'false') . ",\n" .
-                "    'hotlink_block_enabled' => " . ($hotlinkBlockEnabled ? 'true' : 'false') . ",\n" .
-                "    'hotlink_trusted_hosts' => " . var_export($hotlinkTrustedHosts, true) . ",\n" .
-                "    'admin_ip_allowlist' => " . var_export($adminIpAllowlist, true) . ",\n" .
-                "    'ops_alerts' => [\n" .
-                "        'storage_partition_percent_enabled' => " . ($opsStoragePartitionPercentEnabled ? 'true' : 'false') . ",\n" .
-                "        'storage_partition_percent_threshold' => $opsStoragePartitionPercentThreshold,\n" .
-                "        'user_quota_percent_enabled' => " . ($opsUserQuotaPercentEnabled ? 'true' : 'false') . ",\n" .
-                "        'user_quota_percent_threshold' => $opsUserQuotaPercentThreshold\n" .
-                "    ],\n" .
-                "    'guest_uploads' => [\n" .
-                "        'enabled' => " . ($guestUploadsEnabled ? 'true' : 'false') . ",\n" .
-                "        'max_files' => $guestMaxFiles,\n" .
-                "        'max_storage' => $guestMaxStorage\n" .
-                "    ],\n" .
-                "    'user_limits' => [\n" .
-                "        'max_files_enabled' => " . ($userMaxFilesEnabled ? 'true' : 'false') . ",\n" .
-                "        'max_files' => $userMaxFiles,\n" .
-                "        'max_storage_enabled' => " . ($userMaxStorageEnabled ? 'true' : 'false') . ",\n" .
-                "        'max_storage' => $userMaxStorage\n" .
-                "    ],\n" .
-                "    'trash_retention_days' => $trashRetentionDays,\n" .
-                "];\n?>";
+            $updatedSettings = datadock_export_site_settings_php($applied['form']);
 
             if (file_put_contents($settingsFile, $updatedSettings)) {
                 if ($settingsGroupPosted === 'files' && $storageBasePath === '') {
@@ -251,9 +123,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($settingsGroupPosted === 'uploads' && ($serverUploadOverride > 0 || $serverPostOverride > 0)) {
                 $currentUploadBytes = return_bytes(ini_get('upload_max_filesize'));
                 $currentPostBytes = return_bytes(ini_get('post_max_size'));
-                $uploadIni = $serverUploadOverride > 0 ? bytes_to_ini_size($serverUploadOverride) : bytes_to_ini_size($currentUploadBytes);
-                $postIni = $serverPostOverride > 0 ? bytes_to_ini_size($serverPostOverride) : bytes_to_ini_size($currentPostBytes);
-                $userIniContent = "; DataDock server limits (optional override)\nupload_max_filesize = " . $uploadIni . "\npost_max_size = " . $postIni . "\n";
+                $userIniContent = datadock_user_ini_override(
+                    $serverUploadOverride > 0 ? $serverUploadOverride : $currentUploadBytes,
+                    $serverPostOverride > 0 ? $serverPostOverride : $currentPostBytes
+                );
                 if (@file_put_contents($userIniPath, $userIniContent)) {
                     $_SESSION['flash_success'][] = "✅ Server PHP limits written to .user.ini. They may take effect on the next request (not all hosts support .user.ini).";
                 } else {

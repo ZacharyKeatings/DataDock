@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run the PHP test suite before a commit, including MySQL when Docker or
+# DATADOCK_TEST_DB_* is available. Enable once per clone:
+#   git config core.hooksPath hooks
+root=$(git rev-parse --show-toplevel) || exit 1
+cd "$root" || exit 1
+exec php tests/run.php

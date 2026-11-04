@@ -15,6 +15,7 @@ chdir($base);
 
 require_once $base . '/includes/functions.php';
 require_once $base . '/includes/install_lib.php';
+require_once $base . '/includes/docker_runtime.php';
 
 function arg(string $name, ?string $default = null): ?string {
     global $argv;
@@ -71,6 +72,7 @@ $stmt = $pdo->prepare('SELECT id FROM users WHERE role = ? LIMIT 1');
 $stmt->execute(['admin']);
 if ($stmt->fetch()) {
     fwrite(STDOUT, "Already initialized (admin user exists). Config refreshed.\n");
+    datadock_announce_installer_retired();
     exit(0);
 }
 
@@ -79,4 +81,5 @@ $ins = $pdo->prepare("INSERT INTO users (username, email, password_hash, role) V
 $ins->execute([$adminUser, $adminEmail, $hash]);
 
 fwrite(STDOUT, "OK: DataDock installed. Admin user: {$adminUser}\n");
+datadock_announce_installer_retired();
 exit(0);

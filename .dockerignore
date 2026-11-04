@@ -3,3 +3,12 @@
 **/node_modules
 **/*.md
 !README.md
+config/settings.php
+config/db.php
+config/.db-runtime.php
+config/.docker.php
+config/*.bak
+uploads/*
+!uploads/.htaccess
+thumbnails/*
+!thumbnails/.htaccess

@@ -3,6 +3,7 @@
 /config/.db-runtime.php
 /info.php
 /config/settings.php
+/config/.docker.php
 /uploads/**
 !/uploads/.htaccess
 /thumbnails/**

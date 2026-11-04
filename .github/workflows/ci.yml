@@ -1,25 +1,41 @@
-# Quick CI: PHP syntax check on push and pull requests.
+# PHP syntax, native tests, and a temporary MySQL database.
 
 name: CI
 
 on:
   push:
-    branches: [main, master]
   pull_request:
-    branches: [main, master]
 
 permissions:
   contents: read
 
 jobs:
-  php-syntax:
+  php-tests:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: datadock_test
+          MYSQL_ROOT_HOST: "%"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pdatadock_test --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+          --health-start-period=20s
+    env:
+      DATADOCK_TEST_DB_HOST: 127.0.0.1
+      DATADOCK_TEST_DB_PORT: "3306"
+      DATADOCK_TEST_DB_USER: root
+      DATADOCK_TEST_DB_PASSWORD: datadock_test
     steps:
       - uses: actions/checkout@v4
 
-      - name: PHP syntax check
-        run: |
-          set -e
-          while IFS= read -r -d '' f; do
-            php -l "$f"
-          done < <(find . -name '*.php' -print0)
+      - name: Install PHP
+        run: sudo apt-get update && sudo apt-get install -y php-cli php-mysql php-mbstring php-xml
+
+      - name: PHP syntax and tests
+        run: php tests/run.php

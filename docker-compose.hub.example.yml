@@ -1,9 +1,14 @@
-# Same stack as Docker Hub’s minimal example, but with the fields the app needs to reach MySQL.
-# Use this when pulling from Docker Hub (no local build / no bind mount).
+# Published image (no local build, no source bind mount).
 # Image tags: :latest follows the newest GitHub Release; :dev follows the latest commit on main/master; :<sha> is immutable.
 #
 # Copy to docker-compose.yml, change secrets, then: docker compose up -d
-# Open http://localhost:8080 (or your mapped port) and complete install.php if required.
+# Open http://localhost:8080/install.php once.
+#
+# After setup the container deletes install.php. docker compose down / up and
+# --force-recreate do not bring it back and do not wipe the site:
+#   datadock_data  — site settings and uploaded files
+#   datadock_mysql — the database
+# docker compose down -v deletes those volumes.
 
 services:
   web:
@@ -17,8 +22,11 @@ services:
       DATADOCK_DB_NAME: datadock
       DATADOCK_DB_USER: datadock
       DATADOCK_DB_PASSWORD: changeme_app
+    volumes:
+      - datadock_data:/var/lib/datadock
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:8.0
@@ -29,6 +37,13 @@ services:
       MYSQL_PASSWORD: changeme_app
     volumes:
       - datadock_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
 volumes:
   datadock_mysql:
+  datadock_data:

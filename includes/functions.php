@@ -270,6 +270,8 @@ function format_filesize($size) {
  * @return void
  */
 function write_default_settings_file($siteName = 'DataDock') {
+    require_once __DIR__ . '/docker_runtime.php';
+    $storageBasePath = datadock_docker_default_storage_path();
     $settings = "<?php\n\$settings = [\n" .
         "    'site_name' => " . var_export($siteName, true) . ",\n" .
         "    'admin_contact_email' => '',\n" .
@@ -320,7 +322,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "        'mode' => 'off',\n" .
         "        'extensions' => ''\n" .
         "    ],\n" .
-        "    'storage_base_path' => '',\n" .
+        "    'storage_base_path' => " . var_export($storageBasePath, true) . ",\n" .
         "    'trusted_proxies' => '',\n" .
         "    'public_browsing_enabled' => false,\n" .
         "    'public_grid_enabled' => false,\n" .

@@ -453,7 +453,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
           <input type="checkbox" name="use_chunks" id="use_chunks" value="1">
           Send large files in chunks
         </label>
-        <p class="form-hint">The browser slices the file. The server reassembles it, then runs the usual type, quota, and scan checks once.</p>
+        <p class="form-hint">Uploads over 512 KB are already split into pieces, so a server size limit does not reject the whole request. Check this to send smaller files that way too.</p>
       </div>
       <div class="upload-submit-wrap">
         <button type="submit" class="btn btn-primary btn-upload-submit">Upload</button>
@@ -471,6 +471,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
     const uploadForm        = document.getElementById("uploadForm");
     const uploadButton      = uploadForm.querySelector('button[type="submit"]');
     const maxSize           = <?= $appMaxFileSize ?>;
+    const uploadChunkBytes  = 512 * 1024;
     const forbiddenExts     = <?= json_encode($forbiddenExtensions) ?>;
     const policyMode        = <?= json_encode($filetypePolicy['mode']) ?>;
     const policyExts        = <?= json_encode($filetypePolicy['extensions']) ?>;
@@ -584,12 +585,39 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       return field ? field.value : '';
     }
 
+    function parseUploadJson(text) {
+      try {
+        return JSON.parse(text);
+      } catch (e) {}
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        try {
+          return JSON.parse(text.slice(start, end + 1));
+        } catch (e) {}
+      }
+      return null;
+    }
+
+    function uploadRejectedMessage(status) {
+      const http = status ? ' (HTTP ' + status + ')' : '';
+      return '❌ Upload failed: the server did not accept the file' + http + '. Its upload size limit is lower than this request.';
+    }
+
+    async function readUploadJson(response) {
+      const data = parseUploadJson(await response.text());
+      if (data && typeof data === 'object') return data;
+      const error = new Error(uploadRejectedMessage(response.status));
+      error.uploadFailed = true;
+      throw error;
+    }
+
     async function uploadChunked() {
       const files = Array.from(fileInput.files);
       const errors = [];
       const success = [];
       const uploaded = [];
-      const chunkSize = 1024 * 1024;
+      const chunkSize = uploadChunkBytes;
       let done = 0;
       const total = files.reduce((sum, file) => sum + file.size, 0) || 1;
       for (const file of files) {
@@ -599,7 +627,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
         start.append('size', String(file.size));
         start.append('csrf_token', csrfToken());
         const started = await fetch('upload_chunk.php', { method: 'POST', body: start, headers: { 'X-Requested-With': 'xmlhttprequest' } });
-        const startJson = await started.json();
+        const startJson = await readUploadJson(started);
         if (!startJson.ok) {
           errors.push(startJson.error || ('Could not start ' + file.name));
           continue;
@@ -615,7 +643,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
           part.append('chunk', blob, 'chunk');
           part.append('csrf_token', csrfToken());
           const sent = await fetch('upload_chunk.php', { method: 'POST', body: part });
-          const partJson = await sent.json();
+          const partJson = await readUploadJson(sent);
           if (!partJson.ok) {
             errors.push(partJson.error || ('Chunk failed for ' + file.name));
             failed = true;
@@ -628,12 +656,14 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
         }
         if (failed) continue;
         const finish = new FormData(uploadForm);
-        finish.delete('upload');
+        for (const key of [...finish.keys()]) {
+          if (key === 'upload' || key === 'upload[]') finish.delete(key);
+        }
         finish.set('action', 'finish');
         finish.set('upload_id', startJson.upload_id);
         finish.set('filename', file.name);
         const finished = await fetch('upload_chunk.php', { method: 'POST', body: finish });
-        const finishJson = await finished.json();
+        const finishJson = await readUploadJson(finished);
         if (!finishJson.ok) {
           errors.push(finishJson.error || ('Could not finish ' + file.name));
         } else {
@@ -671,9 +701,13 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       progressContainer.style.display = "block";
 
       const chunked = document.getElementById('use_chunks');
-      if (chunked && chunked.checked) {
-        uploadChunked().catch(() => {
-          showUploadResult(['❌ Upload failed: network error.'], []);
+      const totalBytes = Array.from(fileInput.files).reduce((sum, file) => sum + file.size, 0);
+      if ((chunked && chunked.checked) || totalBytes > uploadChunkBytes) {
+        uploadChunked().catch((err) => {
+          const message = err && err.uploadFailed
+            ? err.message
+            : '❌ Upload failed: the connection closed before the server replied. A proxy or the web server may be limiting upload size.';
+          showUploadResult([message], []);
           uploadButton.disabled = false;
           uploadButton.textContent = 'Upload';
         });
@@ -693,14 +727,17 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       });
 
       xhr.onerror = () => {
-        showUploadResult(["❌ Upload failed: network error."], []);
+        showUploadResult(["❌ Upload failed: the connection closed before the server replied. A proxy or the web server may be limiting upload size."], []);
         uploadButton.disabled = false;
         uploadButton.textContent = "Upload";
       };
 
       xhr.onload = () => {
         try {
-          const resp = JSON.parse(xhr.responseText);
+          const resp = parseUploadJson(xhr.responseText);
+          if (!resp || typeof resp !== 'object') {
+            throw new Error('not json');
+          }
           const errors = resp.errors || [];
           const success = resp.success || [];
           showUploadResult(errors, success, resp.files || []);
@@ -711,7 +748,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
             preview.innerHTML = "";
           }
         } catch (e) {
-          showUploadResult(["❌ Upload failed: invalid response."], []);
+          showUploadResult([uploadRejectedMessage(xhr.status)], []);
           uploadButton.disabled = false;
           uploadButton.textContent = "Upload";
         }

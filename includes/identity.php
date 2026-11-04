@@ -506,7 +506,9 @@ function datadock_jwt_rs256_payload(string $jwt, array $jwks, string $issuer, st
     if ($ok !== 1) {
         return null;
     }
-    if (($payload['iss'] ?? '') !== $issuer) {
+    // Issuers such as Authentik keep a trailing slash on iss. Config strips it
+    // before discovery, so compare the identifiers without that slash.
+    if (rtrim((string) ($payload['iss'] ?? ''), '/') !== rtrim($issuer, '/')) {
         return null;
     }
     $aud = $payload['aud'] ?? '';

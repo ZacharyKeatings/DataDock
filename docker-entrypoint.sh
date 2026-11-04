@@ -29,4 +29,36 @@ for file in /var/www/html/config/db.php /var/www/html/config/.db-runtime.php; do
     chmod 640 "$file"
   fi
 done
+
+# Published image (DATADOCK_IMAGE_MODE=1, no .git): keep settings and uploads on
+# DATADOCK_DATA_DIR, and delete install.php once setup has finished. A new container
+# does not bring the installer back. Source checkouts set DATADOCK_IMAGE_MODE=0
+# or bind-mount a tree that contains .git; those keep install.php in the project.
+if [ "${DATADOCK_IMAGE_MODE:-}" = "0" ] || [ -e /var/www/html/.git ]; then
+  rm -f /var/www/html/config/.docker.php
+  echo "DataDock: source tree is mounted; install.php is left in the project directory."
+else
+  DATADOCK_DATA_DIR="${DATADOCK_DATA_DIR:-/var/lib/datadock}"
+  export DATADOCK_DATA_DIR
+  php /var/www/html/scripts/docker-bootstrap.php
+  chown www-data:www-data \
+    "$DATADOCK_DATA_DIR" \
+    "$DATADOCK_DATA_DIR/uploads" \
+    "$DATADOCK_DATA_DIR/uploads/avatars" \
+    "$DATADOCK_DATA_DIR/thumbnails" \
+    /var/www/html/config/.docker.php
+  chmod 0750 \
+    "$DATADOCK_DATA_DIR" \
+    "$DATADOCK_DATA_DIR/uploads" \
+    "$DATADOCK_DATA_DIR/uploads/avatars" \
+    "$DATADOCK_DATA_DIR/thumbnails"
+  chmod 640 /var/www/html/config/.docker.php
+  if [ -e "$DATADOCK_DATA_DIR/settings.php" ]; then
+    chown www-data:www-data "$DATADOCK_DATA_DIR/settings.php"
+    chmod 640 "$DATADOCK_DATA_DIR/settings.php"
+  fi
+  if [ -L /var/www/html/config/settings.php ]; then
+    chown -h www-data:www-data /var/www/html/config/settings.php
+  fi
+fi
 exec "$@"

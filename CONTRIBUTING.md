@@ -48,7 +48,27 @@ Keep branch names short, lowercase, and hyphen-separated.
 - Match existing code style and conventions in the project.
 - For larger or breaking changes, consider opening an issue first to discuss the approach.
 
-### 4. Open a pull request
+### 4. Run the tests
+
+The suite uses plain PHP. It checks syntax, the helpers that do not need a database, and the database itself against a temporary MySQL 8 server:
+
+```bash
+php tests/run.php
+```
+
+GitHub Actions runs that command on every push and pull request. Locally, Docker starts MySQL when `DATADOCK_TEST_DB_HOST` is not set. Point the same command at a server you already have with `DATADOCK_TEST_DB_HOST`, `DATADOCK_TEST_DB_PORT`, `DATADOCK_TEST_DB_USER`, and `DATADOCK_TEST_DB_PASSWORD`. The run creates a `datadock_test_*` database and drops it at the end. It does not change `config/db.php`.
+
+The PHP binary needs the `pdo_mysql` extension (`php-mysql`). If it is missing and Docker is available, the runner builds `tests/php-cli.Dockerfile` once and executes there.
+
+To run the suite before every commit, once per clone:
+
+```bash
+git config core.hooksPath hooks
+```
+
+Git does not share hook settings, so each clone needs that command. The hook is `hooks/pre-commit`.
+
+### 5. Open a pull request
 
 1. Push your branch to your fork:
    ```bash

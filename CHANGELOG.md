@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 
+## [Unreleased]
+
+### Fixed
+
+- **Docker recreate** — The published image stores site settings and uploads on `/var/lib/datadock` (the `datadock_data` volume in `docker-compose.hub.example.yml`). After setup, `install.php` is removed and stays removed across `docker compose down` / `up` and `--force-recreate`.
+- **Large uploads** — Uploads over 512 KB are sent in chunks, so a web server or proxy body limit no longer drops an 18 MB file as “network error” or “invalid response”. The Docker image also raises PHP’s upload limit to 512 MB.
+
 ## [v2.6.0] - 2026-10-28
 
 ### File Sharing, Security, Administration & UI Improvements

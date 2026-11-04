@@ -2,6 +2,7 @@
 /**
  * Load config/settings.php and apply optional DATADOCK_* environment overrides (containers, 12-factor).
  */
+require_once __DIR__ . '/docker_runtime.php';
 
 /**
  * @return array<string, mixed>
@@ -112,14 +113,20 @@ function datadock_load_settings(): array {
         return $cached;
     }
     if ($loading) {
-        return datadock_apply_env_overrides(datadock_load_settings_from_file());
+        return datadock_apply_env_overrides(
+            datadock_apply_docker_storage_default(datadock_load_settings_from_file())
+        );
     }
     $loading = true;
     $settings = datadock_load_settings_from_file();
+    $settings = datadock_apply_docker_storage_default($settings);
     require_once __DIR__ . '/private_storage.php';
     $settings = datadock_maybe_relocate_private_storage($settings);
     $cached = datadock_apply_env_overrides($settings);
     $loading = false;
+    if (datadock_settings_file_ready()) {
+        datadock_retire_web_installer();
+    }
     return $cached;
 }
 

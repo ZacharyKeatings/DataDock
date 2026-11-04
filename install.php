@@ -1,6 +1,17 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/install_lib.php';
+require_once __DIR__ . '/includes/docker_runtime.php';
+
+$datadockAlreadyInstalled = false;
+$datadockInstallerState = 'skipped';
+if (datadock_docker_image_mode()) {
+    datadock_docker_recover_settings_if_database_exists();
+    if (datadock_settings_file_ready()) {
+        $datadockInstallerState = datadock_retire_web_installer();
+        $datadockAlreadyInstalled = true;
+    }
+}
 ?>
 
 <?php
@@ -27,7 +38,17 @@ $siteName = "DataDock";
         <div class="page-section">
             <h2 class="page-title">Install DataDock</h2>
 
-            <?php if ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
+            <?php if ($datadockAlreadyInstalled): ?>
+                <div class="flash success persistent"><div>
+                    This site is already installed.
+                    <?php if ($datadockInstallerState === 'failed'): ?>
+                        <code>install.php</code> could not be removed just now. The next time this container starts, it will be removed, including after the container is recreated.
+                    <?php else: ?>
+                        The installer has been removed. Recreating the container does not bring it back. Site settings and uploaded files stay in the Docker data volume.
+                    <?php endif; ?>
+                    <a href="index.php">Go to your site</a>
+                </div></div>
+            <?php elseif ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
                 <div class="message">
                     <?php
                         // Gather site and DB settings
@@ -58,42 +79,56 @@ $siteName = "DataDock";
                             $admin_errors[] = "Admin passwords do not match.";
                         }
 
-                        // Create the database and tables
-                        $result = install_database($host, $user, $pass, $dbname);
-                        if ($result === true) {
-                            create_db_config_file($host, $user, $pass, $dbname);
-                            write_default_settings_file($siteName);
-                            secure_config_folder();
-
-                            // Create directories for uploads and thumbnails
-                            $dirs = ['uploads', 'thumbnails'];
-                            foreach ($dirs as $dir) {
-                                $path = __DIR__ . '/' . $dir;
-                                if (!is_dir($path)) {
-                                    mkdir($path, 0755, true);
-                                } else {
-                                    chmod($path, 0755);
-                                }
+                        if (!empty($admin_errors)) {
+                            foreach ($admin_errors as $err) {
+                                echo '<div class="flash error persistent"><div>' . htmlspecialchars($err) . '</div></div>';
                             }
-                            
-                            // If there are admin errors, display them and halt installation
-                            if (!empty($admin_errors)) {
-                                foreach ($admin_errors as $err) {
-                                    echo '<div class="flash error persistent"><div>' . htmlspecialchars($err) . '</div></div>';
-                                }
-                                echo '<div class="flash error persistent"><div>Installation failed because the admin account could not be created. Fix the fields and try again.</div></div>';
-                            } else {
-                                require_once __DIR__ . '/config/db.php';
-
-                                // Insert admin user into the database with role 'admin'
-                                $admin_hash = password_hash($admin_password, PASSWORD_DEFAULT);
-                                $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')");
-                                $stmt->execute([$admin_username, $admin_email, $admin_hash]);
-
-                                echo '<div class="flash success persistent"><div>Installation complete. Database tables, config files, upload folders, and the admin user are ready.<br><strong>Delete install.php now.</strong> <a href="index.php">Go to your site</a></div></div>';
-                            }
+                            echo '<div class="flash error persistent"><div>Installation failed because the admin account could not be created. Fix the fields and try again.</div></div>';
                         } else {
-                            echo '<div class="flash error persistent"><div>Installation failed: ' . htmlspecialchars((string) $result) . '</div></div>';
+                            $result = install_database($host, $user, $pass, $dbname);
+                            if ($result !== true) {
+                                echo '<div class="flash error persistent"><div>Installation failed: ' . htmlspecialchars((string) $result) . '</div></div>';
+                            } else {
+                                create_db_config_file($host, $user, $pass, $dbname);
+                                $adminCreated = false;
+                                try {
+                                    require_once __DIR__ . '/config/db.php';
+                                    $admin_hash = password_hash($admin_password, PASSWORD_DEFAULT);
+                                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')");
+                                    $stmt->execute([$admin_username, $admin_email, $admin_hash]);
+                                    $adminCreated = true;
+                                } catch (PDOException $e) {
+                                    echo '<div class="flash error persistent"><div>Installation failed: ' . htmlspecialchars($e->getMessage()) . '</div></div>';
+                                }
+
+                                if ($adminCreated) {
+                                    write_default_settings_file($siteName);
+                                    secure_config_folder();
+
+                                    $dirs = ['uploads', 'thumbnails'];
+                                    foreach ($dirs as $dir) {
+                                        $path = __DIR__ . '/' . $dir;
+                                        if (!is_dir($path)) {
+                                            mkdir($path, 0755, true);
+                                        } else {
+                                            chmod($path, 0755);
+                                        }
+                                    }
+
+                                    if (!datadock_settings_file_ready()) {
+                                        echo '<div class="flash error persistent"><div>The admin account was created, but site settings could not be saved.</div></div>';
+                                    } else {
+                                        $installerState = datadock_retire_web_installer();
+                                        if ($installerState === 'skipped') {
+                                            echo '<div class="flash success persistent"><div>Installation complete. Database tables, config files, upload folders, and the admin user are ready.<br><strong>Delete install.php now.</strong> <a href="index.php">Go to your site</a></div></div>';
+                                        } elseif ($installerState === 'failed') {
+                                            echo '<div class="flash success persistent"><div>Installation complete. <code>install.php</code> could not be removed just now. The next time this container starts, it will be removed, including after the container is recreated. <a href="index.php">Go to your site</a></div></div>';
+                                        } else {
+                                            echo '<div class="flash success persistent"><div>Installation complete. <code>install.php</code> has been removed and will not come back when this container is recreated. Site settings and uploaded files stay in the Docker data volume. <a href="index.php">Go to your site</a></div></div>';
+                                        }
+                                    }
+                                }
+                            }
                         }
                     ?>
                 </div>

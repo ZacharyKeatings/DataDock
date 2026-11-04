@@ -478,3 +478,151 @@ function datadock_apply_site_settings_group(array $form, string $group, array $p
 
     return ['form' => $form, 'errors' => $errors, 'warnings' => $warnings];
 }
+
+/**
+ * PHP source for config/settings.php. The admin save writes this string.
+ *
+ * @param array<string, mixed> $form
+ */
+function datadock_export_site_settings_php(array $form): string {
+    $on = static function ($value): string {
+        return $value ? 'true' : 'false';
+    };
+    return "<?php\n\$settings = [\n" .
+        "    'site_name' => " . var_export($form['siteName'], true) . ",\n" .
+        "    'admin_contact_email' => " . var_export($form['adminContactEmail'], true) . ",\n" .
+        "    'registration_enabled' => " . $on($form['registrationEnabled']) . ",\n" .
+        "    'invite_only_registration' => " . $on($form['inviteOnlyRegistration']) . ",\n" .
+        "    'enforce_unique_email' => " . $on($form['enforceUniqueEmail']) . ",\n" .
+        "    'email_verification_enabled' => " . $on($form['emailVerificationEnabled']) . ",\n" .
+        "    'max_file_size' => " . $form['maxFileSize'] . ",\n" .
+        "    'default_file_expiry' => " . var_export($form['defaultFileExpiry'], true) . ",\n" .
+        "    'thumbnails_enabled' => " . $on($form['thumbnailsEnabled']) . ",\n" .
+        "    'session_timeout_minutes' => " . $form['sessionTimeoutMinutes'] . ",\n" .
+        "    'security_headers_mode' => " . var_export($form['securityHeadersMode'], true) . ",\n" .
+        "    'remember_device' => [\n" .
+        "        'enabled' => " . $on($form['rememberDeviceEnabled']) . ",\n" .
+        "        'cookie_days' => " . $form['rememberDeviceCookieDays'] . "\n" .
+        "    ],\n" .
+        "    'install_warning_enabled' => " . $on($form['installWarningEnabled']) . ",\n" .
+        "    'maintenance_mode' => " . $on($form['maintenanceMode']) . ",\n" .
+        "    'read_only_mode' => " . $on($form['readOnlyMode']) . ",\n" .
+        "    'debug_mode' => " . $on($form['debugMode']) . ",\n" .
+        "    'log_path' => " . var_export($form['logPath'], true) . ",\n" .
+        "    'log_level' => " . var_export($form['logLevel'], true) . ",\n" .
+        "    'logo_url' => " . var_export($form['logoUrl'], true) . ",\n" .
+        "    'favicon_url' => " . var_export($form['faviconUrl'], true) . ",\n" .
+        "    'welcome_message' => " . var_export($form['welcomeMessage'], true) . ",\n" .
+        "    'theme' => " . var_export($form['theme'], true) . ",\n" .
+        "    'file_icons' => " . var_export($form['fileIcons'], true) . ",\n" .
+        "    'tos_enabled' => " . $on($form['tosEnabled']) . ",\n" .
+        "    'tos_text' => " . var_export($form['tosText'], true) . ",\n" .
+        "    'privacy_enabled' => " . $on($form['privacyEnabled']) . ",\n" .
+        "    'privacy_text' => " . var_export($form['privacyText'], true) . ",\n" .
+        "    'password_rules' => [\n" .
+        "        'min_length' => " . $form['passwordMinLength'] . ",\n" .
+        "        'complexity' => " . $on($form['passwordComplexity']) . "\n" .
+        "    ],\n" .
+        "    'storage_base_path' => " . var_export($form['storageBasePath'], true) . ",\n" .
+        "    'trusted_proxies' => " . var_export($form['trustedProxies'], true) . ",\n" .
+        "    'public_browsing_enabled' => " . $on($form['publicBrowsingEnabled']) . ",\n" .
+        "    'public_grid_enabled' => " . $on($form['publicGridEnabled']) . ",\n" .
+        "    'download_quota' => [\n" .
+        "        'enabled' => " . $on($form['downloadQuotaEnabled']) . ",\n" .
+        "        'window_minutes' => " . $form['downloadQuotaWindow'] . ",\n" .
+        "        'max_bytes_per_user' => " . $form['downloadQuotaUserBytes'] . ",\n" .
+        "        'max_bytes_per_file' => " . $form['downloadQuotaFileBytes'] . "\n" .
+        "    ],\n" .
+        "    'upload_scan' => [\n" .
+        "        'mode' => " . var_export($form['uploadScanMode'], true) . ",\n" .
+        "        'command' => " . var_export($form['uploadScanCommand'], true) . ",\n" .
+        "        'socket' => " . var_export($form['uploadScanSocket'], true) . "\n" .
+        "    ],\n" .
+        "    'identity' => [\n" .
+        "        'totp_policy' => " . var_export($form['totpPolicy'], true) . ",\n" .
+        "        'oidc' => [\n" .
+        "            'enabled' => " . $on($form['oidcEnabled']) . ",\n" .
+        "            'issuer' => " . var_export($form['oidcIssuer'], true) . ",\n" .
+        "            'client_id' => " . var_export($form['oidcClientId'], true) . ",\n" .
+        "            'client_secret' => " . var_export($form['oidcClientSecret'], true) . ",\n" .
+        "            'role_claim' => " . var_export($form['oidcRoleClaim'], true) . ",\n" .
+        "            'admin_groups' => " . var_export($form['oidcAdminGroups'], true) . "\n" .
+        "        ],\n" .
+        "        'ldap' => [\n" .
+        "            'enabled' => " . $on($form['ldapEnabled']) . ",\n" .
+        "            'host' => " . var_export($form['ldapHost'], true) . ",\n" .
+        "            'port' => " . $form['ldapPort'] . ",\n" .
+        "            'encryption' => " . var_export($form['ldapEncryption'], true) . ",\n" .
+        "            'user_dn_template' => " . var_export($form['ldapUserDn'], true) . ",\n" .
+        "            'base_dn' => " . var_export($form['ldapBaseDn'], true) . ",\n" .
+        "            'bind_dn' => " . var_export($form['ldapBindDn'], true) . ",\n" .
+        "            'bind_password' => " . var_export($form['ldapBindPassword'], true) . ",\n" .
+        "            'user_filter' => " . var_export($form['ldapUserFilter'], true) . ",\n" .
+        "            'admin_group' => " . var_export($form['ldapAdminGroup'], true) . "\n" .
+        "        ],\n" .
+        "        'forward_auth' => [\n" .
+        "            'enabled' => " . $on($form['forwardEnabled']) . ",\n" .
+        "            'trusted_proxies' => " . var_export($form['forwardProxies'], true) . ",\n" .
+        "            'user_header' => " . var_export($form['forwardUserHeader'], true) . ",\n" .
+        "            'group_header' => " . var_export($form['forwardGroupHeader'], true) . ",\n" .
+        "            'admin_groups' => " . var_export($form['forwardAdminGroups'], true) . "\n" .
+        "        ]\n" .
+        "    ],\n" .
+        "    'brute_force' => [\n" .
+        "        'enabled' => " . $on($form['bruteForceEnabled']) . ",\n" .
+        "        'max_attempts' => " . $form['maxAttempts'] . ",\n" .
+        "        'lockout_minutes' => " . $form['lockoutMinutes'] . ",\n" .
+        "        'lockout_window' => " . $form['lockoutWindow'] . ",\n" .
+        "        'adaptive_cooldown_enabled' => " . $on($form['adaptiveCooldownEnabled']) . ",\n" .
+        "        'adaptive_cooldown_ip_window_minutes' => " . $form['adaptiveCooldownWindow'] . ",\n" .
+        "        'adaptive_cooldown_steps' => [5 => 5, 15 => 15, 30 => 60]\n" .
+        "    ],\n" .
+        "    'rate_limit_uploads' => [\n" .
+        "        'enabled' => " . $on($form['rateLimitUploadsEnabled']) . ",\n" .
+        "        'window_minutes' => " . $form['rateLimitWindowMinutes'] . ",\n" .
+        "        'max_per_ip' => " . $form['rateLimitMaxPerIp'] . ",\n" .
+        "        'max_per_user' => " . $form['rateLimitMaxPerUser'] . "\n" .
+        "    ],\n" .
+        "    'rewrite_file_extension' => " . $on($form['rewriteFileExtension']) . ",\n" .
+        "    'upload_quarantine_enabled' => " . $on($form['uploadQuarantineEnabled']) . ",\n" .
+        "    'filetype_policy' => [\n" .
+        "        'mode' => " . var_export($form['filetypeMode'], true) . ",\n" .
+        "        'extensions' => " . var_export($form['filetypeExtensions'], true) . "\n" .
+        "    ],\n" .
+        "    'deduplicate_storage' => " . $on($form['deduplicateStorage']) . ",\n" .
+        "    'folders_enabled' => " . $on($form['foldersEnabledSetting']) . ",\n" .
+        "    'tags_enabled' => " . $on($form['tagsEnabledSetting']) . ",\n" .
+        "    'pastes_enabled' => " . $on($form['pastesEnabledSetting']) . ",\n" .
+        "    'hotlink_logging_enabled' => " . $on($form['hotlinkLoggingEnabled']) . ",\n" .
+        "    'hotlink_block_enabled' => " . $on($form['hotlinkBlockEnabled']) . ",\n" .
+        "    'hotlink_trusted_hosts' => " . var_export($form['hotlinkTrustedHosts'], true) . ",\n" .
+        "    'admin_ip_allowlist' => " . var_export($form['adminIpAllowlist'], true) . ",\n" .
+        "    'ops_alerts' => [\n" .
+        "        'storage_partition_percent_enabled' => " . $on($form['opsStoragePartitionPercentEnabled']) . ",\n" .
+        "        'storage_partition_percent_threshold' => " . $form['opsStoragePartitionPercentThreshold'] . ",\n" .
+        "        'user_quota_percent_enabled' => " . $on($form['opsUserQuotaPercentEnabled']) . ",\n" .
+        "        'user_quota_percent_threshold' => " . $form['opsUserQuotaPercentThreshold'] . "\n" .
+        "    ],\n" .
+        "    'guest_uploads' => [\n" .
+        "        'enabled' => " . $on($form['guestUploadsEnabled']) . ",\n" .
+        "        'max_files' => " . $form['guestMaxFiles'] . ",\n" .
+        "        'max_storage' => " . $form['guestMaxStorage'] . "\n" .
+        "    ],\n" .
+        "    'user_limits' => [\n" .
+        "        'max_files_enabled' => " . $on($form['userMaxFilesEnabled']) . ",\n" .
+        "        'max_files' => " . $form['userMaxFiles'] . ",\n" .
+        "        'max_storage_enabled' => " . $on($form['userMaxStorageEnabled']) . ",\n" .
+        "        'max_storage' => " . $form['userMaxStorage'] . "\n" .
+        "    ],\n" .
+        "    'trash_retention_days' => " . $form['trashRetentionDays'] . ",\n" .
+        "];\n?>";
+}
+
+/**
+ * Optional .user.ini body for the upload size overrides on the Uploads settings page.
+ */
+function datadock_user_ini_override(int $uploadBytes, int $postBytes): string {
+    return "; DataDock server limits (optional override)\n"
+        . 'upload_max_filesize = ' . bytes_to_ini_size($uploadBytes) . "\n"
+        . 'post_max_size = ' . bytes_to_ini_size($postBytes) . "\n";
+}
