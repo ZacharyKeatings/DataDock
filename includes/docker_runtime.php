@@ -206,7 +206,11 @@ function datadock_docker_database_has_users(?string $appRoot = null): ?bool {
             $pass,
             [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::MYSQL_ATTR_CONNECT_TIMEOUT => 2,
+                // PHP 8.5 removed PDO::MYSQL_ATTR_CONNECT_TIMEOUT. Referencing the
+                // missing constant throws, and this probe treats that as "database
+                // unreachable", so a recreated container never notices an existing
+                // install and sends every visit back to install.php.
+                PDO::ATTR_TIMEOUT => 2,
             ]
         );
     } catch (Throwable $e) {
