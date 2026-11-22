@@ -3,15 +3,11 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/install_lib.php';
 require_once __DIR__ . '/includes/docker_runtime.php';
 
-$datadockAlreadyInstalled = false;
-$datadockInstallerState = 'skipped';
 if (datadock_docker_image_mode()) {
     datadock_docker_recover_settings_if_database_exists();
-    if (datadock_settings_file_ready()) {
-        $datadockInstallerState = datadock_retire_web_installer();
-        $datadockAlreadyInstalled = true;
-    }
 }
+$datadockAlreadyInstalled = datadock_settings_file_ready();
+$datadockInstallerState = $datadockAlreadyInstalled ? datadock_retire_web_installer() : 'absent';
 ?>
 
 <?php
@@ -40,11 +36,11 @@ $siteName = "DataDock";
 
             <?php if ($datadockAlreadyInstalled): ?>
                 <div class="flash success persistent"><div>
-                    This site is already installed.
+                    This site is already installed, so the installer will not run again.
                     <?php if ($datadockInstallerState === 'failed'): ?>
-                        <code>install.php</code> could not be removed just now. The next time this container starts, it will be removed, including after the container is recreated.
-                    <?php else: ?>
-                        The installer has been removed. Recreating the container does not bring it back. Site settings and uploaded files stay in the Docker data volume.
+                        <code>install.php</code> is still on the server and could not be deleted. Remove that file when you can.
+                    <?php elseif ($datadockInstallerState === 'removed'): ?>
+                        <code>install.php</code> has been removed.
                     <?php endif; ?>
                     <a href="index.php">Go to your site</a>
                 </div></div>
@@ -119,12 +115,10 @@ $siteName = "DataDock";
                                         echo '<div class="flash error persistent"><div>The admin account was created, but site settings could not be saved.</div></div>';
                                     } else {
                                         $installerState = datadock_retire_web_installer();
-                                        if ($installerState === 'skipped') {
-                                            echo '<div class="flash success persistent"><div>Installation complete. Database tables, config files, upload folders, and the admin user are ready.<br><strong>Delete install.php now.</strong> <a href="index.php">Go to your site</a></div></div>';
-                                        } elseif ($installerState === 'failed') {
-                                            echo '<div class="flash success persistent"><div>Installation complete. <code>install.php</code> could not be removed just now. The next time this container starts, it will be removed, including after the container is recreated. <a href="index.php">Go to your site</a></div></div>';
+                                        if ($installerState === 'failed') {
+                                            echo '<div class="flash success persistent"><div>Installation complete. <code>install.php</code> could not be deleted, but it will not run again. Remove that file from the server when you can. <a href="index.php">Go to your site</a></div></div>';
                                         } else {
-                                            echo '<div class="flash success persistent"><div>Installation complete. <code>install.php</code> has been removed and will not come back when this container is recreated. Site settings and uploaded files stay in the Docker data volume. <a href="index.php">Go to your site</a></div></div>';
+                                            echo '<div class="flash success persistent"><div>Installation complete. <code>install.php</code> has been removed and will not run again. <a href="index.php">Go to your site</a></div></div>';
                                         }
                                     }
                                 }

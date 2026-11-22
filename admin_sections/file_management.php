@@ -23,10 +23,12 @@ $fileStatusFilter = $fileStatusFilter ?? 'all';
         </div>
         <div class="file-mgmt-purge-forms">
         <form method="post" class="file-mgmt-purge-form">
+            <?= datadock_csrf_field() ?>
             <input type="hidden" name="purge" value="1">
             <button type="submit" class="btn btn-primary">Purge Expired Files</button>
         </form>
         <form method="post" class="file-mgmt-purge-form">
+            <?= datadock_csrf_field() ?>
             <input type="hidden" name="purge_trash" value="1">
             <button type="submit" class="btn btn-danger btn-small">Purge Trash</button>
         </form>

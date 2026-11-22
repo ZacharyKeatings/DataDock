@@ -63,7 +63,7 @@ function init_session(): void {
 
     session_set_cookie_params([
         'lifetime' => $cookieLifetime,
-        'path' => '/',
+        'path' => datadock_cookie_path(),
         'secure' => $secure,
         'httponly' => true,
         'samesite' => 'Lax',

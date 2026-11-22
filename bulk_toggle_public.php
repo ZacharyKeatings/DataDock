@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['ids'], $_POST['publi
     header("Location: dashboard.php");
     exit;
 }
+datadock_reject_invalid_csrf('dashboard.php');
 
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 if (!$publicBrowsingEnabled) {

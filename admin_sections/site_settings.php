@@ -7,6 +7,7 @@ $settingsGroupTitle = datadock_site_settings_groups()[$settingsGroup] ?? 'Genera
     <p class="page-description"><?= sanitize_data(datadock_site_settings_group_description($settingsGroup)) ?></p>
 
     <form method="post" class="settings-form">
+        <?= datadock_csrf_field() ?>
         <input type="hidden" name="section" value="site">
         <input type="hidden" name="settings_group" value="<?= sanitize_data($settingsGroup) ?>">
 

@@ -18,8 +18,17 @@ if (!empty($_SESSION['user_id'])) {
     }
 }
 
-$referer = $_SERVER['HTTP_REFERER'] ?? 'index.php';
-$host = $_SERVER['HTTP_HOST'] ?? '';
-$target = ($host !== '' && strpos($referer, $host) !== false) ? $referer : 'index.php';
+$target = 'index.php';
+$referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
+$parts = parse_url($referer);
+if (is_array($parts)) {
+    $refHost = strtolower((string) ($parts['host'] ?? ''));
+    $path = (string) ($parts['path'] ?? '');
+    $query = (string) ($parts['query'] ?? '');
+    $queryOk = $query === '' || preg_match('/^[A-Za-z0-9_%.&=+-]*$/', $query) === 1;
+    if ($refHost !== '' && $refHost === datadock_request_hostname() && $path !== '' && !str_contains($path, '..') && !str_starts_with($path, '//') && $queryOk) {
+        $target = $path . ($query !== '' ? '?' . $query : '');
+    }
+}
 header('Location: ' . $target);
 exit;

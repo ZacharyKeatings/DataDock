@@ -5,6 +5,7 @@
     <h3 class="settings-card-title">Add partition</h3>
     <div class="settings-card-body">
         <form method="post" action="admin.php" class="settings-form">
+            <?= datadock_csrf_field() ?>
             <input type="hidden" name="add_storage_partition" value="1">
             <div class="settings-row">
                 <label for="partition_name">Name</label>
@@ -40,6 +41,7 @@
                     <strong>Default</strong>
                 <?php else: ?>
                     <form method="post" action="admin.php" class="inline-form compact">
+                        <?= datadock_csrf_field() ?>
                         <input type="hidden" name="set_default_partition" value="1">
                         <input type="hidden" name="partition_id" value="<?= (int) $sp['id'] ?>">
                         <button type="submit" class="btn btn-small">Set default</button>

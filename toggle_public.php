@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['id']) || !is_numeric
     header("Location: dashboard.php");
     exit;
 }
+datadock_reject_invalid_csrf('dashboard.php');
 
 $fileId = (int) $_POST['id'];
 $userId = $_SESSION['user_id'];

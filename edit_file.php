@@ -64,6 +64,7 @@ if ($tagsEnabled) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('edit_file.php?id=' . $fileId);
     $originalName = trim($_POST['original_name'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $duration = $_POST['duration'] ?? 'never';
@@ -140,6 +141,7 @@ require_once __DIR__ . '/includes/header.php';
     <p class="page-description">Change display name, description, or expiry. The file on disk is not modified.</p>
 
     <form method="post" action="edit_file.php?id=<?= (int)$fileId ?>" class="settings-card narrow-form">
+        <?= datadock_csrf_field() ?>
         <div class="settings-card-body">
             <div class="form-group">
                 <label for="original_name">Display name</label>

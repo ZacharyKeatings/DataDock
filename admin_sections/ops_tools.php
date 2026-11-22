@@ -31,6 +31,7 @@ $cronExample = '0 * * * * php ' . $scriptPath . '  # hourly purge (adjust path)'
         <div class="settings-card-body">
             <p class="settings-hint">This replaces the database with the archive and copies the archived files back onto the storage partitions. Download a full backup first if you may want the current site back.</p>
             <form method="post" enctype="multipart/form-data" class="form" onsubmit="return confirm('Replace the database and stored files with this backup?');">
+                <?= datadock_csrf_field() ?>
                 <div class="form-group">
                     <label for="backup_archive">Backup file</label>
                     <input type="file" name="backup_archive" id="backup_archive" accept=".tar,application/x-tar" required>
@@ -58,6 +59,7 @@ $cronExample = '0 * * * * php ' . $scriptPath . '  # hourly purge (adjust path)'
         <div class="settings-card-body">
             <p class="settings-hint">Finds DB rows whose file is missing on disk, and upload files on disk that are not referenced (orphans).</p>
             <form method="post" class="form-actions">
+                <?= datadock_csrf_field() ?>
                 <button type="submit" name="ops_run_disk_scan" value="1" class="btn btn-primary">Run scan</button>
             </form>
 
@@ -97,6 +99,7 @@ $cronExample = '0 * * * * php ' . $scriptPath . '  # hourly purge (adjust path)'
         <div class="settings-card-body">
             <p class="settings-hint">Compares stored MD5/SHA256 to bytes on disk. Leave limit at 0 to check all active files.</p>
             <form method="post" class="inline-form compact">
+                <?= datadock_csrf_field() ?>
                 <label for="verify_limit">Max rows (0 = all)</label>
                 <input type="number" name="verify_limit" id="verify_limit" class="input-medium" value="0" min="0" max="50000">
                 <button type="submit" name="ops_verify_checksums" value="1" class="btn btn-primary">Verify checksums</button>
@@ -122,6 +125,7 @@ $cronExample = '0 * * * * php ' . $scriptPath . '  # hourly purge (adjust path)'
         <div class="settings-card-body">
             <p class="settings-hint">Recomputes MD5 and SHA256 from current file bytes and updates the database (use after restoring files or repairing storage). Limit 0 = all active files.</p>
             <form method="post" class="inline-form compact" onsubmit="return confirm('Update checksums in the database from disk?');">
+                <?= datadock_csrf_field() ?>
                 <label for="rehash_limit">Max rows (0 = all)</label>
                 <input type="number" name="rehash_limit" id="rehash_limit" class="input-medium" value="0" min="0" max="50000">
                 <button type="submit" name="ops_rehash_from_disk" value="1" class="btn btn-danger">Re-hash and update DB</button>

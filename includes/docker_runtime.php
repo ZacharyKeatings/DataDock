@@ -65,13 +65,13 @@ function datadock_settings_file_ready(?string $appRoot = null): bool {
 }
 
 /**
- * @return 'skipped'|'removed'|'absent'|'failed'
+ * Delete install.php after setup. The installer also refuses to run when settings exist,
+ * so a file that cannot be deleted still cannot reinstall the site.
+ *
+ * @return 'removed'|'absent'|'failed'
  */
 function datadock_retire_web_installer(?string $appRoot = null): string {
     $appRoot = $appRoot ?? datadock_docker_app_root();
-    if (!datadock_docker_image_mode($appRoot)) {
-        return 'skipped';
-    }
     $path = rtrim($appRoot, '/') . '/install.php';
     if (!is_file($path)) {
         return 'absent';

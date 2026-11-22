@@ -43,7 +43,13 @@ expect_same('docker runtime reads the data dir', $runtime['data_dir'], '/var/lib
 expect_same('image mode fills an empty storage path', datadock_apply_docker_storage_default([], $dockerRoot)['storage_base_path'], '/var/lib/datadock');
 expect_same('a saved storage path is left alone', datadock_apply_docker_storage_default(['storage_base_path' => '/keep'], $dockerRoot)['storage_base_path'], '/keep');
 expect_true('a non-empty settings file is ready', datadock_settings_file_ready($dockerRoot));
-expect_same('installer retirement is skipped outside image mode', datadock_retire_web_installer(sys_get_temp_dir()), 'skipped');
+$installerRoot = sys_get_temp_dir() . '/datadock-installer-' . bin2hex(random_bytes(4));
+mkdir($installerRoot);
+expect_same('missing installer is absent', datadock_retire_web_installer($installerRoot), 'absent');
+file_put_contents($installerRoot . '/install.php', "<?php\n");
+expect_same('installer file is removed', datadock_retire_web_installer($installerRoot), 'removed');
+expect_false('installer file is gone', is_file($installerRoot . '/install.php'));
+rmdir($installerRoot);
 datadock_remove_tree($dockerRoot);
 
 $prefill = install_db_form_prefill();
@@ -89,6 +95,18 @@ $_SERVER['HTTP_HOST'] = 'files.example';
 $_SERVER['HTTPS'] = 'on';
 $_SERVER['SCRIPT_NAME'] = '/datadock/index.php';
 expect_same('public url includes the directory', datadock_public_url('oidc.php'), 'https://files.example/datadock/oidc.php');
+expect_same('odd host header is ignored', (function () {
+    $saved = $_SERVER['HTTP_HOST'];
+    $_SERVER['HTTP_HOST'] = "files.example\r\nX-Evil: 1";
+    $url = datadock_public_url('oidc.php');
+    $_SERVER['HTTP_HOST'] = $saved;
+    return $url;
+})(), 'https://localhost/datadock/oidc.php');
+expect_same('oidc endpoint must match the issuer', datadock_oidc_same_origin_url('https://idp.example/realms/a', 'https://idp.example/token'), 'https://idp.example/token');
+expect_same('oidc endpoint on another host is rejected', datadock_oidc_same_origin_url('https://idp.example', 'https://evil.example/token'), null);
+expect_same('absolute redirect is rejected', datadock_safe_local_redirect('https://evil.example', 'index.php'), 'index.php');
+expect_same('protocol-relative redirect is rejected', datadock_safe_local_redirect('//evil.example', 'index.php'), 'index.php');
+expect_same('local redirect is kept', datadock_safe_local_redirect('download.php?id=1', 'index.php'), 'download.php?id=1');
 $_SERVER['HTTP_X_REQUEST_ID'] = 'abc';
 expect_same('request header is read', datadock_request_header('X-Request-Id'), 'abc');
 

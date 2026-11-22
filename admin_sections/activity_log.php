@@ -21,6 +21,7 @@
             <a href="audit_export.php?format=csv" class="btn btn-quiet btn-small">Download CSV</a>
             <a href="audit_export.php?format=json" class="btn btn-quiet btn-small">Download JSON</a>
             <form method="post" class="inline-form compact" onsubmit="return confirm('Remove old activity log entries?');">
+                <?= datadock_csrf_field() ?>
                 <label for="activity_log_purge_days">Remove older than</label>
                 <input type="number" name="activity_log_purge_days" id="activity_log_purge_days" class="input-compact" value="90" min="1" max="3650">
                 <span>days</span>

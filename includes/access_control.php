@@ -27,19 +27,27 @@ function datadock_hmac_secret(PDO $pdo): string {
         $cached = $val;
         return $cached;
     } catch (Throwable $e) {
-        return hash('sha256', __DIR__ . 'datadock-fallback', true);
+        $cached = '';
+        return '';
     }
 }
 
 function datadock_signed_download_build(PDO $pdo, int $fileId, int $expUnix): string {
-    $msg = 'v1|' . $fileId . '|' . $expUnix;
     $secret = datadock_hmac_secret($pdo);
+    if ($secret === '') {
+        return '';
+    }
+    $msg = 'v1|' . $fileId . '|' . $expUnix;
     return hash_hmac('sha256', $msg, $secret);
 }
 
 function datadock_signed_download_build_v2(PDO $pdo, int $linkId, int $fileId, int $expUnix): string {
+    $secret = datadock_hmac_secret($pdo);
+    if ($secret === '') {
+        return '';
+    }
     $msg = 'v2|' . $linkId . '|' . $fileId . '|' . $expUnix;
-    return hash_hmac('sha256', $msg, datadock_hmac_secret($pdo));
+    return hash_hmac('sha256', $msg, $secret);
 }
 
 /**
@@ -55,9 +63,13 @@ function datadock_signed_link_create(PDO $pdo, int $fileId, int $userId, int $ex
         if ($id <= 0) {
             return null;
         }
+        $sig = datadock_signed_download_build_v2($pdo, $id, $fileId, $expUnix);
+        if ($sig === '') {
+            return null;
+        }
         return [
             'id' => $id,
-            'sig' => datadock_signed_download_build_v2($pdo, $id, $fileId, $expUnix),
+            'sig' => $sig,
         ];
     } catch (Throwable $e) {
         return null;
@@ -65,7 +77,7 @@ function datadock_signed_link_create(PDO $pdo, int $fileId, int $userId, int $ex
 }
 
 function datadock_signed_download_verify(PDO $pdo, int $fileId, int $expUnix, string $sigHex, ?int $linkId = null): bool {
-    if ($expUnix < time() || $sigHex === '') {
+    if ($expUnix < time() || $sigHex === '' || datadock_hmac_secret($pdo) === '') {
         return false;
     }
     if ($linkId !== null && $linkId > 0) {
@@ -228,6 +240,7 @@ function datadock_render_download_password_page(string $fileLabel, string $retur
     echo '<h2 class="page-title">' . htmlspecialchars($title) . '</h2>';
     echo '<p class="page-description">Enter the password to download this file.</p><p class="file-label"><strong>File:</strong> ' . htmlspecialchars($fileLabel) . '</p>';
     echo '<form method="post" action="' . htmlspecialchars(app_script_url('download.php')) . '" class="form">';
+    echo datadock_csrf_field();
     echo '<input type="hidden" name="download_access" value="1">';
     foreach ($hiddenFields as $k => $v) {
         echo '<input type="hidden" name="' . htmlspecialchars((string) $k) . '" value="' . htmlspecialchars((string) $v) . '">';

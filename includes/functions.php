@@ -146,6 +146,23 @@ function app_asset_url(string $path): string {
     return app_script_url($path);
 }
 
+/**
+ * Keep a redirect on this site. Absolute URLs and protocol-relative paths are dropped.
+ */
+function datadock_safe_local_redirect(string $candidate, string $fallback): string {
+    $candidate = trim($candidate);
+    if ($candidate === '' || preg_match('/[\r\n\\\\]/', $candidate) === 1 || str_contains($candidate, '..')) {
+        return $fallback;
+    }
+    if (preg_match('#^[a-z][a-z0-9+.-]*:#i', $candidate) === 1 || str_starts_with($candidate, '//')) {
+        return $fallback;
+    }
+    if (preg_match('#^[A-Za-z0-9_./?=&%+-]+$#', $candidate) !== 1) {
+        return $fallback;
+    }
+    return $candidate;
+}
+
 function return_bytes(string $val): int {
     $val = trim($val);
     $last = strtolower($val[strlen($val) - 1]);

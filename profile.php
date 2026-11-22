@@ -29,6 +29,7 @@ $bio = $user['bio'] ?? '';
 $preferredTheme = trim((string) ($user['preferred_theme'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('profile.php');
     $action = $_POST['action'] ?? '';
 
     if ($action === 'theme') {
@@ -404,6 +405,7 @@ require_once __DIR__ . '/includes/header.php';
         <h3 class="settings-card-title">Default theme</h3>
         <div class="settings-card-body">
             <form method="post" class="form">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="theme">
                 <div class="form-group">
                     <label for="preferred_theme">Theme</label>
@@ -432,6 +434,7 @@ require_once __DIR__ . '/includes/header.php';
         <h3 class="settings-card-title">Edit profile</h3>
         <div class="settings-card-body">
             <form method="post" class="form" enctype="multipart/form-data">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="profile">
                 <div class="form-group profile-avatar-group">
                     <label>Profile picture</label>
@@ -485,6 +488,7 @@ require_once __DIR__ . '/includes/header.php';
         <h3 class="settings-card-title">Change password</h3>
         <div class="settings-card-body">
             <form method="post" class="form" onsubmit="return validatePasswordForm()">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="password">
                 <div class="form-group">
                     <label for="current_password">Current password</label>
@@ -535,6 +539,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php if ($totpOn): ?>
                 <p>Authenticator codes are on.</p>
                 <form method="post" class="form">
+                    <?= datadock_csrf_field() ?>
                     <input type="hidden" name="action" value="totp_disable">
                     <div class="form-group">
                         <label for="totp_off_password">Current password</label>
@@ -551,6 +556,7 @@ require_once __DIR__ . '/includes/header.php';
                 <p><code><?= sanitize_data($setupSecret) ?></code></p>
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=<?= urlencode($otpauth) ?>" alt="Authenticator QR code" class="qr-image">
                 <form method="post" class="form">
+                    <?= datadock_csrf_field() ?>
                     <input type="hidden" name="action" value="totp_confirm">
                     <div class="form-group">
                         <label for="totp_on_password">Current password</label>
@@ -564,6 +570,7 @@ require_once __DIR__ . '/includes/header.php';
                 </form>
             <?php else: ?>
                 <form method="post">
+                    <?= datadock_csrf_field() ?>
                     <input type="hidden" name="action" value="totp_start">
                     <button type="submit" class="btn btn-primary">Set up authenticator</button>
                 </form>
@@ -576,6 +583,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="settings-card-body">
             <p class="page-description">This permanently removes your account and deletes your files. The last admin account cannot be closed.</p>
             <form method="post" class="form" onsubmit="return confirm('Close your account and delete your files? This cannot be undone.');">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="close_account">
                 <div class="form-group">
                     <label for="close_password">Current password</label>

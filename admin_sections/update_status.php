@@ -54,6 +54,7 @@ curl_close($ch);
     include __DIR__ . '/../includes/progress_bar.php';
     ?>
     <form id="updaterForm" method="post" action="admin_sections/update.php" onsubmit="return handleUpdaterSubmit(event, '<?= addslashes($latestTag ?? '') ?>');">
+        <?= datadock_csrf_field() ?>
         <button type="submit" id="updaterBtn" class="btn btn-primary">Update to <?= $latestTag ?></button>
     </form>
     <script>

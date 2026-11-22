@@ -5,7 +5,7 @@ init_session();
 if (isset($_GET['local'])) {
     setcookie('datadock_local_login', '1', [
         'expires' => time() + 43200,
-        'path' => '/',
+        'path' => datadock_cookie_path(),
         'secure' => function_exists('datadock_request_is_https') && datadock_request_is_https(),
         'httponly' => true,
         'samesite' => 'Lax',
@@ -15,7 +15,7 @@ if (isset($_GET['local'])) {
 if (isset($_GET['sso'])) {
     setcookie('datadock_local_login', '', [
         'expires' => time() - 3600,
-        'path' => '/',
+        'path' => datadock_cookie_path(),
         'secure' => function_exists('datadock_request_is_https') && datadock_request_is_https(),
         'httponly' => true,
         'samesite' => 'Lax',
@@ -40,6 +40,10 @@ $lockoutWindow   = $bruteForce['lockout_window'] ?? 10;
 $adaptiveCooldown = !empty($bruteForce['adaptive_cooldown_enabled']);
 $adaptiveWindow  = (int) ($bruteForce['adaptive_cooldown_ip_window_minutes'] ?? 60);
 $adaptiveSteps   = $bruteForce['adaptive_cooldown_steps'] ?? [5 => 5, 15 => 15, 30 => 60];
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    datadock_reject_invalid_csrf('login.php');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['totp_code'])) {
     $pending = $_SESSION['totp_pending'] ?? null;
@@ -141,7 +145,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['totp_code'])) {
                         }
                     } else {
                         $ldapCfg = datadock_identity_config($settings)['ldap'];
-                        $ldapHit = datadock_ldap_authenticate($ldapCfg, (string) $user['username'], (string) $password);
+                        $ldapHit = null;
+                        if (($user['auth_source'] ?? '') === 'ldap') {
+                            $ldapHit = datadock_ldap_authenticate($ldapCfg, (string) $user['username'], (string) $password);
+                        }
                         if ($ldapHit) {
                             $maintenanceMode = $settings['maintenance_mode'] ?? false;
                             if ($maintenanceMode && $ldapHit['role'] !== 'admin' && ($user['role'] ?? '') !== 'admin') {
@@ -225,6 +232,7 @@ require_once __DIR__ . '/includes/header.php';
     ?>
     <?php if ($totpPending): ?>
     <form method="post" class="form">
+        <?= datadock_csrf_field() ?>
         <p class="page-description">Enter the 6-digit code from your authenticator app.</p>
         <div class="form-group">
             <label for="totp_code">Authenticator code</label>
@@ -237,6 +245,7 @@ require_once __DIR__ . '/includes/header.php';
         <p><a class="btn btn-primary" href="oidc.php">Sign in with OpenID Connect</a></p>
     <?php endif; ?>
     <form method="post" class="form">
+        <?= datadock_csrf_field() ?>
         <div class="form-group">
             <label for="input">Username or Email</label>
             <input type="text" name="input" id="input" value="<?= htmlspecialchars($input) ?>" required>

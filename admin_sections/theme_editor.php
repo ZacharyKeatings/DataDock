@@ -53,6 +53,7 @@ $colorFields = [
 
     <div class="theme-editor-layout">
         <form method="post" class="settings-card theme-editor-form" id="theme-editor-form">
+            <?= datadock_csrf_field() ?>
             <h3 class="settings-card-title"><?= $editing ? 'Edit theme' : 'New theme' ?></h3>
             <div class="settings-card-body">
                 <input type="hidden" name="save_custom_theme" value="1">
@@ -128,6 +129,7 @@ $colorFields = [
                             <span class="theme-saved-actions">
                                 <a class="btn btn-quiet btn-small" href="admin.php?section=themes&amp;edit=<?= urlencode($slug) ?>">Edit</a>
                                 <form method="post" class="inline-form compact" onsubmit="return confirm('Delete this theme?');">
+                                    <?= datadock_csrf_field() ?>
                                     <input type="hidden" name="delete_custom_theme" value="1">
                                     <input type="hidden" name="theme_slug" value="<?= sanitize_data($slug) ?>">
                                     <button type="submit" class="btn btn-danger btn-small">Delete</button>

@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['ids']) || !is_array(
     header("Location: dashboard.php");
     exit;
 }
+datadock_reject_invalid_csrf('dashboard.php');
 
 $ids = array_filter(array_map('intval', $_POST['ids']));
 if (empty($ids)) {

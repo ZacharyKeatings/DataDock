@@ -89,7 +89,13 @@ function datadock_paste_guest_id(bool $create): ?string {
         return null;
     }
     $id = bin2hex(random_bytes(16));
-    setcookie('guest_id', $id, time() + 86400 * 30, '/');
+    setcookie('guest_id', $id, [
+        'expires' => time() + 86400 * 30,
+        'path' => function_exists('datadock_cookie_path') ? datadock_cookie_path() : '/',
+        'secure' => function_exists('datadock_request_is_https') && datadock_request_is_https(),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     $_COOKIE['guest_id'] = $id;
     return $id;
 }

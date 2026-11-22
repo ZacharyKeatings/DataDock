@@ -31,6 +31,7 @@ if (!$file) {
 
 // Handle POST - add or remove share
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('share.php?id=' . $fileId);
     if (datadock_read_only_enabled($settings)) {
         $_SESSION['flash_error'][] = '❌ Read-only mode: sharing changes are disabled.';
         header('Location: share.php?id=' . $fileId);
@@ -121,6 +122,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <h3 class="section-title">Add someone</h3>
     <form method="post" class="inline-form">
+        <?= datadock_csrf_field() ?>
         <input type="hidden" name="action" value="add">
         <label for="share-username" class="visually-hidden">Username</label>
         <input type="text" name="username" id="share-username" placeholder="Username" required minlength="2" autocomplete="off">
@@ -134,6 +136,7 @@ require_once __DIR__ . '/includes/header.php';
             <li>
                 <?= user_profile_link($s['username']) ?>
                 <form method="post" class="inline-form" onsubmit="return confirm('Remove share with <?= htmlspecialchars($s['username']) ?>?')">
+                    <?= datadock_csrf_field() ?>
                     <input type="hidden" name="action" value="remove">
                     <input type="hidden" name="user_id" value="<?= (int)$s['shared_with_user_id'] ?>">
                     <button type="submit" class="btn btn-small btn-danger">Remove</button>

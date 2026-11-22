@@ -18,6 +18,7 @@ if ($tokenParam !== '') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
+    datadock_reject_invalid_csrf('reset_password.php?token=' . rawurlencode($tokenParam));
     $newPass = $_POST['new_password'] ?? '';
     $confirm = $_POST['confirm_password'] ?? '';
 
@@ -50,6 +51,7 @@ require_once __DIR__ . '/includes/header.php';
     <?php else: ?>
         <p class="page-description"><?= sanitize_data(datadock_password_hint($settings)) ?></p>
         <form method="post" class="form" onsubmit="return validateResetForm()">
+            <?= datadock_csrf_field() ?>
             <input type="hidden" name="token" value="<?= sanitize_data($tokenParam) ?>">
             <div class="form-group">
                 <label for="new_password">New password</label>

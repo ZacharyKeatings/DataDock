@@ -30,5 +30,7 @@ $_SERVER['SERVER_PORT'] = '443';
 expect_true('port 443 counts as https', datadock_request_is_https());
 $_SERVER['SERVER_PORT'] = '80';
 $_SERVER['HTTP_X_FORWARDED_PROTO'] = 'https';
-expect_true('forwarded proto https counts', datadock_request_is_https());
+$_SERVER['REMOTE_ADDR'] = '203.0.113.9';
+expect_false('forwarded proto from an untrusted peer is ignored', datadock_forwarded_proto_is_https('203.0.113.9', []));
+expect_true('forwarded proto from a trusted proxy counts', datadock_forwarded_proto_is_https('10.1.2.3', ['10.0.0.0/8']));
 $_SERVER = $saved;

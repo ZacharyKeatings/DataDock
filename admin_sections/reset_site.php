@@ -4,6 +4,7 @@
         This deletes every non-admin user, every uploaded file and thumbnail, every file record, and restores settings to their defaults. It cannot be undone.
     </div>
     <form method="post" class="form-actions" onsubmit="return confirm('Are you sure? This action is irreversible.');">
+        <?= datadock_csrf_field() ?>
         <input type="hidden" name="confirm_reset" value="yes">
         <button type="submit" class="btn btn-danger">Reset Site</button>
     </form>

@@ -61,11 +61,9 @@ $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 
 // Unlock form (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['download_access'])) {
+    datadock_reject_invalid_csrf('download.php');
     $fid = (int) ($_POST['file_id'] ?? 0);
-    $next = (string) ($_POST['next'] ?? 'download.php');
-    if (!preg_match('#^[a-zA-Z0-9_./?=&+%:-]+$#', $next) || strpos($next, '..') !== false) {
-        $next = 'download.php';
-    }
+    $next = datadock_safe_local_redirect((string) ($_POST['next'] ?? 'download.php'), 'download.php');
     $pw = (string) ($_POST['access_password'] ?? '');
     if ($fid > 0) {
         $stmt = $pdo->prepare("SELECT * FROM files f WHERE f.id = ? AND f.deleted_at IS NULL AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)");

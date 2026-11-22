@@ -107,6 +107,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
     );
+    if (!datadock_csrf_is_valid()) {
+        $msg = 'That action could not be confirmed. Use the button on the page.';
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['errors' => [$msg], 'success' => []]);
+            exit;
+        }
+        $_SESSION['flash_error'][] = $msg;
+        header('Location: upload.php');
+        exit;
+    }
 
     //--- application‐level size pre-check
     // if entire payload > app limit, PHP will flag FORM_SIZE

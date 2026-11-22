@@ -272,6 +272,8 @@ function datadock_sanitize_custom_css(string $css): string {
     $css = preg_replace('/<\/?[a-zA-Z][^>]*>/', '', $css) ?? $css;
     $css = preg_replace('/expression\s*\(/i', 'blocked(', $css) ?? $css;
     $css = preg_replace('/javascript\s*:/i', 'blocked:', $css) ?? $css;
+    $css = preg_replace('/url\s*\(/i', 'blocked(', $css) ?? $css;
+    $css = preg_replace('/image-set\s*\(/i', 'blocked(', $css) ?? $css;
     $css = preg_replace('/@import\b/i', '/* import removed */', $css) ?? $css;
     $css = preg_replace('/-moz-binding\s*:/i', 'blocked:', $css) ?? $css;
     $css = preg_replace('/behavior\s*:/i', 'blocked:', $css) ?? $css;

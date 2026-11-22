@@ -51,6 +51,7 @@ $durations = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('create_signed.php?id=' . $fileId);
     $k = $_POST['signed_duration'] ?? '1_day';
     if (!isset($durations[$k])) {
         $k = '1_day';
@@ -113,6 +114,7 @@ require_once __DIR__ . '/includes/header.php';
     <p class="page-description">Time-limited URL validated with HMAC. An IP allow list on the file still applies.</p>
     <p class="file-label"><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
     <form method="post" action="create_signed.php?id=<?= (int) $fileId ?>" class="settings-card narrow-form">
+        <?= datadock_csrf_field() ?>
         <div class="settings-card-body">
             <div class="form-group">
                 <label for="signed_duration">Link valid for</label>

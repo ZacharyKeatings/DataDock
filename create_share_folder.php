@@ -65,6 +65,7 @@ foreach ($ids as $iid) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('create_share_folder.php');
     $title = trim((string) ($_POST['title'] ?? ''));
     if (strlen($title) > 200) {
         $title = substr($title, 0, 200);
@@ -144,6 +145,7 @@ require_once __DIR__ . '/includes/header.php';
     <h2 class="page-title">Create share folder link</h2>
     <p class="page-description">One link for <?= (int) count($orderedFiles) ?> file<?= count($orderedFiles) === 1 ? '' : 's' ?>. A note is shown only to people who open the link.</p>
     <form method="post" class="form">
+        <?= datadock_csrf_field() ?>
         <div class="settings-row">
             <label for="title">Title (optional)</label>
             <input type="text" name="title" id="title" maxlength="200" placeholder="e.g. Project deliverables">

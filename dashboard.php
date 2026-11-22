@@ -354,6 +354,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
     <?php endif; ?>
     <?php if (empty($readOnly)): ?>
     <form method="post" action="" class="folder-create-form">
+        <?= datadock_csrf_field() ?>
         <input type="hidden" name="datadock_folder_create" value="1">
         <input type="hidden" name="redirect_folder" value="<?= (int) $currentFolderId ?>">
         <input type="hidden" name="parent_id" value="<?= (int) $currentFolderId ?>">
@@ -514,6 +515,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
                                         <a href="edit_file.php?id=<?= $file['id'] ?>" class="dropdown-item">Edit</a>
                                         <?php if ($foldersEnabled && !empty($allFoldersFlat)): ?>
                                         <form method="post" action="" class="dropdown-item-form move-folder-form">
+                                            <?= datadock_csrf_field() ?>
                                             <input type="hidden" name="datadock_move_file" value="1">
                                             <input type="hidden" name="file_id" value="<?= (int) $file['id'] ?>">
                                             <input type="hidden" name="redirect_folder" value="<?= (int) $currentFolderId ?>">
@@ -533,6 +535,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
                                         <?php endif; ?>
                                         <?php if ($publicBrowsingEnabled): ?>
                                         <form method="post" action="toggle_public.php" class="dropdown-item-form">
+                                            <?= datadock_csrf_field() ?>
                                             <input type="hidden" name="id" value="<?= $file['id'] ?>">
                                             <button type="submit" class="dropdown-item" title="<?= $file['is_public'] ? 'Make private' : 'Make public' ?>">
                                                 <span class="btn-icon"><?= icon_svg($file['is_public'] ? 'lock-open' : 'lock') ?></span> <?= $file['is_public'] ? 'Public' : 'Private' ?>
@@ -629,6 +632,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
                 echo '<li>' . sanitize_data($tokenName) . ' — share link, ' . sanitize_data($usesLeft) . ', ' . sanitize_data($tokenExpLabel);
                 if (empty($readOnly)) {
                     echo ' <form method="post" action="revoke_link.php" class="inline-form compact" onsubmit="return confirm(\'Revoke this link?\');">';
+                    echo datadock_csrf_field();
                     echo '<input type="hidden" name="type" value="token"><input type="hidden" name="id" value="' . (int) $tokenLink['id'] . '">';
                     echo '<button type="submit" class="btn btn-danger btn-small">Revoke</button></form>';
                 }
@@ -650,6 +654,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
                 }
                 if (empty($readOnly)) {
                     echo ' <form method="post" action="revoke_link.php" class="inline-form compact" onsubmit="return confirm(\'Revoke this link?\');">';
+                    echo datadock_csrf_field();
                     echo '<input type="hidden" name="type" value="signed"><input type="hidden" name="id" value="' . (int) $signedLink['id'] . '">';
                     echo '<button type="submit" class="btn btn-danger btn-small">Revoke</button></form>';
                 }
@@ -685,6 +690,7 @@ if ($foldersEnabled && $currentFolderId > 0) {
                 $expLabel = ($exp === null || $exp === '') ? 'no auto-expiry' : 'expires ' . sanitize_data($exp) . ' UTC';
                 echo '<li>' . sanitize_data($label) . ' — ' . $expLabel;
                 echo ' <form method="post" action="revoke_share_folder.php" class="inline-form compact" onsubmit="return confirm(\'Revoke this link?\');">';
+                echo datadock_csrf_field();
                 echo '<input type="hidden" name="id" value="' . (int) ($sf['id'] ?? 0) . '">';
                 echo '<button type="submit" class="btn btn-danger btn-small">Revoke</button></form>';
                 echo '<div class="share-link-row">';
@@ -792,6 +798,14 @@ document.addEventListener('DOMContentLoaded', function () {
         cb.addEventListener('change', updateBulkState);
     });
     if (bulkSelect) bulkSelect.addEventListener('change', updateBulkState);
+    var datadockCsrf = <?= json_encode(datadock_csrf_token()) ?>;
+    function datadockAppendCsrf(form) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrf_token';
+        input.value = datadockCsrf;
+        form.appendChild(input);
+    }
     if (bulkApplyBtn) {
         bulkApplyBtn.addEventListener('click', function () {
             var ids = Array.from(document.querySelectorAll('.zip-checkbox:checked')).map(function (c) { return c.value; });
@@ -818,6 +832,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     form.appendChild(input);
                 });
                 document.body.appendChild(form);
+                datadockAppendCsrf(form);
                 form.submit();
             } else if (action === 'move') {
                 var form = document.createElement('form');
@@ -836,6 +851,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     form.appendChild(input);
                 });
                 document.body.appendChild(form);
+                datadockAppendCsrf(form);
                 form.submit();
             } else if (action === 'delete' && confirm('Delete ' + ids.length + ' selected file(s)?')) {
                 var form = document.createElement('form');
@@ -849,6 +865,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     form.appendChild(input);
                 });
                 document.body.appendChild(form);
+                datadockAppendCsrf(form);
                 form.submit();
             }
         });

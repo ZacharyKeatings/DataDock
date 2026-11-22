@@ -18,6 +18,7 @@ if (!datadock_ip_allowlist_allows($link['ip_allowlist'] ?? null, datadock_client
 }
 if (!empty($link['access_password_hash']) && !datadock_folder_link_unlocked($linkId)) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        datadock_reject_invalid_csrf('folder_link.php?t=' . rawurlencode($token));
         if (password_verify((string) ($_POST['access_password'] ?? ''), (string) $link['access_password_hash'])) {
             datadock_folder_link_grant($linkId);
             header('Location: folder_link.php?t=' . rawurlencode($token));
@@ -28,6 +29,7 @@ if (!empty($link['access_password_hash']) && !datadock_folder_link_unlocked($lin
     $pageTitle = 'Folder link';
     require __DIR__ . '/includes/header.php';
     echo '<div class="page-section"><h2 class="page-title">This folder is locked</h2><form method="post" class="form">';
+    echo datadock_csrf_field();
     echo '<input type="hidden" name="t" value="' . sanitize_data($token) . '">';
     echo '<div class="form-group"><label for="access_password">Password</label><input type="password" name="access_password" id="access_password" required></div>';
     echo '<button type="submit" class="btn btn-primary">Unlock</button></form></div>';

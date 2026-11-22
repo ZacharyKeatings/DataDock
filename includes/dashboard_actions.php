@@ -22,6 +22,7 @@ function datadock_process_dashboard_post(PDO $pdo): void {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
         return;
     }
+    datadock_reject_invalid_csrf('dashboard.php');
 
     require_once __DIR__ . '/settings_loader.php';
     if (datadock_read_only_enabled(datadock_load_settings())) {

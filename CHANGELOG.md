@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Installer** — A finished setup deletes `install.php` and will not run it again. If the file cannot be deleted, the admin warning asks for it to be removed and the installer still refuses to start. Database settings are written with escaped PHP values.
+- **OpenID Connect** — An external login no longer attaches itself to an existing account unless the provider says that email is verified, and that first link does not change the account’s role. Discovery addresses must stay on the identity provider’s host.
+- **Previews** — A file’s IP allowlist applies to previews for everyone except the owner and an administrator.
+- **Redirects** — Theme changes and download-password submissions only send the browser back to a local address.
+- **CSRF** — State-changing forms now require the session token, including admin actions, account changes, sharing, and login.
+- **Sessions and links** — The session cookie is limited to the DataDock path. `X-Forwarded-Proto` is trusted only from a configured proxy. Signed download links fail closed when the signing secret cannot be stored. Custom theme CSS cannot load remote `url()` resources. A directory password cannot sign in to a local account of the same name. Forward-auth does not run when the proxy list is every address.
 
 ## [v2.6.1] - 2026-11-21
 

@@ -23,6 +23,8 @@ $cleaned = datadock_sanitize_custom_css("<style>@import url('x');\nbody{backgrou
 expect_false('custom css drops import', strpos($cleaned, '@import') !== false);
 expect_false('custom css drops expression', stripos($cleaned, 'expression') !== false);
 expect_false('custom css drops tags', strpos($cleaned, '<style>') !== false);
+$urlCss = datadock_sanitize_custom_css('body{background:url(https://evil.example/x)}');
+expect_false('custom css drops remote urls', stripos($urlCss, 'url(') !== false);
 
 expect_same('site theme is used for a guest', datadock_resolve_theme(['theme' => 'ocean']), 'ocean');
 expect_same('unknown site theme falls back to light', datadock_resolve_theme(['theme' => 'missing']), 'light');

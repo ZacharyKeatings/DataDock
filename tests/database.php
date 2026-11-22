@@ -76,6 +76,29 @@ try {
     $suspended = strpos($e->getMessage(), 'suspended') !== false;
 }
 expect_true('suspended external account is refused', $suspended);
+$unverifiedLink = false;
+try {
+    datadock_upsert_external_user($pdo, [
+        'sub' => 'attacker-sub',
+        'email' => 'ada@example.com',
+        'preferred_username' => 'ada',
+        'role' => 'admin',
+        'email_verified' => false,
+    ], 'oidc');
+} catch (RuntimeException $e) {
+    $unverifiedLink = strpos($e->getMessage(), 'already exists') !== false;
+}
+expect_true('unverified email does not link to an existing account', $unverifiedLink);
+expect_same('existing account keeps its role', (string) $pdo->query('SELECT role FROM users WHERE id = ' . $ada)->fetchColumn(), 'user');
+$linked = datadock_upsert_external_user($pdo, [
+    'sub' => 'verified-sub',
+    'email' => 'ada@example.com',
+    'preferred_username' => 'ada',
+    'role' => 'admin',
+    'email_verified' => true,
+], 'oidc');
+expect_same('verified email links the existing account', (int) $linked['id'], $ada);
+expect_same('verified email link keeps the existing role', $linked['role'], 'user');
 
 $pdo->prepare('UPDATE users SET quota_max_files = 1, quota_max_bytes = 1000 WHERE id = ?')->execute([$ada]);
 $limits = datadock_user_quota_limits($pdo, $ada, ['user_limits' => ['max_files_enabled' => false]]);

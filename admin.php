@@ -21,6 +21,7 @@ $section = $_GET['section'] ?? 'overview';
 
 // Handle POST actions first
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('admin.php?section=' . rawurlencode((string) $section));
     if (isset($_POST['save_custom_theme']) || isset($_POST['delete_custom_theme'])) {
         require_once __DIR__ . '/includes/themes.php';
         if (isset($_POST['delete_custom_theme'])) {

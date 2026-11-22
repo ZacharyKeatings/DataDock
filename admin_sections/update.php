@@ -4,6 +4,11 @@ ob_start();
 require_once __DIR__ . '/../includes/auth.php';
 init_session();
 require_admin();
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    header('Location: ../admin.php?section=updater');
+    exit;
+}
+datadock_reject_invalid_csrf('../admin.php?section=updater');
 
 require_once __DIR__ . '/../includes/settings_loader.php';
 $settings = datadock_load_settings();
