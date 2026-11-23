@@ -190,6 +190,17 @@ if ($custom['ok']) {
 
 expect_true('checkout is not docker image mode', datadock_docker_image_mode() === false);
 expect_same('checkout has no default docker storage path', datadock_docker_default_storage_path(), '');
+$limitRoot = sys_get_temp_dir() . '/datadock-limit-' . bin2hex(random_bytes(3));
+mkdir($limitRoot . '/config', 0755, true);
+file_put_contents($limitRoot . '/config/settings.php', "<?php\n\$settings = [\n    'max_file_size' => 5242880,\n];\n");
+datadock_docker_raise_stock_upload_limit($limitRoot);
+expect_contains('stock 5 MB docker limit becomes 200 MB', (string) file_get_contents($limitRoot . '/config/settings.php'), '209715200');
+file_put_contents($limitRoot . '/config/settings.php', "<?php\n\$settings = [\n    'max_file_size' => 10485760,\n];\n");
+datadock_docker_raise_stock_upload_limit($limitRoot);
+expect_contains('a chosen upload limit stays', (string) file_get_contents($limitRoot . '/config/settings.php'), '10485760');
+unlink($limitRoot . '/config/settings.php');
+rmdir($limitRoot . '/config');
+rmdir($limitRoot);
 expect_same('session hash is sha256 of the session id', datadock_session_hash(), hash('sha256', session_id()));
 expect_false('email verification flag defaults off', datadock_email_verification_enabled([]));
 expect_true('builtin theme list includes ocean', isset(datadock_builtin_theme_tokens()['ocean']));

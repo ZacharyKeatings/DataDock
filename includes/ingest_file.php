@@ -7,6 +7,39 @@ require_once __DIR__ . '/upload_scan.php';
 require_once __DIR__ . '/quotas.php';
 
 /**
+ * Write a small JPEG thumbnail. Missing image support, or a picture too large to decode, skips the thumb instead of failing the upload.
+ */
+function datadock_write_image_thumbnail(string $sourcePath, string $thumbPath): bool {
+    if (!function_exists('imagecreatefromstring') || !function_exists('imagescale') || !function_exists('imagejpeg')) {
+        return false;
+    }
+    $size = @filesize($sourcePath);
+    if ($size === false || $size < 1 || $size > 33554432 || !is_readable($sourcePath)) {
+        return false;
+    }
+    try {
+        $bytes = file_get_contents($sourcePath);
+        if (!is_string($bytes) || $bytes === '') {
+            return false;
+        }
+        $img = @imagecreatefromstring($bytes);
+        if ($img === false) {
+            return false;
+        }
+        $thumb = @imagescale($img, 100);
+        imagedestroy($img);
+        if ($thumb === false) {
+            return false;
+        }
+        $ok = @imagejpeg($thumb, $thumbPath);
+        imagedestroy($thumb);
+        return $ok;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+/**
  * @param array{source_path:string,original_name:string,file_size?:int,user_id?:?int,guest_id?:?string,folder_id?:?int,is_public?:int,expiry_ts?:?string,relocate?:string} $spec
  * relocate is "upload" (move_uploaded_file) or "rename".
  * @return array{ok:bool,error:?string,file_id:?int}
@@ -97,19 +130,8 @@ function datadock_ingest_local_file(PDO $pdo, array $settings, array $spec): arr
         $thumbBase = pathinfo($uniqueName, PATHINFO_FILENAME) ?: $uniqueName;
         $thumbnailName = 'thumb_' . $thumbBase . '.jpg';
         $thumbPath = $thumbDir . $thumbnailName;
-        if (!file_exists($thumbPath) && is_readable($destPath)) {
-            if ($img = @imagecreatefromstring((string) file_get_contents($destPath))) {
-                $thumb = imagescale($img, 100);
-                if ($thumb) {
-                    imagejpeg($thumb, $thumbPath);
-                    imagedestroy($thumb);
-                } else {
-                    $thumbnailName = null;
-                }
-                imagedestroy($img);
-            } else {
-                $thumbnailName = null;
-            }
+        if (!file_exists($thumbPath) && !datadock_write_image_thumbnail($destPath, $thumbPath)) {
+            $thumbnailName = null;
         }
     }
 
@@ -256,15 +278,8 @@ function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, 
         $thumbBase = pathinfo($uniqueName, PATHINFO_FILENAME) ?: $uniqueName;
         $thumbnailName = 'thumb_' . $thumbBase . '.jpg';
         $thumbPath = datadock_thumbnails_dir($pdo, $partitionId) . $thumbnailName;
-        if (!file_exists($thumbPath) && is_readable($destPath) && ($img = @imagecreatefromstring((string) file_get_contents($destPath)))) {
-            $thumb = imagescale($img, 100);
-            if ($thumb) {
-                imagejpeg($thumb, $thumbPath);
-                imagedestroy($thumb);
-            } else {
-                $thumbnailName = null;
-            }
-            imagedestroy($img);
+        if (!file_exists($thumbPath) && !datadock_write_image_thumbnail($destPath, $thumbPath)) {
+            $thumbnailName = null;
         }
     }
 

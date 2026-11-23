@@ -348,7 +348,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'invite_only_registration' => false,\n" .
         "    'enforce_unique_email' => true,\n" .
         "    'email_verification_enabled' => false,\n" .
-        "    'max_file_size' => 5242880,\n" .
+        "    'max_file_size' => " . (datadock_docker_image_mode() ? 209715200 : 5242880) . ",\n" .
         "    'default_file_expiry' => 'never',\n" .
         "    'thumbnails_enabled' => true,\n" .
         "    'session_timeout_minutes' => 60,\n" .
@@ -810,13 +810,7 @@ function upload_image_body_has_embedded_script_markers(string $tmpPath, string $
     if ($chunk === false) {
         return true;
     }
-    if (stripos($chunk, '<?php') !== false || stripos($chunk, '<?=') !== false) {
-        return true;
-    }
-    if (preg_match('/<\?(?!xml[\s=])/i', $chunk)) {
-        return true;
-    }
-    return false;
+    return preg_match('/<\?php|<\?=|<script\b/i', $chunk) === 1;
 }
 
 function get_friendly_filetype($mime) {

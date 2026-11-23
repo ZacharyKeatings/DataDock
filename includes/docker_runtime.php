@@ -271,6 +271,38 @@ function datadock_announce_installer_retired(): void {
     }
 }
 
+/**
+ * The published image used to install with a 5 MB upload cap. Raise that stock value to 200 MB.
+ * A limit the admin has already changed is left alone.
+ */
+function datadock_docker_raise_stock_upload_limit(string $appRoot): void {
+    $file = rtrim($appRoot, '/') . '/config/settings.php';
+    if (!is_file($file)) {
+        return;
+    }
+    $raw = file_get_contents($file);
+    if (!is_string($raw)) {
+        return;
+    }
+    $updated = preg_replace(
+        "/(['\"]max_file_size['\"]\\s*=>\\s*)5242880\\b/",
+        '${1}209715200',
+        $raw,
+        1,
+        $count
+    );
+    if (!is_string($updated) || $count !== 1 || $updated === $raw) {
+        return;
+    }
+    if (file_put_contents($file, $updated, LOCK_EX) === false) {
+        fwrite(STDERR, "DataDock: could not raise the upload limit in settings.php\n");
+        return;
+    }
+    if (PHP_SAPI === 'cli') {
+        echo "DataDock: upload limit raised from 5 MB to 200 MB.\n";
+    }
+}
+
 function datadock_docker_bootstrap(string $dataDir, int $dbWaitSeconds = 10): void {
     $dataDir = rtrim($dataDir, '/');
     $appRoot = datadock_docker_app_root();
@@ -309,6 +341,7 @@ function datadock_docker_bootstrap(string $dataDir, int $dbWaitSeconds = 10): vo
     }
 
     datadock_docker_pin_storage_path($appRoot, $dataDir);
+    datadock_docker_raise_stock_upload_limit($appRoot);
     $retired = datadock_retire_web_installer($appRoot);
     if ($retired === 'removed') {
         echo "DataDock: removed install.php. Recreating this container will not bring it back.\n";

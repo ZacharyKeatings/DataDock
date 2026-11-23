@@ -612,7 +612,10 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
 
     function uploadRejectedMessage(status) {
       const http = status ? ' (HTTP ' + status + ')' : '';
-      return '❌ Upload failed: the server did not accept the file' + http + '. Its upload size limit is lower than this request.';
+      if (status === 413) {
+        return '❌ Upload failed: the server did not accept the file' + http + '. Its upload size limit is lower than this request.';
+      }
+      return '❌ Upload failed: the server could not store the file' + http + '.';
     }
 
     async function readUploadJson(response) {

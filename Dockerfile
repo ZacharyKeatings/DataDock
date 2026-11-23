@@ -1,7 +1,15 @@
 # DataDock — PHP + Apache. Configure MySQL/MariaDB separately (see docker-compose.example.yml).
 FROM php:8.5-apache
 
-RUN docker-php-ext-install pdo_mysql \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libfreetype6-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        libwebp-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install gd pdo_mysql \
+    && rm -rf /var/lib/apt/lists/* \
     && a2enmod rewrite headers \
     && printf '%s\n' \
         '<Directory /var/www/html/uploads>' \
@@ -21,7 +29,7 @@ RUN docker-php-ext-install pdo_mysql \
         'file_uploads=On' \
         'upload_max_filesize=512M' \
         'post_max_size=512M' \
-        'memory_limit=256M' \
+        'memory_limit=512M' \
         'max_execution_time=300' \
         'max_input_time=300' \
         'max_file_uploads=50' \

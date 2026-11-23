@@ -36,6 +36,10 @@ file_put_contents($gif, 'GIF89a' . '<?php echo 1;');
 expect_false('gif body named as jpeg fails', upload_strict_image_format_ok($gif, 'jpg', 'image/jpeg'));
 expect_true('embedded php in an image is flagged', upload_image_body_has_embedded_script_markers($gif, 'image/gif', 'gif'));
 expect_false('non-images skip the script scan', upload_image_body_has_embedded_script_markers($gif, 'text/plain', 'txt'));
+$plainJpeg = tempnam(sys_get_temp_dir(), 'ddq');
+file_put_contents($plainJpeg, "\xFF\xD8\xFF" . str_repeat('A', 200) . '<?' . str_repeat('B', 200));
+expect_false('compressed image bytes are not treated as php', upload_image_body_has_embedded_script_markers($plainJpeg, 'image/jpeg', 'jpg'));
+unlink($plainJpeg);
 unlink($jpeg);
 unlink($gif);
 

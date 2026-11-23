@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Docker uploads** — Ordinary photos are no longer rejected because compressed image data happens to contain `<?`. The image includes PHP’s image library, so creating a thumbnail cannot crash the upload. A Docker install that still has the original 5 MB limit is raised to 200 MB when the container starts. A limit you already changed is left as you set it.
 - **File actions** — Opening one file’s Actions menu closes any other open menu.
 
 - **Installer** — A finished setup deletes `install.php` and will not run it again. If the file cannot be deleted, the admin warning asks for it to be removed and the installer still refuses to start. Database settings are written with escaped PHP values.
