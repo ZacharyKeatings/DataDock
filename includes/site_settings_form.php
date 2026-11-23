@@ -218,6 +218,13 @@ function datadock_apply_site_settings_group(array $form, string $group, array $p
         if ($form['adminContactEmail'] !== '' && !filter_var($form['adminContactEmail'], FILTER_VALIDATE_EMAIL)) {
             $errors[] = '❌ Admin contact email must be a valid email address.';
         }
+        require_once __DIR__ . '/functions.php';
+        if (!datadock_branding_url_ok($form['logoUrl'])) {
+            $errors[] = '❌ Logo URL must be empty, a site path, or an https address.';
+        }
+        if (!datadock_branding_url_ok($form['faviconUrl'])) {
+            $errors[] = '❌ Favicon URL must be empty, a site path, or an https address.';
+        }
         require_once __DIR__ . '/themes.php';
         if (!datadock_theme_is_known($form['theme'])) {
             $errors[] = '❌ That theme is not available.';

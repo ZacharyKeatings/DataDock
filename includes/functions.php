@@ -149,6 +149,58 @@ function app_asset_url(string $path): string {
 /**
  * Keep a redirect on this site. Absolute URLs and protocol-relative paths are dropped.
  */
+/**
+ * True when an archive member stays inside the archive root.
+ * Rejects absolute paths and any ".." segment.
+ */
+function datadock_archive_entry_is_safe(string $name): bool {
+    $name = str_replace('\\', '/', $name);
+    if ($name === '' || str_contains($name, "\0")) {
+        return false;
+    }
+    if (str_starts_with($name, '/') || preg_match('#^[A-Za-z]:#', $name) === 1) {
+        return false;
+    }
+    $kept = false;
+    foreach (explode('/', $name) as $part) {
+        if ($part === '' || $part === '.') {
+            continue;
+        }
+        if ($part === '..') {
+            return false;
+        }
+        $kept = true;
+    }
+    return $kept;
+}
+
+/**
+ * https URL with a host and no embedded username or password.
+ */
+function datadock_https_asset_url(string $url): bool {
+    if (preg_match('#^https://#i', $url) !== 1) {
+        return false;
+    }
+    $parts = parse_url($url);
+    if (!is_array($parts) || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
+        return false;
+    }
+    return filter_var($url, FILTER_VALIDATE_URL) !== false;
+}
+
+/**
+ * Branding image: empty, a site-relative path, or an https URL.
+ */
+function datadock_branding_url_ok(string $url): bool {
+    if ($url === '') {
+        return true;
+    }
+    if (str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '..')) {
+        return preg_match('#^/[A-Za-z0-9_./?=&%+-]*$#', $url) === 1;
+    }
+    return datadock_https_asset_url($url);
+}
+
 function datadock_safe_local_redirect(string $candidate, string $fallback): string {
     $candidate = trim($candidate);
     if ($candidate === '' || preg_match('/[\r\n\\\\]/', $candidate) === 1 || str_contains($candidate, '..')) {

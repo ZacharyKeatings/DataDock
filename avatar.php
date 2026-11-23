@@ -37,8 +37,8 @@ if ($userId === null || $avatar === null || trim($avatar) === '') {
 
 $avatar = trim($avatar);
 
-if (preg_match('#^https?://#i', $avatar)) {
-    header('Location: ' . $avatar);
+if (preg_match('#^[a-z][a-z0-9+.-]*:#i', $avatar)) {
+    http_response_code(404);
     exit;
 }
 
@@ -59,6 +59,7 @@ $mimes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', '
 $mime = $mimes[$ext] ?? 'application/octet-stream';
 datadock_log_hotlink_if_external($pdo, $settings, 'avatar', null, (int) $userId);
 datadock_deny_untrusted_hotlink($settings);
+header('X-Content-Type-Options: nosniff');
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . filesize($path));
 header('Cache-Control: public, max-age=86400');

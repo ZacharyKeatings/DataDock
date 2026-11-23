@@ -135,7 +135,7 @@ Security-related choices: CSRF-safe form handling, `password_hash` for passwords
 - **HTTP headers (optional, v2.5+)** — In **Admin → Site Settings**, you can set `security_headers_mode` to `recommended` or `strict` so PHP sends extra headers (nosniff, referrer policy, framing, and in `strict` mode a Content-Security-Policy aligned with this app’s inline scripts and the Activity chart CDN). For TLS/HSTS and duplicate-header control, prefer your reverse proxy: copy from **`examples/nginx-security-headers.conf`** or **`examples/apache-security-headers.conf`**. Container / env: `DATADOCK_SECURITY_HEADERS=off|recommended|strict`.
 - **Sessions** — Idle timeout signs users out with a clear message on the login page. Optional **Remember this device** only extends the session cookie lifetime (still the same PHP session; idle rules apply); it is not a separate “remember me” token system.
 
-For security-sensitive deployments, use HTTPS, restrict admin access (e.g. by IP or VPN), and keep PHP and MySQL updated. Report vulnerabilities responsibly (e.g. via GitHub issues or contact details in the repo).
+For security-sensitive deployments, use HTTPS, restrict admin access (e.g. by IP or VPN), and keep PHP and MySQL updated. Report vulnerabilities in private. See **[SECURITY.md](SECURITY.md)**. Do not open a public issue for a security report.
 
 ---
 
@@ -143,6 +143,7 @@ For security-sensitive deployments, use HTTPS, restrict admin access (e.g. by IP
 
 | Document | Description |
 |----------|-------------|
+| [**SECURITY.md**](SECURITY.md) | How to report a vulnerability in private, and what to expect after you do. |
 | [**PRIVACY.md**](PRIVACY.md) | How DataDock handles your data: no telemetry, no cloud sync; everything stays on your server. |
 | [**CONTRIBUTING.md**](CONTRIBUTING.md) | How to contribute: fork, branch naming, and pull requests. |
 | [**ROADMAP.md**](ROADMAP.md) | Full feature checklist (done and planned) with short descriptions. |

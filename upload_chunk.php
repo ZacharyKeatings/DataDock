@@ -33,11 +33,8 @@ if ($currentUserId < 1 && !$isGuest) {
 }
 $guestId = '';
 if ($isGuest) {
-    $guestId = (string) ($_COOKIE['guest_id'] ?? '');
-    if (!preg_match('/^[a-f0-9]{32}$/', $guestId)) {
-        $guestId = bin2hex(random_bytes(16));
-        setcookie('guest_id', $guestId, time() + 86400 * 30, '/');
-    }
+    require_once __DIR__ . '/includes/pastes.php';
+    $guestId = (string) (datadock_paste_guest_id(true) ?? '');
 }
 $ownerKey = $currentUserId > 0 ? ('u' . $currentUserId) : ('g' . $guestId);
 $root = rtrim(sys_get_temp_dir(), '/') . '/datadock-chunks';

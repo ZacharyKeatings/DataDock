@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker `dev` tag** — The published `dev` image follows the latest commit on `dev-testing`. Pushes to `main` still publish a SHA tag. SemVer and `latest` stay on published releases.
 - **Docker updates** — A container running the published image turns off the in-app updater. The updater page says to pull a new image instead.
 
+### Security
+
+- **Private reports** — [SECURITY.md](SECURITY.md) is the path for vulnerability reports. Public issues are for bugs that are not security issues.
+- **Archives** — The updater and full-backup restore refuse archive members that escape the destination directory.
+- **Avatars and branding** — An avatar URL is no longer sent as a redirect. New avatar URLs, and the site logo and favicon, must be https or a local path.
+- **Config directory** — `config/.htaccess` uses Apache 2.4 `Require all denied`, with the older syntax kept for Apache 2.2.
+
 ### Fixed
 
 - **File actions** — Opening one file’s Actions menu closes any other open menu.

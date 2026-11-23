@@ -78,11 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (strlen($bio) > 500) {
             $_SESSION['flash_error'][] = "❌ Bio must be 500 characters or less.";
         }
-        if ($avatarUrl !== '' && !filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
-            $_SESSION['flash_error'][] = "❌ Avatar URL must be a valid URL.";
-        }
-        if ($avatarUrl !== '' && !preg_match('#^https?://#i', $avatarUrl)) {
-            $_SESSION['flash_error'][] = "❌ Avatar URL must start with http:// or https://.";
+        if ($avatarUrl !== '' && !datadock_https_asset_url($avatarUrl)) {
+            $_SESSION['flash_error'][] = "❌ Avatar URL must be an https address without a username or password.";
         }
 
         $newAvatar = null;

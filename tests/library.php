@@ -108,6 +108,13 @@ expect_same('oidc endpoint on another host is rejected', datadock_oidc_same_orig
 expect_same('absolute redirect is rejected', datadock_safe_local_redirect('https://evil.example', 'index.php'), 'index.php');
 expect_same('protocol-relative redirect is rejected', datadock_safe_local_redirect('//evil.example', 'index.php'), 'index.php');
 expect_same('local redirect is kept', datadock_safe_local_redirect('download.php?id=1', 'index.php'), 'download.php?id=1');
+expect_true('archive entry inside the tree is safe', datadock_archive_entry_is_safe('DataDock-v2.6.1/index.php'));
+expect_false('archive entry with a parent segment is rejected', datadock_archive_entry_is_safe('../config/db.php'));
+expect_false('absolute archive entry is rejected', datadock_archive_entry_is_safe('/etc/passwd'));
+expect_true('https branding url is accepted', datadock_branding_url_ok('https://cdn.example/logo.png'));
+expect_true('site-relative branding url is accepted', datadock_branding_url_ok('/assets/logo.png'));
+expect_false('javascript branding url is rejected', datadock_branding_url_ok('javascript:alert(1)'));
+expect_false('https url with a password is rejected', datadock_https_asset_url('https://user:secret@cdn.example/a.png'));
 $_SERVER['HTTP_X_REQUEST_ID'] = 'abc';
 expect_same('request header is read', datadock_request_header('X-Request-Id'), 'abc');
 

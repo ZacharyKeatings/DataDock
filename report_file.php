@@ -20,7 +20,7 @@ function datadock_safe_report_return(string $returnTo): string {
     if ($returnTo === '') {
         return 'dashboard.php';
     }
-    if (str_contains($returnTo, '://') || str_starts_with($returnTo, '//')) {
+    if (str_contains($returnTo, '..') || str_contains($returnTo, '://') || str_starts_with($returnTo, '//')) {
         return 'dashboard.php';
     }
     if (str_starts_with($returnTo, '/')) {

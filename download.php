@@ -47,6 +47,7 @@ function datadock_send_file_stream(PDO $pdo, array $file, array $settings, strin
     if ($logDownloadEventForOwner) {
         datadock_log_file_download_event($pdo, $fileId);
     }
+    header('X-Content-Type-Options: nosniff');
     header('Content-Description: File Transfer');
     header('Content-Type: ' . ($file['filetype'] ?? 'application/octet-stream'));
     send_download_disposition($file['filetype'] ?? 'application/octet-stream', basename($file['original_name'] ?? $file['filename']));

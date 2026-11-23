@@ -12,6 +12,7 @@ datadock_reject_invalid_csrf('../admin.php?section=updater');
 
 require_once __DIR__ . '/../includes/settings_loader.php';
 require_once __DIR__ . '/../includes/updater.php';
+require_once __DIR__ . '/../includes/functions.php';
 $settings = datadock_load_settings();
 
 if (datadock_docker_image_mode()) {
@@ -136,6 +137,16 @@ if (!file_exists($zipPath) || filesize($zipPath) === 0) {
 // Extract
 $zip = new ZipArchive;
 if ($zip->open($zipPath) === TRUE) {
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $entry = (string) $zip->getNameIndex($i);
+        if (!datadock_archive_entry_is_safe($entry)) {
+            $zip->close();
+            $_SESSION['flash_error'][] = "❌ Release archive contains an unsafe path.";
+            ob_end_clean();
+            header("Location: ../admin.php?section=updater");
+            exit;
+        }
+    }
     $zip->extractTo($extractPath);
     $zip->close();
 } else {
