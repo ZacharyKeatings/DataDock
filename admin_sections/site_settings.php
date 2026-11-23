@@ -570,6 +570,7 @@ $settingsGroupTitle = datadock_site_settings_groups()[$settingsGroup] ?? 'Genera
                 <div class="settings-row"><label for="oidc_client_secret">Client secret</label><input type="password" name="oidc_client_secret" id="oidc_client_secret" value="<?= sanitize_data($oidcCfg['client_secret'] ?? '') ?>"></div>
                 <div class="settings-row"><label for="oidc_role_claim">Role claim</label><input type="text" name="oidc_role_claim" id="oidc_role_claim" value="<?= sanitize_data($oidcCfg['role_claim'] ?? 'groups') ?>"></div>
                 <div class="settings-row"><label for="oidc_admin_groups">Admin groups</label><input type="text" name="oidc_admin_groups" id="oidc_admin_groups" value="<?= sanitize_data($oidcCfg['admin_groups'] ?? '') ?>" placeholder="comma-separated"></div>
+                <p class="settings-hint">Register this redirect URI with the identity provider, exactly as shown: <code><?= sanitize_data(datadock_public_url('oidc.php')) ?></code></p>
             </div>
         </div>
         <div class="settings-card">

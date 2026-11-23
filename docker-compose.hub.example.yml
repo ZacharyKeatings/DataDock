@@ -22,6 +22,9 @@ services:
       DATADOCK_DB_NAME: datadock
       DATADOCK_DB_USER: datadock
       DATADOCK_DB_PASSWORD: changeme_app
+      # Behind Traefik or another proxy, leave this unset: the published image
+      # trusts private-network addresses for X-Forwarded-Proto. Set it only to
+      # replace that list. OpenID Connect then redirects to https://your-host/oidc.php.
     volumes:
       - datadock_data:/var/lib/datadock
     depends_on:

@@ -97,6 +97,9 @@ function datadock_apply_env_overrides(array $settings): array {
     if (($b = datadock_env_bool($e('DATADOCK_INVITE_ONLY_REGISTRATION'), null)) !== null) {
         $settings['invite_only_registration'] = $b;
     }
+    if (trim((string) ($settings['trusted_proxies'] ?? '')) === '' && datadock_docker_image_mode()) {
+        $settings['trusted_proxies'] = datadock_docker_default_trusted_proxies();
+    }
 
     return $settings;
 }

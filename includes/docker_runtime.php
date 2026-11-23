@@ -33,6 +33,15 @@ function datadock_docker_image_mode(?string $appRoot = null): bool {
     return datadock_docker_runtime($appRoot)['image_mode'];
 }
 
+/**
+ * Private ranges used when a published image has no trusted-proxy list.
+ * Docker bridge and Compose networks fall inside these ranges, so a reverse
+ * proxy on the same network can supply X-Forwarded-Proto.
+ */
+function datadock_docker_default_trusted_proxies(): string {
+    return '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7';
+}
+
 function datadock_docker_default_storage_path(?string $appRoot = null): string {
     $runtime = datadock_docker_runtime($appRoot);
     if (!$runtime['image_mode']) {

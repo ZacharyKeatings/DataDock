@@ -190,6 +190,19 @@ if ($custom['ok']) {
 
 expect_true('checkout is not docker image mode', datadock_docker_image_mode() === false);
 expect_same('checkout has no default docker storage path', datadock_docker_default_storage_path(), '');
+expect_same(
+    'docker image trusts private proxies by default',
+    datadock_docker_default_trusted_proxies(),
+    '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7'
+);
+expect_true(
+    'a docker bridge address matches the default proxy list',
+    datadock_ip_is_trusted_proxy('172.18.0.5', explode(',', datadock_docker_default_trusted_proxies()))
+);
+$proxySettings = datadock_apply_env_overrides(['trusted_proxies' => '']);
+expect_same('a checkout does not invent trusted proxies', $proxySettings['trusted_proxies'], '');
+$keptProxies = datadock_apply_env_overrides(['trusted_proxies' => '192.0.2.1']);
+expect_same('a saved proxy list is kept', $keptProxies['trusted_proxies'], '192.0.2.1');
 $limitRoot = sys_get_temp_dir() . '/datadock-limit-' . bin2hex(random_bytes(3));
 mkdir($limitRoot . '/config', 0755, true);
 file_put_contents($limitRoot . '/config/settings.php', "<?php\n\$settings = [\n    'max_file_size' => 5242880,\n];\n");
