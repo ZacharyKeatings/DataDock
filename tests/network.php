@@ -34,3 +34,28 @@ $_SERVER['REMOTE_ADDR'] = '203.0.113.9';
 expect_false('forwarded proto from an untrusted peer is ignored', datadock_forwarded_proto_is_https('203.0.113.9', []));
 expect_true('forwarded proto from a trusted proxy counts', datadock_forwarded_proto_is_https('10.1.2.3', ['10.0.0.0/8']));
 $_SERVER = $saved;
+
+$savedProxies = getenv('DATADOCK_TRUSTED_PROXIES');
+putenv('DATADOCK_TRUSTED_PROXIES=10.0.0.0/8');
+datadock_forget_cached_settings();
+$openid = $_SERVER;
+$_SERVER['HTTPS'] = 'off';
+$_SERVER['SERVER_PORT'] = '80';
+$_SERVER['HTTP_HOST'] = 'datadock.example';
+$_SERVER['SCRIPT_NAME'] = '/oidc.php';
+$_SERVER['REMOTE_ADDR'] = '10.1.2.3';
+$_SERVER['HTTP_X_FORWARDED_PROTO'] = 'https';
+expect_same('openid redirect uses https behind a trusted proxy', datadock_public_url('oidc.php'), 'https://datadock.example/oidc.php');
+$_SERVER['REMOTE_ADDR'] = '203.0.113.9';
+expect_same('openid redirect stays http for an untrusted peer', datadock_public_url('oidc.php'), 'http://datadock.example/oidc.php');
+$_SERVER['REMOTE_ADDR'] = '10.1.2.3';
+$_SERVER['HTTP_X_FORWARDED_PROTO'] = 'http';
+expect_same('openid redirect stays http when the proxy says http', datadock_public_url('oidc.php'), 'http://datadock.example/oidc.php');
+$_SERVER = $openid;
+if ($savedProxies === false) {
+    putenv('DATADOCK_TRUSTED_PROXIES');
+} else {
+    putenv('DATADOCK_TRUSTED_PROXIES=' . $savedProxies);
+}
+datadock_forget_cached_settings();
+datadock_trusted_proxy_entries();

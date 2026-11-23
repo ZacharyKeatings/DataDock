@@ -105,6 +105,14 @@ function datadock_apply_env_overrides(array $settings): array {
 }
 
 /**
+ * Drop the in-process settings and trusted-proxy caches so a changed environment is read again.
+ */
+function datadock_forget_cached_settings(): void {
+    $GLOBALS['datadock_forget_settings_cache'] = true;
+    $GLOBALS['datadock_forget_proxy_cache'] = true;
+}
+
+/**
  * Cached merged settings (file + env). Use datadock_load_settings_from_file() in Admin when editing stored values.
  *
  * @return array<string, mixed>
@@ -112,6 +120,10 @@ function datadock_apply_env_overrides(array $settings): array {
 function datadock_load_settings(): array {
     static $cached = null;
     static $loading = false;
+    if (!empty($GLOBALS['datadock_forget_settings_cache'])) {
+        $cached = null;
+        $GLOBALS['datadock_forget_settings_cache'] = false;
+    }
     if ($cached !== null) {
         return $cached;
     }

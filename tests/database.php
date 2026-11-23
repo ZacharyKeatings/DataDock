@@ -42,6 +42,9 @@ expect_same(
     (int) $pdo->query('SELECT id FROM storage_partitions WHERE is_default = 1')->fetchColumn(),
     1
 );
+$storageRoot = sys_get_temp_dir() . '/datadock-ingest-' . bin2hex(random_bytes(4));
+mkdir($storageRoot, 0755, true);
+$pdo->prepare('UPDATE storage_partitions SET root_path = ? WHERE id = 1')->execute([$storageRoot]);
 expect_same('fresh database has no upload names to check', datadock_expected_upload_filenames_by_partition($pdo), []);
 
 $password = password_hash('secret', PASSWORD_DEFAULT);
@@ -309,3 +312,92 @@ expect_same('session row is stored', (int) $pdo->query('SELECT COUNT(*) FROM use
 $begin = datadock_begin_email_verification($pdo, $ada, 'ada@example.com');
 expect_same('verification email is not sent without smtp', $begin['sent'], false);
 expect_contains('verification begin returns a url', $begin['url'], 'verify_email.php?token=');
+
+require_once dirname(__DIR__) . '/includes/ingest_file.php';
+$insertUser->execute(['upload-user', 'upload@example.com', $password, 'user']);
+$uploader = (int) $pdo->lastInsertId();
+$ingestSettings = [
+    'max_file_size' => 1048576,
+    'thumbnails_enabled' => true,
+    'deduplicate_storage' => false,
+    'filetype_policy' => ['mode' => 'off'],
+];
+$note = $storageRoot . '/note-src.txt';
+file_put_contents($note, 'hello dock');
+$stored = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $note,
+    'original_name' => 'note.txt',
+    'user_id' => $uploader,
+]);
+expect_true('a text upload is stored', !empty($stored['ok']));
+$storedId = (int) ($stored['file_id'] ?? 0);
+expect_true('a text upload returns an id', $storedId > 0);
+if ($storedId > 0) {
+    $storedName = (string) $pdo->query('SELECT filename FROM files WHERE id = ' . $storedId)->fetchColumn();
+    expect_same('a text upload keeps its bytes', (string) file_get_contents(datadock_upload_dir($pdo, 1) . $storedName), 'hello dock');
+} else {
+    test_fail('a text upload keeps its bytes', (string) ($stored['error'] ?? 'upload was not stored'));
+}
+
+$phpUpload = $storageRoot . '/shell-src.php';
+file_put_contents($phpUpload, '<?php echo 1;');
+$forbidden = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $phpUpload,
+    'original_name' => 'shell.php',
+    'user_id' => $uploader,
+]);
+expect_false('a php upload is refused', !empty($forbidden['ok']));
+expect_contains('a php upload names the forbidden type', (string) ($forbidden['error'] ?? ''), 'forbidden');
+unlink($phpUpload);
+
+$tinyUpload = $storageRoot . '/tiny-src.txt';
+file_put_contents($tinyUpload, 'too-big');
+$tooLarge = datadock_ingest_local_file($pdo, ['max_file_size' => 3] + $ingestSettings, [
+    'source_path' => $tinyUpload,
+    'original_name' => 'tiny.txt',
+    'user_id' => $uploader,
+]);
+expect_false('an upload over the limit is refused', !empty($tooLarge['ok']));
+expect_contains('an upload over the limit says it is too large', (string) ($tooLarge['error'] ?? ''), 'too large');
+unlink($tinyUpload);
+
+$jpegBytes = hex2bin('ffd8ffdb00430003020202020202030202020303030304060404040404080606050609080a0a090809090a0c0f0c0a0b0e0b09090d110d0e0f101011100a0c12131210130f101010ffc9000b080001000101011100ffcc000600101005ffda0008010100003f00d2cf20ffd9');
+$scriptJpeg = $storageRoot . '/script.jpg';
+file_put_contents($scriptJpeg, $jpegBytes . '<?php echo 1;');
+$scripted = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $scriptJpeg,
+    'original_name' => 'script.jpg',
+    'user_id' => $uploader,
+]);
+expect_false('a jpeg with php inside is refused', !empty($scripted['ok']));
+expect_contains('a jpeg with php inside is described as a script', (string) ($scripted['error'] ?? ''), 'script content');
+unlink($scriptJpeg);
+
+$cleanJpeg = $storageRoot . '/clean.jpg';
+file_put_contents($cleanJpeg, $jpegBytes);
+$photo = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $cleanJpeg,
+    'original_name' => 'clean.jpg',
+    'user_id' => $uploader,
+]);
+expect_true('a jpeg upload is stored', !empty($photo['ok']));
+$photoId = (int) ($photo['file_id'] ?? 0);
+$photoThumb = $pdo->query('SELECT thumbnail_path FROM files WHERE id = ' . $photoId)->fetchColumn();
+if (function_exists('imagecreatefromstring')) {
+    expect_true('a jpeg upload stores a thumbnail', is_string($photoThumb) && $photoThumb !== '' && is_file(datadock_thumbnails_dir($pdo, 1) . $photoThumb));
+} else {
+    expect_same('a jpeg upload succeeds without a thumbnail', $photoThumb, null);
+}
+
+$pdo->prepare('UPDATE users SET totp_enabled = 1, totp_secret = ? WHERE id = ?')->execute(['JBSWY3DPEHPK3PXP', $ada]);
+expect_true('an authenticator secret makes totp required', datadock_user_needs_totp($pdo, $ada));
+$_SESSION['totp_pending'] = ['user_id' => $ada];
+@datadock_establish_session($pdo, [
+    'id' => $ada,
+    'username' => 'ada',
+    'role' => 'user',
+], ['remember_device' => ['enabled' => false]], false, false);
+expect_same('password login starts a session', (int) ($_SESSION['user_id'] ?? 0), $ada);
+expect_same('password login keeps the username', (string) ($_SESSION['username'] ?? ''), 'ada');
+expect_false('password login clears a pending authenticator step', isset($_SESSION['totp_pending']));
+datadock_remove_tree($storageRoot);
