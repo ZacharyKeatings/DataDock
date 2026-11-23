@@ -257,6 +257,9 @@ function datadock_render_theme_css(array $tokens, string $extra = ''): string {
         . ".sidebar-nav a.active, .sidebar-nav a:hover { background: var(--color-secondary); color: {$stat}; }\n"
         . ".file-row, .file-row-dashboard, .file-row-user-management, .file-row-file-management { border-bottom-color: var(--color-border); }\n"
         . ".welcome-banner { background: var(--color-secondary); border-left-color: var(--color-accent); }\n";
+    if ($scheme === 'dark') {
+        $css .= ".file-header { background-color: var(--color-secondary); color: var(--color-text); }\n";
+    }
     $extra = datadock_sanitize_custom_css($extra);
     if ($extra !== '') {
         $css .= "\n/* Custom rules */\n" . $extra . "\n";

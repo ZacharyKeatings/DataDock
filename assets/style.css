@@ -2833,6 +2833,24 @@ a.btn-small {
 
 .paste-list-label {
     font-weight: bold;
+    color: var(--color-link, var(--color-primary, #038c96));
+    text-decoration: none;
+}
+
+a.paste-list-label:hover {
+    text-decoration: underline;
+}
+
+.paste-list-preview {
+    margin: 0.2rem 0 0;
+    max-width: 40rem;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    opacity: 0.85;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .paste-list-meta {

@@ -29,4 +29,5 @@ button:hover, .btn-primary:hover { background-color: #99e6bc; color: #102018; }
 .sidebar-nav a { color: var(--color-text); }
 .sidebar-nav a.active, .sidebar-nav a:hover { background: var(--color-secondary); color: #b7e4c7; }
 .file-row, .file-row-dashboard, .file-row-user-management, .file-row-file-management { border-bottom-color: var(--color-border); }
+.file-header { background-color: var(--color-secondary); color: var(--color-text); }
 .welcome-banner { background: var(--color-secondary); border-left-color: var(--color-accent); }

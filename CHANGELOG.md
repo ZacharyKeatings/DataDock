@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker uploads** — Ordinary photos are no longer rejected because compressed image data happens to contain `<?`. The image includes PHP’s image library, so creating a thumbnail cannot crash the upload. A Docker install that still has the original 5 MB limit is raised to 200 MB when the container starts. A limit you already changed is left as you set it.
 - **OpenID Connect behind a proxy** — A published image with no trusted-proxy list trusts private-network proxies for `X-Forwarded-Proto`. The sign-in redirect then uses https, which is the address the identity provider has registered. Identity settings show that redirect URI so it can be copied exactly.
 - **File actions** — Opening one file’s Actions menu closes any other open menu.
+- **Midnight theme** — The files list header uses the theme’s dark surface, so the column labels stay readable.
+- **Pastes on the files page** — Each paste title opens that paste, and a short preview shows the text. Opening your own paste does not count as a view or delete a one-time paste.
 
 - **Installer** — A finished setup deletes `install.php` and will not run it again. If the file cannot be deleted, the admin warning asks for it to be removed and the installer still refuses to start. Database settings are written with escaped PHP values.
 - **OpenID Connect** — An external login no longer attaches itself to an existing account unless the provider says that email is verified, and that first link does not change the account’s role. Discovery addresses must stay on the identity provider’s host.

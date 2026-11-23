@@ -98,7 +98,7 @@ function datadock_paste_render_text(array $paste, bool $receipt, bool $readOnly)
     </div>
     <?php if ($receipt && !empty($paste['burn_after_read'])): ?>
         <p class="settings-hint">Opening the share link deletes this paste. Copy or save it here first if you still need the text.</p>
-    <?php elseif (!$receipt && !$burned): ?>
+    <?php elseif (!$receipt && !$burned && !datadock_paste_is_creator($paste)): ?>
         <p class="settings-hint">Opening this page, the raw link, or the download URL each count as a view.</p>
     <?php endif; ?>
     <pre class="paste-body" id="pasteBody"><?= htmlspecialchars((string) ($paste['content'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
@@ -198,7 +198,12 @@ if ($tokenParam !== '') {
         exit;
     }
     try {
-        $opened = datadock_paste_open($pdo, $tokenParam);
+        if ($lockedRow && datadock_paste_is_creator($lockedRow) && !$wantsRaw) {
+            $opened = $lockedRow;
+            $opened['_burned'] = false;
+        } else {
+            $opened = datadock_paste_open($pdo, $tokenParam);
+        }
     } catch (Throwable $e) {
         $opened = null;
     }
