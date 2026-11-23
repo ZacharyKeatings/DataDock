@@ -11,50 +11,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 datadock_reject_invalid_csrf('../admin.php?section=updater');
 
 require_once __DIR__ . '/../includes/settings_loader.php';
+require_once __DIR__ . '/../includes/updater.php';
 $settings = datadock_load_settings();
 
-$githubRepo   = 'ZacharyKeatings/DataDock';
-$latestUrl    = "https://api.github.com/repos/$githubRepo/releases/latest";
+if (datadock_docker_image_mode()) {
+    $_SESSION['flash_error'][] = 'This copy is a Docker image. Pull a new image instead of using the in-app updater.';
+    header('Location: ../admin.php?section=updater');
+    exit;
+}
+
 $zipPath      = __DIR__ . '/../tmp/latest-release.zip';
 $extractPath  = __DIR__ . '/../tmp/update';
 $dryRun       = false;
-
-/**
- * Fetches the latest release from GitHub and returns the release data,
- * including a download URL for the .zip or .tar.gz file.
- */
-function fetch_latest_release($url) {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_USERAGENT      => 'DataDock-Updater'
-    ]);
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    $release = json_decode($response, true);
-
-    if (!$release || !isset($release['tag_name'])) return null;
-
-    // Prefer .zip asset if available
-    foreach ($release['assets'] ?? [] as $asset) {
-        if (str_ends_with($asset['name'], '.zip')) {
-            $release['download_url'] = $asset['browser_download_url'];
-            return $release;
-        }
-    }
-
-    // Fallback to .tar.gz
-    foreach ($release['assets'] ?? [] as $asset) {
-        if (str_ends_with($asset['name'], '.tar.gz')) {
-            $release['download_url'] = $asset['browser_download_url'];
-            return $release;
-        }
-    }
-
-    $release['download_url'] = null;
-    return $release;
-}
 
 /**
  * Downloads a remote file from GitHub to the specified path.
@@ -122,17 +90,16 @@ function find_project_root($path) {
 
 // === Begin Update Process ===
 
-$release = fetch_latest_release($latestUrl);
+$release = datadock_fetch_update_target();
+$zipUrl = (string) ($release['asset_url'] ?? '');
+$tag = (string) ($release['tag'] ?? 'unknown');
 
-if (!isset($release['download_url'])) {
-    $_SESSION['flash_error'][] = '❌ Failed to fetch latest release info.';
+if (empty($release['ok']) || $zipUrl === '' || !str_ends_with(parse_url($zipUrl, PHP_URL_PATH) ?: '', '.zip')) {
+    $_SESSION['flash_error'][] = $release['error'] ?? '❌ No installable zip is attached to that release.';
     ob_end_clean();
     header("Location: ../admin.php?section=updater");
     exit;
 }
-
-$zipUrl = $release['download_url'];
-$tag    = $release['tag_name'] ?? 'unknown';
 
 if ($dryRun) {
     $tagEsc = htmlspecialchars($tag, ENT_QUOTES, 'UTF-8');
@@ -188,7 +155,7 @@ if (!$sourceFolder) {
 }
 
 // Overwrite files
-$skip = ['config/settings.php', 'config/db.php', 'uploads', 'thumbnails'];
+$skip = ['config/settings.php', 'config/db.php', 'config/update-channel.txt', 'uploads', 'thumbnails'];
 
 foreach (new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($sourceFolder, RecursiveDirectoryIterator::SKIP_DOTS),

@@ -4,6 +4,7 @@
 /info.php
 /config/settings.php
 /config/.docker.php
+/config/update-channel.txt
 /uploads/**
 !/uploads/.htaccess
 /thumbnails/**

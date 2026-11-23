@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Release packages** — Publishing a GitHub release attaches a zip and a tar.gz of that tag. The in-app updater installs the zip. Pre-releases get the same packages. The archives leave out Git metadata, GitHub Actions, tests, contributor docs, and Docker build files.
+- **Update channel** — Admin → Updater can follow stable releases or development pre-releases. Choosing Stable again installs the newest stable release even when its version number is lower. Settings, uploads, and the database stay in place.
+
+### Changed
+
+- **Docker `dev` tag** — The published `dev` image follows the latest commit on `dev-testing`. Pushes to `main` still publish a SHA tag. SemVer and `latest` stay on published releases.
+- **Docker updates** — A container running the published image turns off the in-app updater. The updater page says to pull a new image instead.
+
 ### Fixed
+
+- **File actions** — Opening one file’s Actions menu closes any other open menu.
 
 - **Installer** — A finished setup deletes `install.php` and will not run it again. If the file cannot be deleted, the admin warning asks for it to be removed and the installer still refuses to start. Database settings are written with escaped PHP values.
 - **OpenID Connect** — An external login no longer attaches itself to an existing account unless the provider says that email is verified, and that first link does not change the account’s role. Discovery addresses must stay on the identity provider’s host.

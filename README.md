@@ -87,7 +87,7 @@ A full checklist of implemented and planned features is maintained in the **[Roa
 
 ### Docker image
 
-Use [docker-compose.hub.example.yml](docker-compose.hub.example.yml) with the published image. Copy it to `docker-compose.yml`, set the passwords, and run `docker compose up -d`. Open `http://localhost:8080/install.php` once.
+Use [docker-compose.hub.example.yml](docker-compose.hub.example.yml) with the published image. Copy it to `docker-compose.yml`, set the passwords, and run `docker compose up -d`. Open `http://localhost:8080/install.php` once. The image turns off the in-app updater. Pull a new image to upgrade (`docker compose pull && docker compose up -d`). The `latest` tag is the newest release. The `dev` tag follows the `dev-testing` branch.
 
 When setup finishes, the container deletes `install.php`. `docker compose down` / `up` and `--force-recreate` do not bring the installer back, and they do not wipe the site: settings and uploaded files stay in the `datadock_data` volume, and the database stays in `datadock_mysql`. `docker compose down -v` deletes those volumes.
 

@@ -12,6 +12,7 @@ require_once dirname(__DIR__) . '/includes/read_only.php';
 require_once dirname(__DIR__) . '/includes/hotlink_log.php';
 require_once dirname(__DIR__) . '/includes/themes.php';
 require_once dirname(__DIR__) . '/includes/email_verify.php';
+require_once dirname(__DIR__) . '/includes/updater.php';
 
 expect_contains('deny-all htaccess blocks http', datadock_htaccess_deny_all(), 'Require all denied');
 expect_same('windows slashes are normalized', datadock_normalize_fs_path('C:\\data\\dock\\'), 'C:/data/dock');
@@ -186,3 +187,28 @@ expect_same('session hash is sha256 of the session id', datadock_session_hash(),
 expect_false('email verification flag defaults off', datadock_email_verification_enabled([]));
 expect_true('builtin theme list includes ocean', isset(datadock_builtin_theme_tokens()['ocean']));
 expect_true('theme catalog includes light', isset(datadock_theme_catalog()['light']));
+
+$releases = [
+    ['tag_name' => 'v2.7.0-dev', 'prerelease' => true, 'assets' => [
+        ['name' => 'DataDock-v2.7.0-dev.tar.gz', 'browser_download_url' => 'https://example.test/dev.tar.gz'],
+        ['name' => 'DataDock-v2.7.0-dev.zip', 'browser_download_url' => 'https://example.test/dev.zip'],
+    ]],
+    ['tag_name' => 'v2.6.1', 'prerelease' => false, 'assets' => [
+        ['name' => 'DataDock-v2.6.1.zip', 'browser_download_url' => 'https://example.test/stable.zip'],
+    ]],
+    ['tag_name' => 'v2.6.0-dev', 'prerelease' => true],
+];
+expect_same('development channel picks the newest pre-release', datadock_pick_release($releases, 'development')['tag_name'] ?? '', 'v2.7.0-dev');
+expect_same('stable channel skips pre-releases', datadock_pick_release($releases, 'stable')['tag_name'] ?? '', 'v2.6.1');
+expect_same('zip asset is preferred', datadock_release_asset_url($releases[0]), 'https://example.test/dev.zip');
+expect_same('a newer dev build can return to an older stable tag', datadock_update_relation('2.7.0-dev', '2.6.1'), 'downgrade');
+expect_same('an older install is an upgrade', datadock_update_relation('2.6.0', '2.6.1'), 'upgrade');
+expect_same('the same version is current', datadock_update_relation('v2.6.1', '2.6.1'), 'current');
+
+$channelFile = sys_get_temp_dir() . '/datadock-channel-' . bin2hex(random_bytes(4));
+expect_same('a missing channel file means stable', datadock_update_channel($channelFile), 'stable');
+expect_true('development channel can be saved', datadock_set_update_channel('development', $channelFile));
+expect_same('saved channel is development', datadock_update_channel($channelFile), 'development');
+expect_true('stable channel can be saved again', datadock_set_update_channel('nope', $channelFile));
+expect_same('an unknown channel is stored as stable', datadock_update_channel($channelFile), 'stable');
+@unlink($channelFile);

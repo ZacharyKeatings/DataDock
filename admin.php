@@ -22,6 +22,17 @@ $section = $_GET['section'] ?? 'overview';
 // Handle POST actions first
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     datadock_reject_invalid_csrf('admin.php?section=' . rawurlencode((string) $section));
+    if (isset($_POST['update_channel_save'])) {
+        require_once __DIR__ . '/includes/updater.php';
+        $saved = datadock_set_update_channel((string) ($_POST['update_channel'] ?? 'stable'));
+        if ($saved) {
+            $_SESSION['flash_success'][] = 'Update channel saved.';
+        } else {
+            $_SESSION['flash_error'][] = 'The update channel could not be saved.';
+        }
+        header('Location: admin.php?section=updater');
+        exit;
+    }
     if (isset($_POST['save_custom_theme']) || isset($_POST['delete_custom_theme'])) {
         require_once __DIR__ . '/includes/themes.php';
         if (isset($_POST['delete_custom_theme'])) {

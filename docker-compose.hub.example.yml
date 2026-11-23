@@ -1,5 +1,5 @@
 # Published image (no local build, no source bind mount).
-# Image tags: :latest follows the newest GitHub Release; :dev follows the latest commit on main/master; :<sha> is immutable.
+# Image tags: :latest follows the newest GitHub Release; :dev follows the latest commit on dev-testing; :<sha> is immutable.
 #
 # Copy to docker-compose.yml, change secrets, then: docker compose up -d
 # Open http://localhost:8080/install.php once.

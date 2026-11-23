@@ -892,6 +892,14 @@ document.addEventListener('DOMContentLoaded', function () {
             el.classList.remove('visible');
         });
     });
+    document.querySelectorAll('.file-actions-dropdown').forEach(function (details) {
+        details.addEventListener('toggle', function () {
+            if (!details.open) return;
+            document.querySelectorAll('.file-actions-dropdown[open]').forEach(function (other) {
+                if (other !== details) other.open = false;
+            });
+        });
+    });
 });
 </script>
 
