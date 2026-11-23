@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OpenID Connect behind a proxy** — A published image with no trusted-proxy list trusts private-network proxies for `X-Forwarded-Proto`. The sign-in redirect then uses https, which is the address the identity provider has registered. Identity settings show that redirect URI so it can be copied exactly.
 - **File actions** — Opening one file’s Actions menu closes any other open menu.
 - **Midnight theme** — The files list header uses the theme’s dark surface, so the column labels stay readable.
+- **Checkboxes** — Option boxes on login, upload, and settings stay beside their labels.
+- **Theme preview** — The sample shows the header, text, link, accent, panel, input, and button, and each one updates as its color changes.
 - **Pastes on the files page** — Each paste title opens that paste, and a short preview shows the text. Opening your own paste does not count as a view or delete a one-time paste.
 
 - **Installer** — A finished setup deletes `install.php` and will not run it again. If the file cannot be deleted, the admin warning asks for it to be removed and the installer still refuses to start. Database settings are written with escaped PHP values.
