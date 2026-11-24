@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Authenticator setup** — The QR code is a quarter of its previous size. Cancel closes it and hides the key.
 - **Docker uploads** — Ordinary photos are no longer rejected because compressed image data happens to contain `<?`. The image includes PHP’s image library, so creating a thumbnail cannot crash the upload. A Docker install that still has the original 5 MB limit is raised to 200 MB when the container starts. A limit you already changed is left as you set it. The image also includes PHP’s zip extension, which the file export and the release installer use.
 - **OpenID Connect behind a proxy** — A published image with no trusted-proxy list trusts private-network proxies for `X-Forwarded-Proto`. The sign-in redirect then uses https, which is the address the identity provider has registered. Identity settings show that redirect URI so it can be copied exactly.
 - **File actions** — Opening one file’s Actions menu closes any other open menu.

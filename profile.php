@@ -207,6 +207,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: profile.php');
         exit;
     }
+    if ($action === 'totp_cancel') {
+        unset($_SESSION['datadock_totp_setup']);
+        header('Location: profile.php');
+        exit;
+    }
     if ($action === 'totp_confirm' || $action === 'totp_disable') {
         $stmt = $pdo->prepare('SELECT password_hash, totp_secret, totp_enabled FROM users WHERE id = ?');
         $stmt->execute([(int) $userId]);
@@ -604,7 +609,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php elseif ($setupSecret !== ''): ?>
                 <p>Add this key to your authenticator app, then enter a code to confirm.</p>
                 <p><code><?= sanitize_data($setupSecret) ?></code></p>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=<?= urlencode($otpauth) ?>" alt="Authenticator QR code" class="qr-image">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&amp;data=<?= urlencode($otpauth) ?>" alt="Authenticator QR code" class="qr-image authenticator-qr" width="50" height="50">
                 <form method="post" class="form">
                     <?= datadock_csrf_field() ?>
                     <input type="hidden" name="action" value="totp_confirm">
@@ -616,7 +621,10 @@ require_once __DIR__ . '/includes/header.php';
                         <label for="totp_on_code">Code</label>
                         <input type="text" name="totp_code" id="totp_on_code" inputmode="numeric" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Confirm</button>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Confirm</button>
+                        <button type="submit" class="btn btn-quiet" name="action" value="totp_cancel" formnovalidate>Cancel</button>
+                    </div>
                 </form>
             <?php else: ?>
                 <form method="post">
