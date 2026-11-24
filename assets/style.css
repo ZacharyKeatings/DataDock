@@ -1541,9 +1541,10 @@ body {
 }
 
 .authenticator-qr {
-    width: 50px;
-    height: 50px;
-    max-width: 50px;
+    width: 250px;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
 }
 
 .btn-copy {
