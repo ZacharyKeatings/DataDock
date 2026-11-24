@@ -19,10 +19,13 @@ $css = datadock_render_theme_css([
 ]);
 expect_contains('theme css includes the primary color', $css, '#4db8c0');
 expect_contains('theme css sets the color scheme', $css, 'color-scheme: dark');
+expect_contains('dark theme colors the file header', $css, '.file-header { background-color: var(--color-secondary); color: var(--color-text); }');
 $cleaned = datadock_sanitize_custom_css("<style>@import url('x');\nbody{background:expression(alert(1));}</style>");
 expect_false('custom css drops import', strpos($cleaned, '@import') !== false);
 expect_false('custom css drops expression', stripos($cleaned, 'expression') !== false);
 expect_false('custom css drops tags', strpos($cleaned, '<style>') !== false);
+$urlCss = datadock_sanitize_custom_css('body{background:url(https://evil.example/x)}');
+expect_false('custom css drops remote urls', stripos($urlCss, 'url(') !== false);
 
 expect_same('site theme is used for a guest', datadock_resolve_theme(['theme' => 'ocean']), 'ocean');
 expect_same('unknown site theme falls back to light', datadock_resolve_theme(['theme' => 'missing']), 'light');

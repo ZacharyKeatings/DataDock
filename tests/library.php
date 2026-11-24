@@ -12,6 +12,7 @@ require_once dirname(__DIR__) . '/includes/read_only.php';
 require_once dirname(__DIR__) . '/includes/hotlink_log.php';
 require_once dirname(__DIR__) . '/includes/themes.php';
 require_once dirname(__DIR__) . '/includes/email_verify.php';
+require_once dirname(__DIR__) . '/includes/updater.php';
 
 expect_contains('deny-all htaccess blocks http', datadock_htaccess_deny_all(), 'Require all denied');
 expect_same('windows slashes are normalized', datadock_normalize_fs_path('C:\\data\\dock\\'), 'C:/data/dock');
@@ -43,7 +44,13 @@ expect_same('docker runtime reads the data dir', $runtime['data_dir'], '/var/lib
 expect_same('image mode fills an empty storage path', datadock_apply_docker_storage_default([], $dockerRoot)['storage_base_path'], '/var/lib/datadock');
 expect_same('a saved storage path is left alone', datadock_apply_docker_storage_default(['storage_base_path' => '/keep'], $dockerRoot)['storage_base_path'], '/keep');
 expect_true('a non-empty settings file is ready', datadock_settings_file_ready($dockerRoot));
-expect_same('installer retirement is skipped outside image mode', datadock_retire_web_installer(sys_get_temp_dir()), 'skipped');
+$installerRoot = sys_get_temp_dir() . '/datadock-installer-' . bin2hex(random_bytes(4));
+mkdir($installerRoot);
+expect_same('missing installer is absent', datadock_retire_web_installer($installerRoot), 'absent');
+file_put_contents($installerRoot . '/install.php', "<?php\n");
+expect_same('installer file is removed', datadock_retire_web_installer($installerRoot), 'removed');
+expect_false('installer file is gone', is_file($installerRoot . '/install.php'));
+rmdir($installerRoot);
 datadock_remove_tree($dockerRoot);
 
 $prefill = install_db_form_prefill();
@@ -89,6 +96,25 @@ $_SERVER['HTTP_HOST'] = 'files.example';
 $_SERVER['HTTPS'] = 'on';
 $_SERVER['SCRIPT_NAME'] = '/datadock/index.php';
 expect_same('public url includes the directory', datadock_public_url('oidc.php'), 'https://files.example/datadock/oidc.php');
+expect_same('odd host header is ignored', (function () {
+    $saved = $_SERVER['HTTP_HOST'];
+    $_SERVER['HTTP_HOST'] = "files.example\r\nX-Evil: 1";
+    $url = datadock_public_url('oidc.php');
+    $_SERVER['HTTP_HOST'] = $saved;
+    return $url;
+})(), 'https://localhost/datadock/oidc.php');
+expect_same('oidc endpoint must match the issuer', datadock_oidc_same_origin_url('https://idp.example/realms/a', 'https://idp.example/token'), 'https://idp.example/token');
+expect_same('oidc endpoint on another host is rejected', datadock_oidc_same_origin_url('https://idp.example', 'https://evil.example/token'), null);
+expect_same('absolute redirect is rejected', datadock_safe_local_redirect('https://evil.example', 'index.php'), 'index.php');
+expect_same('protocol-relative redirect is rejected', datadock_safe_local_redirect('//evil.example', 'index.php'), 'index.php');
+expect_same('local redirect is kept', datadock_safe_local_redirect('download.php?id=1', 'index.php'), 'download.php?id=1');
+expect_true('archive entry inside the tree is safe', datadock_archive_entry_is_safe('DataDock-v2.6.1/index.php'));
+expect_false('archive entry with a parent segment is rejected', datadock_archive_entry_is_safe('../config/db.php'));
+expect_false('absolute archive entry is rejected', datadock_archive_entry_is_safe('/etc/passwd'));
+expect_true('https branding url is accepted', datadock_branding_url_ok('https://cdn.example/logo.png'));
+expect_true('site-relative branding url is accepted', datadock_branding_url_ok('/assets/logo.png'));
+expect_false('javascript branding url is rejected', datadock_branding_url_ok('javascript:alert(1)'));
+expect_false('https url with a password is rejected', datadock_https_asset_url('https://user:secret@cdn.example/a.png'));
 $_SERVER['HTTP_X_REQUEST_ID'] = 'abc';
 expect_same('request header is read', datadock_request_header('X-Request-Id'), 'abc');
 
@@ -164,7 +190,56 @@ if ($custom['ok']) {
 
 expect_true('checkout is not docker image mode', datadock_docker_image_mode() === false);
 expect_same('checkout has no default docker storage path', datadock_docker_default_storage_path(), '');
+expect_same(
+    'docker image trusts private proxies by default',
+    datadock_docker_default_trusted_proxies(),
+    '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7'
+);
+expect_true(
+    'a docker bridge address matches the default proxy list',
+    datadock_ip_is_trusted_proxy('172.18.0.5', explode(',', datadock_docker_default_trusted_proxies()))
+);
+$proxySettings = datadock_apply_env_overrides(['trusted_proxies' => '']);
+expect_same('a checkout does not invent trusted proxies', $proxySettings['trusted_proxies'], '');
+$keptProxies = datadock_apply_env_overrides(['trusted_proxies' => '192.0.2.1']);
+expect_same('a saved proxy list is kept', $keptProxies['trusted_proxies'], '192.0.2.1');
+$limitRoot = sys_get_temp_dir() . '/datadock-limit-' . bin2hex(random_bytes(3));
+mkdir($limitRoot . '/config', 0755, true);
+file_put_contents($limitRoot . '/config/settings.php', "<?php\n\$settings = [\n    'max_file_size' => 5242880,\n];\n");
+datadock_docker_raise_stock_upload_limit($limitRoot);
+expect_contains('stock 5 MB docker limit becomes 200 MB', (string) file_get_contents($limitRoot . '/config/settings.php'), '209715200');
+file_put_contents($limitRoot . '/config/settings.php', "<?php\n\$settings = [\n    'max_file_size' => 10485760,\n];\n");
+datadock_docker_raise_stock_upload_limit($limitRoot);
+expect_contains('a chosen upload limit stays', (string) file_get_contents($limitRoot . '/config/settings.php'), '10485760');
+unlink($limitRoot . '/config/settings.php');
+rmdir($limitRoot . '/config');
+rmdir($limitRoot);
 expect_same('session hash is sha256 of the session id', datadock_session_hash(), hash('sha256', session_id()));
 expect_false('email verification flag defaults off', datadock_email_verification_enabled([]));
 expect_true('builtin theme list includes ocean', isset(datadock_builtin_theme_tokens()['ocean']));
 expect_true('theme catalog includes light', isset(datadock_theme_catalog()['light']));
+
+$releases = [
+    ['tag_name' => 'v2.7.0-dev', 'prerelease' => true, 'assets' => [
+        ['name' => 'DataDock-v2.7.0-dev.tar.gz', 'browser_download_url' => 'https://example.test/dev.tar.gz'],
+        ['name' => 'DataDock-v2.7.0-dev.zip', 'browser_download_url' => 'https://example.test/dev.zip'],
+    ]],
+    ['tag_name' => 'v2.6.1', 'prerelease' => false, 'assets' => [
+        ['name' => 'DataDock-v2.6.1.zip', 'browser_download_url' => 'https://example.test/stable.zip'],
+    ]],
+    ['tag_name' => 'v2.6.0-dev', 'prerelease' => true],
+];
+expect_same('development channel picks the newest pre-release', datadock_pick_release($releases, 'development')['tag_name'] ?? '', 'v2.7.0-dev');
+expect_same('stable channel skips pre-releases', datadock_pick_release($releases, 'stable')['tag_name'] ?? '', 'v2.6.1');
+expect_same('zip asset is preferred', datadock_release_asset_url($releases[0]), 'https://example.test/dev.zip');
+expect_same('a newer dev build can return to an older stable tag', datadock_update_relation('2.7.0-dev', '2.6.1'), 'downgrade');
+expect_same('an older install is an upgrade', datadock_update_relation('2.6.0', '2.6.1'), 'upgrade');
+expect_same('the same version is current', datadock_update_relation('v2.6.1', '2.6.1'), 'current');
+
+$channelFile = sys_get_temp_dir() . '/datadock-channel-' . bin2hex(random_bytes(4));
+expect_same('a missing channel file means stable', datadock_update_channel($channelFile), 'stable');
+expect_true('development channel can be saved', datadock_set_update_channel('development', $channelFile));
+expect_same('saved channel is development', datadock_update_channel($channelFile), 'development');
+expect_true('stable channel can be saved again', datadock_set_update_channel('nope', $channelFile));
+expect_same('an unknown channel is stored as stable', datadock_update_channel($channelFile), 'stable');
+@unlink($channelFile);

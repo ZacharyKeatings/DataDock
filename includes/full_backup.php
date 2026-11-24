@@ -63,6 +63,22 @@ function datadock_full_backup_restore(PDO $pdo, string $archivePath): void {
     }
     try {
         $archive = new PharData($copy);
+        if (!function_exists('datadock_archive_entry_is_safe')) {
+            require_once __DIR__ . '/functions.php';
+        }
+        $archivePrefix = 'phar://' . str_replace('\\', '/', $copy);
+        $seen = 0;
+        foreach (new RecursiveIteratorIterator($archive, RecursiveIteratorIterator::SELF_FIRST) as $member) {
+            $seen++;
+            $full = str_replace('\\', '/', $member->getPathname());
+            $rel = str_starts_with($full, $archivePrefix) ? ltrim(substr($full, strlen($archivePrefix)), '/') : $full;
+            if (!datadock_archive_entry_is_safe($rel)) {
+                throw new RuntimeException('That backup contains an unsafe path.');
+            }
+        }
+        if ($seen === 0) {
+            throw new RuntimeException('That backup could not be inspected.');
+        }
         $archive->extractTo($temp, null, true);
         $sqlPath = $temp . '/database.sql';
         if (!is_readable($sqlPath)) {

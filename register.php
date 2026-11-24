@@ -33,6 +33,7 @@ function get_valid_signup_token(PDO $pdo, string $token): ?array {
 
 // Handle registration before any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('register.php');
     $signupToken = trim($_POST['signup_token'] ?? '');
     if ($inviteOnly) {
         if (get_valid_signup_token($pdo, $signupToken) === null) {
@@ -153,6 +154,7 @@ require_once __DIR__ . '/includes/header.php';
     <?php else: ?>
         <p class="page-description">Create an account to upload and manage files.</p>
         <form method="post" class="form" onsubmit="return validateForm()">
+            <?= datadock_csrf_field() ?>
             <?php if ($inviteOnly && $signupTokenParam !== ''): ?>
             <input type="hidden" name="signup_token" value="<?= sanitize_data($signupTokenParam) ?>">
             <?php endif; ?>

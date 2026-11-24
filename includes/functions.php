@@ -146,6 +146,75 @@ function app_asset_url(string $path): string {
     return app_script_url($path);
 }
 
+/**
+ * Keep a redirect on this site. Absolute URLs and protocol-relative paths are dropped.
+ */
+/**
+ * True when an archive member stays inside the archive root.
+ * Rejects absolute paths and any ".." segment.
+ */
+function datadock_archive_entry_is_safe(string $name): bool {
+    $name = str_replace('\\', '/', $name);
+    if ($name === '' || str_contains($name, "\0")) {
+        return false;
+    }
+    if (str_starts_with($name, '/') || preg_match('#^[A-Za-z]:#', $name) === 1) {
+        return false;
+    }
+    $kept = false;
+    foreach (explode('/', $name) as $part) {
+        if ($part === '' || $part === '.') {
+            continue;
+        }
+        if ($part === '..') {
+            return false;
+        }
+        $kept = true;
+    }
+    return $kept;
+}
+
+/**
+ * https URL with a host and no embedded username or password.
+ */
+function datadock_https_asset_url(string $url): bool {
+    if (preg_match('#^https://#i', $url) !== 1) {
+        return false;
+    }
+    $parts = parse_url($url);
+    if (!is_array($parts) || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
+        return false;
+    }
+    return filter_var($url, FILTER_VALIDATE_URL) !== false;
+}
+
+/**
+ * Branding image: empty, a site-relative path, or an https URL.
+ */
+function datadock_branding_url_ok(string $url): bool {
+    if ($url === '') {
+        return true;
+    }
+    if (str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '..')) {
+        return preg_match('#^/[A-Za-z0-9_./?=&%+-]*$#', $url) === 1;
+    }
+    return datadock_https_asset_url($url);
+}
+
+function datadock_safe_local_redirect(string $candidate, string $fallback): string {
+    $candidate = trim($candidate);
+    if ($candidate === '' || preg_match('/[\r\n\\\\]/', $candidate) === 1 || str_contains($candidate, '..')) {
+        return $fallback;
+    }
+    if (preg_match('#^[a-z][a-z0-9+.-]*:#i', $candidate) === 1 || str_starts_with($candidate, '//')) {
+        return $fallback;
+    }
+    if (preg_match('#^[A-Za-z0-9_./?=&%+-]+$#', $candidate) !== 1) {
+        return $fallback;
+    }
+    return $candidate;
+}
+
 function return_bytes(string $val): int {
     $val = trim($val);
     $last = strtolower($val[strlen($val) - 1]);
@@ -279,7 +348,7 @@ function write_default_settings_file($siteName = 'DataDock') {
         "    'invite_only_registration' => false,\n" .
         "    'enforce_unique_email' => true,\n" .
         "    'email_verification_enabled' => false,\n" .
-        "    'max_file_size' => 5242880,\n" .
+        "    'max_file_size' => " . (datadock_docker_image_mode() ? 209715200 : 5242880) . ",\n" .
         "    'default_file_expiry' => 'never',\n" .
         "    'thumbnails_enabled' => true,\n" .
         "    'session_timeout_minutes' => 60,\n" .
@@ -741,13 +810,7 @@ function upload_image_body_has_embedded_script_markers(string $tmpPath, string $
     if ($chunk === false) {
         return true;
     }
-    if (stripos($chunk, '<?php') !== false || stripos($chunk, '<?=') !== false) {
-        return true;
-    }
-    if (preg_match('/<\?(?!xml[\s=])/i', $chunk)) {
-        return true;
-    }
-    return false;
+    return preg_match('/<\?php|<\?=|<script\b/i', $chunk) === 1;
 }
 
 function get_friendly_filetype($mime) {
@@ -903,6 +966,9 @@ function build_files_list_where(array $options, string $alias = 'f'): array {
         $conditions[] = $pre . 'deleted_at IS NOT NULL';
     } elseif (!isset($options['exclude_trashed']) || $options['exclude_trashed']) {
         $conditions[] = $pre . 'deleted_at IS NULL';
+    }
+    if (empty($options['include_versions'])) {
+        $conditions[] = $pre . 'replaced_file_id IS NULL';
     }
 
     if (!empty($options['search'])) {

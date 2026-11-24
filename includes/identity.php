@@ -383,38 +383,122 @@ function datadock_unique_username(PDO $pdo, string $base): string {
     return $base . bin2hex(random_bytes(3));
 }
 
+function datadock_app_web_base(): string {
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+    $dir = dirname($script);
+    if (basename($dir) === 'admin_sections') {
+        $dir = dirname($dir);
+    }
+    if ($dir === '/' || $dir === '.' || $dir === '\\') {
+        return '';
+    }
+    return rtrim($dir, '/');
+}
+
+function datadock_cookie_path(): string {
+    $base = datadock_app_web_base();
+    return $base === '' ? '/' : $base . '/';
+}
+
+function datadock_request_host(): string {
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if (preg_match('/^[A-Za-z0-9.-]+(?::[0-9]{1,5})?$/', $host) === 1) {
+        return $host;
+    }
+    if (preg_match('/^\[[0-9A-Fa-f:]+\](?::[0-9]{1,5})?$/', $host) === 1) {
+        return $host;
+    }
+    return 'localhost';
+}
+
+function datadock_request_hostname(): string {
+    $host = datadock_request_host();
+    if (str_starts_with($host, '[')) {
+        $end = strpos($host, ']');
+        return strtolower($end === false ? $host : substr($host, 0, $end + 1));
+    }
+    $name = preg_replace('/:\d+$/', '', $host);
+    return strtolower(is_string($name) ? $name : $host);
+}
+
+function datadock_profile_email_verified(array $profile): bool {
+    $flag = $profile['email_verified'] ?? false;
+    return $flag === true || $flag === 1 || $flag === '1' || $flag === 'true';
+}
+
 /**
- * @param array{sub:string,email?:string,name?:string,preferred_username?:string,role:string} $profile
+ * Discovery endpoints must stay on the issuer origin. A document that points at
+ * another host is rejected so the client secret is not sent there.
+ */
+function datadock_oidc_same_origin_url(string $issuer, string $candidate): ?string {
+    $issuerParts = parse_url($issuer);
+    $parts = parse_url($candidate);
+    if (!is_array($issuerParts) || !is_array($parts)) {
+        return null;
+    }
+    $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+    $issuerScheme = strtolower((string) ($issuerParts['scheme'] ?? ''));
+    if (!in_array($scheme, ['https', 'http'], true) || $scheme !== $issuerScheme) {
+        return null;
+    }
+    if (isset($parts['user']) || isset($parts['pass'])) {
+        return null;
+    }
+    $host = strtolower((string) ($parts['host'] ?? ''));
+    $issuerHost = strtolower((string) ($issuerParts['host'] ?? ''));
+    if ($host === '' || $issuerHost === '' || $host !== $issuerHost) {
+        return null;
+    }
+    $port = isset($parts['port']) ? (int) $parts['port'] : ($scheme === 'https' ? 443 : 80);
+    $issuerPort = isset($issuerParts['port']) ? (int) $issuerParts['port'] : ($issuerScheme === 'https' ? 443 : 80);
+    if ($port !== $issuerPort) {
+        return null;
+    }
+    return $candidate;
+}
+
+/**
+ * @param array{sub:string,email?:string,name?:string,preferred_username?:string,role:string,email_verified?:mixed} $profile
  */
 function datadock_upsert_external_user(PDO $pdo, array $profile, string $source): array {
     $sub = substr((string) $profile['sub'], 0, 255);
     $email = strtolower(trim((string) ($profile['email'] ?? '')));
     $role = ($profile['role'] ?? '') === 'admin' ? 'admin' : 'user';
+    $preserveLocalRole = false;
     $stmt = $pdo->prepare('SELECT * FROM users WHERE external_subject = ?');
     $stmt->execute([$sub]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$user && $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $stmt = $pdo->prepare('SELECT * FROM users WHERE email = ?');
         $stmt->execute([$email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($user) {
-            $pdo->prepare('UPDATE users SET external_subject = ?, auth_source = ? WHERE id = ? AND (external_subject IS NULL OR external_subject = ?)')->execute([
-                $sub, $source, (int) $user['id'], $sub,
+        $byEmail = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($byEmail) {
+            $existingSubject = (string) ($byEmail['external_subject'] ?? '');
+            if (!datadock_profile_email_verified($profile) || ($existingSubject !== '' && $existingSubject !== $sub)) {
+                throw new RuntimeException('An account with that email already exists. Sign in with the account password.');
+            }
+            $pdo->prepare('UPDATE users SET external_subject = ? WHERE id = ? AND (external_subject IS NULL OR external_subject = ?)')->execute([
+                $sub, (int) $byEmail['id'], $sub,
             ]);
+            $user = $byEmail;
+            $user['external_subject'] = $sub;
+            $preserveLocalRole = true;
         }
     }
     if ($user) {
         if (!empty($user['suspended'])) {
             throw new RuntimeException('This account is suspended.');
         }
-        if ($role === 'user' && ($user['role'] ?? '') === 'admin') {
-            $others = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND suspended = 0 AND id != " . (int) $user['id'])->fetchColumn();
-            if ($others < 1) {
-                $role = 'admin';
+        if (!$preserveLocalRole) {
+            if ($role === 'user' && ($user['role'] ?? '') === 'admin') {
+                $others = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND suspended = 0 AND id != " . (int) $user['id'])->fetchColumn();
+                if ($others < 1) {
+                    $role = 'admin';
+                }
             }
+            $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, (int) $user['id']]);
+            $user['role'] = $role;
         }
-        $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, (int) $user['id']]);
-        $user['role'] = $role;
         return $user;
     }
     $prefer = (string) ($profile['preferred_username'] ?? '');
@@ -442,6 +526,7 @@ function datadock_oidc_start(array $settings): void {
     }
     $doc = datadock_http_json('GET', $oidc['issuer'] . '/.well-known/openid-configuration', ['Accept: application/json']);
     $auth = is_array($doc) ? (string) ($doc['authorization_endpoint'] ?? '') : '';
+    $auth = datadock_oidc_same_origin_url($oidc['issuer'], $auth) ?? '';
     if ($auth === '') {
         $_SESSION['flash_error'][] = 'The identity provider discovery document could not be read.';
         header('Location: login.php');
@@ -466,9 +551,9 @@ function datadock_oidc_start(array $settings): void {
 
 function datadock_public_url(string $script): string {
     $https = function_exists('datadock_request_is_https') ? datadock_request_is_https() : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
-    return ($https ? 'https' : 'http') . '://' . $host . ($dir === '' || $dir === '.' ? '' : $dir) . '/' . ltrim($script, '/');
+    $host = datadock_request_host();
+    $dir = datadock_app_web_base();
+    return ($https ? 'https' : 'http') . '://' . $host . $dir . '/' . ltrim($script, '/');
 }
 
 function datadock_jwt_rs256_payload(string $jwt, array $jwks, string $issuer, string $audience, string $nonce): ?array {
@@ -541,8 +626,13 @@ function datadock_oidc_finish(PDO $pdo, array $settings, string $code, string $s
         header('Location: login.php');
         exit;
     }
-    $tokenUrl = (string) ($doc['token_endpoint'] ?? '');
-    $jwksUrl = (string) ($doc['jwks_uri'] ?? '');
+    $tokenUrl = datadock_oidc_same_origin_url($oidc['issuer'], (string) ($doc['token_endpoint'] ?? '')) ?? '';
+    $jwksUrl = datadock_oidc_same_origin_url($oidc['issuer'], (string) ($doc['jwks_uri'] ?? '')) ?? '';
+    if ($tokenUrl === '' || $jwksUrl === '') {
+        $_SESSION['flash_error'][] = 'The identity provider address could not be confirmed.';
+        header('Location: login.php');
+        exit;
+    }
     $body = http_build_query([
         'grant_type' => 'authorization_code',
         'code' => $code,
@@ -572,6 +662,7 @@ function datadock_oidc_finish(PDO $pdo, array $settings, string $code, string $s
             'email' => (string) ($payload['email'] ?? ''),
             'preferred_username' => (string) ($payload['preferred_username'] ?? ''),
             'role' => $role,
+            'email_verified' => $payload['email_verified'] ?? false,
         ], 'oidc');
     } catch (RuntimeException $e) {
         $_SESSION['flash_error'][] = $e->getMessage();
@@ -674,6 +765,18 @@ function datadock_forward_auth_maybe(PDO $pdo, array $settings): void {
     $json = datadock_parse_ip_allowlist_text($fwd['trusted_proxies']);
     if (!datadock_ip_allowlist_allows($json, $remote)) {
         return;
+    }
+    $proxyList = json_decode($json, true);
+    if (is_array($proxyList)) {
+        foreach ($proxyList as $entry) {
+            if (!is_string($entry)) {
+                continue;
+            }
+            $entry = strtolower(trim($entry));
+            if ($entry === '0.0.0.0/0' || $entry === '::/0') {
+                return;
+            }
+        }
     }
     $name = datadock_request_header($fwd['user_header']);
     if ($name === '' || strlen($name) > 200) {

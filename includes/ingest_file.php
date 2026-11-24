@@ -7,6 +7,39 @@ require_once __DIR__ . '/upload_scan.php';
 require_once __DIR__ . '/quotas.php';
 
 /**
+ * Write a small JPEG thumbnail. Missing image support, or a picture too large to decode, skips the thumb instead of failing the upload.
+ */
+function datadock_write_image_thumbnail(string $sourcePath, string $thumbPath): bool {
+    if (!function_exists('imagecreatefromstring') || !function_exists('imagescale') || !function_exists('imagejpeg')) {
+        return false;
+    }
+    $size = @filesize($sourcePath);
+    if ($size === false || $size < 1 || $size > 33554432 || !is_readable($sourcePath)) {
+        return false;
+    }
+    try {
+        $bytes = file_get_contents($sourcePath);
+        if (!is_string($bytes) || $bytes === '') {
+            return false;
+        }
+        $img = @imagecreatefromstring($bytes);
+        if ($img === false) {
+            return false;
+        }
+        $thumb = @imagescale($img, 100);
+        imagedestroy($img);
+        if ($thumb === false) {
+            return false;
+        }
+        $ok = @imagejpeg($thumb, $thumbPath);
+        imagedestroy($thumb);
+        return $ok;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+/**
  * @param array{source_path:string,original_name:string,file_size?:int,user_id?:?int,guest_id?:?string,folder_id?:?int,is_public?:int,expiry_ts?:?string,relocate?:string} $spec
  * relocate is "upload" (move_uploaded_file) or "rename".
  * @return array{ok:bool,error:?string,file_id:?int}
@@ -45,15 +78,26 @@ function datadock_ingest_local_file(PDO $pdo, array $settings, array $spec): arr
             return ['ok' => false, 'error' => '❌ ' . $quotaError, 'file_id' => null];
         }
     }
+    $clientEncrypted = !empty($spec['client_encrypted']);
+    if (!function_exists('datadock_file_is_sealed')) {
+        require_once __DIR__ . '/personal.php';
+    }
+    if ($clientEncrypted && !datadock_file_is_sealed($source)) {
+        return ['ok' => false, 'error' => "❌ {$originalName} was not sealed in the browser.", 'file_id' => null];
+    }
     $mimeType = mime_content_type($source);
     if (!is_string($mimeType) || $mimeType === '') {
         $mimeType = 'application/octet-stream';
     }
-    if (!upload_strict_image_format_ok($source, $extension, $mimeType)) {
-        return ['ok' => false, 'error' => "❌ {$originalName}: file content does not match the image type implied by the extension.", 'file_id' => null];
-    }
-    if (upload_image_body_has_embedded_script_markers($source, $mimeType, $extension)) {
-        return ['ok' => false, 'error' => "❌ {$originalName}: blocked (executable/script content inside a binary image).", 'file_id' => null];
+    if ($clientEncrypted) {
+        $mimeType = 'application/octet-stream';
+    } else {
+        if (!upload_strict_image_format_ok($source, $extension, $mimeType)) {
+            return ['ok' => false, 'error' => "❌ {$originalName}: file content does not match the image type implied by the extension.", 'file_id' => null];
+        }
+        if (upload_image_body_has_embedded_script_markers($source, $mimeType, $extension)) {
+            return ['ok' => false, 'error' => "❌ {$originalName}: blocked (executable/script content inside a binary image).", 'file_id' => null];
+        }
     }
 
     $checksumMd5 = hash_file('md5', $source);
@@ -97,19 +141,8 @@ function datadock_ingest_local_file(PDO $pdo, array $settings, array $spec): arr
         $thumbBase = pathinfo($uniqueName, PATHINFO_FILENAME) ?: $uniqueName;
         $thumbnailName = 'thumb_' . $thumbBase . '.jpg';
         $thumbPath = $thumbDir . $thumbnailName;
-        if (!file_exists($thumbPath) && is_readable($destPath)) {
-            if ($img = @imagecreatefromstring((string) file_get_contents($destPath))) {
-                $thumb = imagescale($img, 100);
-                if ($thumb) {
-                    imagejpeg($thumb, $thumbPath);
-                    imagedestroy($thumb);
-                } else {
-                    $thumbnailName = null;
-                }
-                imagedestroy($img);
-            } else {
-                $thumbnailName = null;
-            }
+        if (!file_exists($thumbPath) && !datadock_write_image_thumbnail($destPath, $thumbPath)) {
+            $thumbnailName = null;
         }
     }
 
@@ -133,8 +166,8 @@ function datadock_ingest_local_file(PDO $pdo, array $settings, array $spec): arr
         INSERT INTO files
           (user_id, guest_id, storage_partition_id, folder_id, is_public, filename, storage_object_id, original_name,
            filetype, filesize, thumbnail_path, upload_date, expiry_date, checksum_md5, checksum_sha256,
-           quarantine_status, mime_anomaly)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           quarantine_status, mime_anomaly, client_encrypted)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $ins->execute([
         $userId > 0 ? $userId : null,
@@ -154,17 +187,22 @@ function datadock_ingest_local_file(PDO $pdo, array $settings, array $spec): arr
         $checksumSha,
         $quarantineStatus,
         $mimeAnomaly,
+        $clientEncrypted ? 1 : 0,
     ]);
-    return ['ok' => true, 'error' => null, 'file_id' => (int) $pdo->lastInsertId(), 'quarantine' => $quarantineStatus, 'scan' => $scan['message']];
+    $newFileId = (int) $pdo->lastInsertId();
+    if ($userId > 0 && $checksumSha !== '') {
+        datadock_notice_duplicate_file($pdo, $userId, $checksumSha, $newFileId, $originalName);
+    }
+    return ['ok' => true, 'error' => null, 'file_id' => $newFileId, 'quarantine' => $quarantineStatus, 'scan' => $scan['message']];
 }
 
 /**
  * Replace the bytes of an existing file. Shares and links stay on the same id.
- * The previous blob is kept on a trash row until retention purge.
+ * The previous bytes are kept as a version until trash retention removes them.
  *
  * @return array{ok:bool,error:?string}
  */
-function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, string $sourcePath, string $originalName): array {
+function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, string $sourcePath, string $originalName, bool $clientEncrypted = false): array {
     $fileId = (int) ($file['id'] ?? 0);
     if ($fileId < 1 || !is_readable($sourcePath)) {
         return ['ok' => false, 'error' => 'The replacement file could not be read.'];
@@ -194,15 +232,25 @@ function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, 
             return ['ok' => false, 'error' => $quotaError];
         }
     }
+    if (!function_exists('datadock_file_is_sealed')) {
+        require_once __DIR__ . '/personal.php';
+    }
+    if ($clientEncrypted && !datadock_file_is_sealed($sourcePath)) {
+        return ['ok' => false, 'error' => 'That file was not sealed in the browser.'];
+    }
     $mimeType = mime_content_type($sourcePath);
     if (!is_string($mimeType) || $mimeType === '') {
         $mimeType = 'application/octet-stream';
     }
-    if (!upload_strict_image_format_ok($sourcePath, $extension, $mimeType)) {
-        return ['ok' => false, 'error' => 'File content does not match the image type implied by the extension.'];
-    }
-    if (upload_image_body_has_embedded_script_markers($sourcePath, $mimeType, $extension)) {
-        return ['ok' => false, 'error' => 'Blocked (executable/script content inside a binary image).'];
+    if ($clientEncrypted) {
+        $mimeType = 'application/octet-stream';
+    } else {
+        if (!upload_strict_image_format_ok($sourcePath, $extension, $mimeType)) {
+            return ['ok' => false, 'error' => 'File content does not match the image type implied by the extension.'];
+        }
+        if (upload_image_body_has_embedded_script_markers($sourcePath, $mimeType, $extension)) {
+            return ['ok' => false, 'error' => 'Blocked (executable/script content inside a binary image).'];
+        }
     }
 
     $checksumMd5 = hash_file('md5', $sourcePath);
@@ -252,19 +300,12 @@ function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, 
 
     $thumbnailName = null;
     $thumbnailsEnabled = !isset($settings['thumbnails_enabled']) || !empty($settings['thumbnails_enabled']);
-    if ($thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
+    if (!$clientEncrypted && $thumbnailsEnabled && str_starts_with($mimeType, 'image/')) {
         $thumbBase = pathinfo($uniqueName, PATHINFO_FILENAME) ?: $uniqueName;
         $thumbnailName = 'thumb_' . $thumbBase . '.jpg';
         $thumbPath = datadock_thumbnails_dir($pdo, $partitionId) . $thumbnailName;
-        if (!file_exists($thumbPath) && is_readable($destPath) && ($img = @imagecreatefromstring((string) file_get_contents($destPath)))) {
-            $thumb = imagescale($img, 100);
-            if ($thumb) {
-                imagejpeg($thumb, $thumbPath);
-                imagedestroy($thumb);
-            } else {
-                $thumbnailName = null;
-            }
-            imagedestroy($img);
+        if (!file_exists($thumbPath) && !datadock_write_image_thumbnail($destPath, $thumbPath)) {
+            $thumbnailName = null;
         }
     }
 
@@ -275,17 +316,22 @@ function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, 
         INSERT INTO files
           (user_id, guest_id, storage_partition_id, folder_id, is_public, filename, storage_object_id, original_name,
            filetype, filesize, thumbnail_path, upload_date, expiry_date, checksum_md5, checksum_sha256,
-           quarantine_status, mime_anomaly, deleted_at, purge_hold, download_count)
+           quarantine_status, mime_anomaly, deleted_at, purge_hold, download_count, client_encrypted, replaced_file_id)
         SELECT user_id, guest_id, storage_partition_id, folder_id, is_public, filename, storage_object_id, original_name,
                filetype, filesize, thumbnail_path, upload_date, expiry_date, checksum_md5, checksum_sha256,
-               quarantine_status, mime_anomaly, UTC_TIMESTAMP(), 0, 0
+               quarantine_status, mime_anomaly, UTC_TIMESTAMP(), 0, 0, client_encrypted, ?
         FROM files WHERE id = ?
-    ")->execute([$fileId]);
+    ")->execute([$fileId, $fileId]);
+    if (!function_exists('datadock_trim_file_versions')) {
+        require_once __DIR__ . '/personal.php';
+    }
+    datadock_trim_file_versions($pdo, $fileId, 5);
 
     $pdo->prepare('
         UPDATE files
            SET filename = ?, storage_object_id = ?, original_name = ?, filetype = ?, filesize = ?,
-               thumbnail_path = ?, checksum_md5 = ?, checksum_sha256 = ?, quarantine_status = ?, mime_anomaly = ?
+               thumbnail_path = ?, checksum_md5 = ?, checksum_sha256 = ?, quarantine_status = ?, mime_anomaly = ?,
+               client_encrypted = ?
          WHERE id = ?
     ')->execute([
         $uniqueName,
@@ -297,7 +343,8 @@ function datadock_replace_file_contents(PDO $pdo, array $settings, array $file, 
         $checksumMd5,
         $checksumSha,
         $quarantineStatus,
-        (int) mime_extension_mismatch($extension, $mimeType),
+        $clientEncrypted ? 0 : (int) mime_extension_mismatch($extension, $mimeType),
+        $clientEncrypted ? 1 : 0,
         $fileId,
     ]);
 

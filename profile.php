@@ -12,7 +12,7 @@ require_once __DIR__ . '/includes/accounts.php';
 require_once __DIR__ . '/includes/audit_log.php';
 
 $userId = $_SESSION['user_id'];
-$stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at, preferred_theme FROM users WHERE id = ?");
+$stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at, preferred_theme, default_expiry, share_preset FROM users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$user) {
@@ -27,8 +27,36 @@ $displayName = $user['display_name'] ?? '';
 $avatar = $user['avatar'] ?? '';
 $bio = $user['bio'] ?? '';
 $preferredTheme = trim((string) ($user['preferred_theme'] ?? ''));
+$defaultExpiry = trim((string) ($user['default_expiry'] ?? ''));
+$sharePreset = trim((string) ($user['share_preset'] ?? ''));
+
+function datadock_profile_wants_json(): bool {
+    return str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+}
+
+function datadock_profile_json(array $payload, int $status = 200): void {
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode($payload, JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function datadock_profile_authenticator_qr(string $account, string $secret): string {
+    $otpauth = 'otpauth://totp/' . rawurlencode(get_site_name() . ':' . $account)
+        . '?secret=' . rawurlencode($secret)
+        . '&issuer=' . rawurlencode(get_site_name())
+        . '&digits=6&period=30';
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . rawurlencode($otpauth);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!datadock_csrf_is_valid()) {
+        if (datadock_profile_wants_json()) {
+            datadock_profile_json(['ok' => false, 'error' => 'That action could not be confirmed. Use the button on the page.'], 400);
+        }
+        datadock_reject_invalid_csrf('profile.php');
+    }
     $action = $_POST['action'] ?? '';
 
     if ($action === 'theme') {
@@ -47,6 +75,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 datadock_set_theme_cookie($chosen);
             }
             $_SESSION['flash_success'][] = 'Default theme saved.';
+        }
+        header('Location: profile.php');
+        exit;
+    }
+
+    if ($action === 'defaults') {
+        require_once __DIR__ . '/includes/personal.php';
+        $expiryRaw = trim((string) ($_POST['default_expiry'] ?? ''));
+        $presetRaw = datadock_share_preset(trim((string) ($_POST['share_preset'] ?? '')));
+        if ($expiryRaw !== '' && !datadock_known_expiry_key($expiryRaw)) {
+            $_SESSION['flash_error'][] = 'Choose a known expiry.';
+        } else {
+            $pdo->prepare('UPDATE users SET default_expiry = ?, share_preset = ? WHERE id = ?')->execute([
+                $expiryRaw === '' ? null : $expiryRaw,
+                $presetRaw === '' ? null : $presetRaw,
+                $userId,
+            ]);
+            $_SESSION['flash_success'][] = 'Upload defaults saved.';
         }
         header('Location: profile.php');
         exit;
@@ -77,11 +123,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (strlen($bio) > 500) {
             $_SESSION['flash_error'][] = "❌ Bio must be 500 characters or less.";
         }
-        if ($avatarUrl !== '' && !filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
-            $_SESSION['flash_error'][] = "❌ Avatar URL must be a valid URL.";
-        }
-        if ($avatarUrl !== '' && !preg_match('#^https?://#i', $avatarUrl)) {
-            $_SESSION['flash_error'][] = "❌ Avatar URL must start with http:// or https://.";
+        if ($avatarUrl !== '' && !datadock_https_asset_url($avatarUrl)) {
+            $_SESSION['flash_error'][] = "❌ Avatar URL must be an https address without a username or password.";
         }
 
         $newAvatar = null;
@@ -185,7 +228,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'totp_start') {
-        $_SESSION['datadock_totp_setup'] = datadock_base32_encode(random_bytes(20));
+        $secret = datadock_base32_encode(random_bytes(20));
+        $_SESSION['datadock_totp_setup'] = $secret;
+        if (datadock_profile_wants_json()) {
+            datadock_profile_json([
+                'ok' => true,
+                'secret' => $secret,
+                'qr' => datadock_profile_authenticator_qr($username, $secret),
+            ]);
+        }
+        header('Location: profile.php');
+        exit;
+    }
+    if ($action === 'totp_cancel') {
+        unset($_SESSION['datadock_totp_setup']);
+        if (datadock_profile_wants_json()) {
+            datadock_profile_json(['ok' => true]);
+        }
         header('Location: profile.php');
         exit;
     }
@@ -404,6 +463,7 @@ require_once __DIR__ . '/includes/header.php';
         <h3 class="settings-card-title">Default theme</h3>
         <div class="settings-card-body">
             <form method="post" class="form">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="theme">
                 <div class="form-group">
                     <label for="preferred_theme">Theme</label>
@@ -421,6 +481,39 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <div class="settings-card stack-card">
+        <h3 class="settings-card-title">Upload defaults</h3>
+        <div class="settings-card-body">
+            <form method="post" class="form">
+                <?= datadock_csrf_field() ?>
+                <input type="hidden" name="action" value="defaults">
+                <div class="form-group">
+                    <label for="default_expiry">My uploads last</label>
+                    <select name="default_expiry" id="default_expiry">
+                        <option value=""<?= $defaultExpiry === '' ? ' selected' : '' ?>>Site default</option>
+                        <?php
+                        require_once __DIR__ . '/includes/personal.php';
+                        foreach (datadock_expiry_offsets() as $key => $offset): ?>
+                            <option value="<?= sanitize_data($key) ?>"<?= $defaultExpiry === $key ? ' selected' : '' ?>><?= sanitize_data(ucwords(str_replace('_', ' ', $key))) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="form-hint">Used when a folder does not set its own expiry. You can still change it on each upload.</p>
+                </div>
+                <div class="form-group">
+                    <label for="share_preset">Share preset</label>
+                    <select name="share_preset" id="share_preset">
+                        <option value=""<?= $sharePreset === '' ? ' selected' : '' ?>>No preset</option>
+                        <option value="onetime"<?= $sharePreset === 'onetime' ? ' selected' : '' ?>>One-time link</option>
+                        <option value="password"<?= $sharePreset === 'password' ? ' selected' : '' ?>>Download password</option>
+                        <option value="signed"<?= $sharePreset === 'signed' ? ' selected' : '' ?>>Signed link</option>
+                    </select>
+                    <p class="form-hint">Adds that share action first on each file. The other ways to share stay available.</p>
+                </div>
+                <button type="submit" class="btn btn-primary">Save defaults</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="settings-card stack-card">
         <h3 class="settings-card-title">Account details</h3>
         <div class="settings-card-body">
             <p><strong>Role:</strong> <?= sanitize_data($user['role']) ?></p>
@@ -432,6 +525,7 @@ require_once __DIR__ . '/includes/header.php';
         <h3 class="settings-card-title">Edit profile</h3>
         <div class="settings-card-body">
             <form method="post" class="form" enctype="multipart/form-data">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="profile">
                 <div class="form-group profile-avatar-group">
                     <label>Profile picture</label>
@@ -485,6 +579,7 @@ require_once __DIR__ . '/includes/header.php';
         <h3 class="settings-card-title">Change password</h3>
         <div class="settings-card-body">
             <form method="post" class="form" onsubmit="return validatePasswordForm()">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="password">
                 <div class="form-group">
                     <label for="current_password">Current password</label>
@@ -521,10 +616,7 @@ require_once __DIR__ . '/includes/header.php';
     $totpOn = !empty($totpRow->fetchColumn());
     $totpPolicy = datadock_identity_config($settings)['totp_policy'];
     $setupSecret = (string) ($_SESSION['datadock_totp_setup'] ?? '');
-    $otpauth = '';
-    if ($setupSecret !== '') {
-        $otpauth = 'otpauth://totp/' . rawurlencode(get_site_name() . ':' . $username) . '?secret=' . rawurlencode($setupSecret) . '&issuer=' . rawurlencode(get_site_name()) . '&digits=6&period=30';
-    }
+    $authenticatorQr = $setupSecret !== '' ? datadock_profile_authenticator_qr($username, $setupSecret) : '';
     ?>
     <div class="settings-card stack-card">
         <h3 class="settings-card-title">Authenticator</h3>
@@ -535,6 +627,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php if ($totpOn): ?>
                 <p>Authenticator codes are on.</p>
                 <form method="post" class="form">
+                    <?= datadock_csrf_field() ?>
                     <input type="hidden" name="action" value="totp_disable">
                     <div class="form-group">
                         <label for="totp_off_password">Current password</label>
@@ -546,27 +639,123 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <button type="submit" class="btn btn-quiet">Turn off</button>
                 </form>
-            <?php elseif ($setupSecret !== ''): ?>
-                <p>Add this key to your authenticator app, then enter a code to confirm.</p>
-                <p><code><?= sanitize_data($setupSecret) ?></code></p>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=<?= urlencode($otpauth) ?>" alt="Authenticator QR code" class="qr-image">
-                <form method="post" class="form">
-                    <input type="hidden" name="action" value="totp_confirm">
-                    <div class="form-group">
-                        <label for="totp_on_password">Current password</label>
-                        <input type="password" name="confirm_password" id="totp_on_password" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="totp_on_code">Code</label>
-                        <input type="text" name="totp_code" id="totp_on_code" inputmode="numeric" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Confirm</button>
-                </form>
             <?php else: ?>
-                <form method="post">
+                <p id="authenticator-error" class="form-hint" hidden></p>
+                <div id="authenticator-setup"<?= $setupSecret === '' ? ' hidden' : '' ?>>
+                    <p>Add this key to your authenticator app, then enter a code to confirm.</p>
+                    <p><code id="authenticator-secret"><?= sanitize_data($setupSecret) ?></code></p>
+                    <img id="authenticator-qr"<?= $authenticatorQr !== '' ? ' src="' . htmlspecialchars($authenticatorQr, ENT_QUOTES, 'UTF-8') . '"' : '' ?> alt="Authenticator QR code" class="qr-image authenticator-qr" width="250" height="250">
+                    <form id="authenticator-confirm" method="post" class="form">
+                        <?= datadock_csrf_field() ?>
+                        <input type="hidden" name="action" value="totp_confirm">
+                        <div class="form-group">
+                            <label for="totp_on_password">Current password</label>
+                            <input type="password" name="confirm_password" id="totp_on_password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="totp_on_code">Code</label>
+                            <input type="text" name="totp_code" id="totp_on_code" inputmode="numeric" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Confirm</button>
+                            <button type="submit" class="btn btn-quiet" name="action" value="totp_cancel" formnovalidate>Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                <form id="authenticator-start" method="post"<?= $setupSecret !== '' ? ' hidden' : '' ?>>
+                    <?= datadock_csrf_field() ?>
                     <input type="hidden" name="action" value="totp_start">
                     <button type="submit" class="btn btn-primary">Set up authenticator</button>
                 </form>
+                <script>
+                (function () {
+                    var startForm = document.getElementById('authenticator-start');
+                    var panel = document.getElementById('authenticator-setup');
+                    var confirmForm = document.getElementById('authenticator-confirm');
+                    var secretEl = document.getElementById('authenticator-secret');
+                    var qr = document.getElementById('authenticator-qr');
+                    var errorEl = document.getElementById('authenticator-error');
+                    if (!startForm || !panel || !confirmForm || !secretEl || !qr || !errorEl) {
+                        return;
+                    }
+
+                    function showError(message) {
+                        errorEl.textContent = message;
+                        errorEl.hidden = false;
+                    }
+
+                    function clearError() {
+                        errorEl.textContent = '';
+                        errorEl.hidden = true;
+                    }
+
+                    function postJson(body) {
+                        return fetch('profile.php', {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            body: body,
+                            credentials: 'same-origin'
+                        }).then(function (response) {
+                            return response.json().then(function (data) {
+                                return { ok: response.ok, data: data };
+                            });
+                        });
+                    }
+
+                    startForm.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        clearError();
+                        var button = startForm.querySelector('button');
+                        if (button) {
+                            button.disabled = true;
+                        }
+                        postJson(new FormData(startForm)).then(function (result) {
+                            if (!result.ok || !result.data || !result.data.secret || !result.data.qr) {
+                                showError((result.data && result.data.error) || 'Authenticator setup could not start.');
+                                return;
+                            }
+                            secretEl.textContent = result.data.secret;
+                            qr.src = result.data.qr;
+                            panel.hidden = false;
+                            startForm.hidden = true;
+                        }).catch(function () {
+                            showError('Authenticator setup could not start.');
+                        }).then(function () {
+                            if (button) {
+                                button.disabled = false;
+                            }
+                        });
+                    });
+
+                    confirmForm.addEventListener('submit', function (event) {
+                        if (!event.submitter || event.submitter.value !== 'totp_cancel') {
+                            return;
+                        }
+                        event.preventDefault();
+                        clearError();
+                        var body = new FormData();
+                        var token = confirmForm.querySelector('input[name="csrf_token"]');
+                        body.set('csrf_token', token ? token.value : '');
+                        body.set('action', 'totp_cancel');
+                        event.submitter.disabled = true;
+                        postJson(body).then(function (result) {
+                            if (!result.ok || !result.data || !result.data.ok) {
+                                showError((result.data && result.data.error) || 'Setup could not be cancelled.');
+                                return;
+                            }
+                            secretEl.textContent = '';
+                            qr.removeAttribute('src');
+                            confirmForm.reset();
+                            panel.hidden = true;
+                            startForm.hidden = false;
+                        }).catch(function () {
+                            showError('Setup could not be cancelled.');
+                        }).then(function () {
+                            event.submitter.disabled = false;
+                        });
+                    });
+                })();
+                </script>
             <?php endif; ?>
         </div>
     </div>
@@ -576,6 +765,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="settings-card-body">
             <p class="page-description">This permanently removes your account and deletes your files. The last admin account cannot be closed.</p>
             <form method="post" class="form" onsubmit="return confirm('Close your account and delete your files? This cannot be undone.');">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="action" value="close_account">
                 <div class="form-group">
                     <label for="close_password">Current password</label>

@@ -1,0 +1,69 @@
+# When a GitHub Release is published, attach a zip and a tar.gz of that tag.
+# The in-app updater installs the zip. Pre-releases get the same packages so the
+# development update channel can download them.
+
+name: Release packages
+
+on:
+  release:
+    types: [published, prereleased]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Build archives
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          prefix="DataDock-${TAG}/"
+          git archive --format=zip --prefix="$prefix" -o "DataDock-${TAG}.zip" HEAD
+          git archive --format=tar.gz --prefix="$prefix" -o "DataDock-${TAG}.tar.gz" HEAD
+          unzip -t "DataDock-${TAG}.zip" >/dev/null
+          listing=$(tar -tzf "DataDock-${TAG}.tar.gz")
+          printf '%s\n' "$listing" | grep -qx "${prefix}index.php"
+          printf '%s\n' "$listing" | grep -qx "${prefix}scripts/datadock-cron-purge.php"
+          for banned in \
+            .git/ \
+            .gitignore \
+            .gitattributes \
+            .github/ \
+            hooks/ \
+            tests/ \
+            README.md \
+            CONTRIBUTING.md \
+            ROADMAP.md \
+            PRIVACY.md \
+            Dockerfile \
+            .dockerignore \
+            docker-compose.example.yml \
+            docker-compose.hub.example.yml \
+            docker-entrypoint.sh \
+            scripts/docker-bootstrap.php \
+            scripts/generate-db-runtime.php
+          do
+            if printf '%s\n' "$listing" | grep -q "${prefix}${banned}"; then
+              echo "release archive still contains ${banned}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Attach archives to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$TAG" \
+            "DataDock-${TAG}.zip" \
+            "DataDock-${TAG}.tar.gz" \
+            --clobber

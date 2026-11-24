@@ -93,6 +93,10 @@ function datadock_normalize_trusted_proxies(string $raw): string {
  */
 function datadock_trusted_proxy_entries(): array {
     static $cached = null;
+    if (!empty($GLOBALS['datadock_forget_proxy_cache'])) {
+        $cached = null;
+        $GLOBALS['datadock_forget_proxy_cache'] = false;
+    }
     if ($cached !== null) {
         return $cached;
     }

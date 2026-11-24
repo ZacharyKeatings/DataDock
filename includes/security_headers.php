@@ -6,15 +6,28 @@
 /**
  * Whether the current request is served over HTTPS (including common reverse-proxy headers).
  */
+function datadock_forwarded_proto_is_https(string $remote, array $trusted): bool {
+    if ($remote === '' || $trusted === [] || !function_exists('datadock_ip_is_trusted_proxy')) {
+        return false;
+    }
+    if (!datadock_ip_is_trusted_proxy($remote, $trusted)) {
+        return false;
+    }
+    $xfp = strtolower(trim((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+    return $xfp === 'https';
+}
+
 function datadock_request_is_https(): bool {
     if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
         return true;
     }
-    $xfp = strtolower(trim((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
-    if ($xfp === 'https') {
+    if (((int) ($_SERVER['SERVER_PORT'] ?? 0)) === 443) {
         return true;
     }
-    return ((int) ($_SERVER['SERVER_PORT'] ?? 0)) === 443;
+    if (!function_exists('datadock_trusted_proxy_entries')) {
+        require_once __DIR__ . '/rate_limit.php';
+    }
+    return datadock_forwarded_proto_is_https((string) ($_SERVER['REMOTE_ADDR'] ?? ''), datadock_trusted_proxy_entries());
 }
 
 /**

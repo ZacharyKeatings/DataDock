@@ -17,6 +17,9 @@ expect_true('one-hour paste expiry is in the future', strtotime((string) datadoc
 expect_true('paste token shape', datadock_paste_token_ok(str_repeat('ab', 16)));
 expect_false('short paste token is rejected', datadock_paste_token_ok('abc'));
 expect_same('paste length counts characters', datadock_paste_strlen('héllo'), 5);
+expect_same('paste preview collapses blank lines', datadock_paste_preview("hello\n\nworld"), 'hello world');
+expect_same('paste preview keeps a short note', datadock_paste_preview('hello'), 'hello');
+expect_true('paste preview ends with an ellipsis', str_ends_with(datadock_paste_preview(str_repeat('a', 200)), '…'));
 
 $_SESSION['user_id'] = 7;
 $_SESSION['role'] = 'user';

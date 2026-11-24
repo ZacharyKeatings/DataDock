@@ -53,6 +53,7 @@ $colorFields = [
 
     <div class="theme-editor-layout">
         <form method="post" class="settings-card theme-editor-form" id="theme-editor-form">
+            <?= datadock_csrf_field() ?>
             <h3 class="settings-card-title"><?= $editing ? 'Edit theme' : 'New theme' ?></h3>
             <div class="settings-card-body">
                 <input type="hidden" name="save_custom_theme" value="1">
@@ -104,10 +105,14 @@ $colorFields = [
         <div class="theme-stage-wrap">
             <h3 class="section-title">Preview</h3>
             <div class="theme-stage" id="theme-stage">
-                <div class="theme-stage-header">DataDock</div>
+                <div class="theme-stage-header">Header</div>
                 <div class="theme-stage-body">
-                    <p>A <a href="#theme-stage">link</a> in the page.</p>
+                    <p class="theme-sample-text">Text and a <a href="#theme-stage">link</a>.</p>
+                    <div class="theme-sample-banner"><span class="theme-sample-swatch" aria-hidden="true"></span>Accent</div>
                     <div class="theme-sample-card">Panel</div>
+                    <label class="theme-sample-field">Input
+                        <input type="text" readonly value="Typed text" tabindex="-1">
+                    </label>
                     <button type="button" class="btn btn-primary">Primary button</button>
                 </div>
             </div>
@@ -128,6 +133,7 @@ $colorFields = [
                             <span class="theme-saved-actions">
                                 <a class="btn btn-quiet btn-small" href="admin.php?section=themes&amp;edit=<?= urlencode($slug) ?>">Edit</a>
                                 <form method="post" class="inline-form compact" onsubmit="return confirm('Delete this theme?');">
+                                    <?= datadock_csrf_field() ?>
                                     <input type="hidden" name="delete_custom_theme" value="1">
                                     <input type="hidden" name="theme_slug" value="<?= sanitize_data($slug) ?>">
                                     <button type="submit" class="btn btn-danger btn-small">Delete</button>
@@ -155,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
         border: '--color-border',
         box: '--color-box-background',
         link: '--color-link',
+        link_hover: '--color-link-hover',
         button_text: '--preview-button-text'
     };
     function paint() {
@@ -164,11 +171,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         var font = form.querySelector('#theme_font');
         var radius = form.querySelector('#theme_radius');
+        var scheme = form.querySelector('#theme_scheme');
         if (font) {
             var family = font.value === 'system' ? 'system-ui, sans-serif' : font.value;
             stage.style.fontFamily = family;
         }
         if (radius) stage.style.setProperty('--radius', radius.value);
+        if (scheme) stage.style.colorScheme = scheme.value;
     }
     form.addEventListener('input', paint);
     form.addEventListener('change', paint);

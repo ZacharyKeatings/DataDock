@@ -15,6 +15,7 @@ require_once dirname(__DIR__) . '/includes/guest_claim.php';
 require_once dirname(__DIR__) . '/includes/folder_links.php';
 require_once dirname(__DIR__) . '/includes/hotlink_log.php';
 require_once dirname(__DIR__) . '/includes/integrity.php';
+require_once dirname(__DIR__) . '/includes/personal.php';
 
 try {
     run_migrations($pdo);
@@ -42,6 +43,9 @@ expect_same(
     (int) $pdo->query('SELECT id FROM storage_partitions WHERE is_default = 1')->fetchColumn(),
     1
 );
+$storageRoot = sys_get_temp_dir() . '/datadock-ingest-' . bin2hex(random_bytes(4));
+mkdir($storageRoot, 0755, true);
+$pdo->prepare('UPDATE storage_partitions SET root_path = ? WHERE id = 1')->execute([$storageRoot]);
 expect_same('fresh database has no upload names to check', datadock_expected_upload_filenames_by_partition($pdo), []);
 
 $password = password_hash('secret', PASSWORD_DEFAULT);
@@ -76,6 +80,29 @@ try {
     $suspended = strpos($e->getMessage(), 'suspended') !== false;
 }
 expect_true('suspended external account is refused', $suspended);
+$unverifiedLink = false;
+try {
+    datadock_upsert_external_user($pdo, [
+        'sub' => 'attacker-sub',
+        'email' => 'ada@example.com',
+        'preferred_username' => 'ada',
+        'role' => 'admin',
+        'email_verified' => false,
+    ], 'oidc');
+} catch (RuntimeException $e) {
+    $unverifiedLink = strpos($e->getMessage(), 'already exists') !== false;
+}
+expect_true('unverified email does not link to an existing account', $unverifiedLink);
+expect_same('existing account keeps its role', (string) $pdo->query('SELECT role FROM users WHERE id = ' . $ada)->fetchColumn(), 'user');
+$linked = datadock_upsert_external_user($pdo, [
+    'sub' => 'verified-sub',
+    'email' => 'ada@example.com',
+    'preferred_username' => 'ada',
+    'role' => 'admin',
+    'email_verified' => true,
+], 'oidc');
+expect_same('verified email links the existing account', (int) $linked['id'], $ada);
+expect_same('verified email link keeps the existing role', $linked['role'], 'user');
 
 $pdo->prepare('UPDATE users SET quota_max_files = 1, quota_max_bytes = 1000 WHERE id = ?')->execute([$ada]);
 $limits = datadock_user_quota_limits($pdo, $ada, ['user_limits' => ['max_files_enabled' => false]]);
@@ -286,3 +313,173 @@ expect_same('session row is stored', (int) $pdo->query('SELECT COUNT(*) FROM use
 $begin = datadock_begin_email_verification($pdo, $ada, 'ada@example.com');
 expect_same('verification email is not sent without smtp', $begin['sent'], false);
 expect_contains('verification begin returns a url', $begin['url'], 'verify_email.php?token=');
+
+require_once dirname(__DIR__) . '/includes/ingest_file.php';
+$insertUser->execute(['upload-user', 'upload@example.com', $password, 'user']);
+$uploader = (int) $pdo->lastInsertId();
+$ingestSettings = [
+    'max_file_size' => 1048576,
+    'thumbnails_enabled' => true,
+    'deduplicate_storage' => false,
+    'filetype_policy' => ['mode' => 'off'],
+];
+$note = $storageRoot . '/note-src.txt';
+file_put_contents($note, 'hello dock');
+$stored = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $note,
+    'original_name' => 'note.txt',
+    'user_id' => $uploader,
+]);
+expect_true('a text upload is stored', !empty($stored['ok']));
+$storedId = (int) ($stored['file_id'] ?? 0);
+expect_true('a text upload returns an id', $storedId > 0);
+if ($storedId > 0) {
+    $storedName = (string) $pdo->query('SELECT filename FROM files WHERE id = ' . $storedId)->fetchColumn();
+    expect_same('a text upload keeps its bytes', (string) file_get_contents(datadock_upload_dir($pdo, 1) . $storedName), 'hello dock');
+} else {
+    test_fail('a text upload keeps its bytes', (string) ($stored['error'] ?? 'upload was not stored'));
+}
+
+$phpUpload = $storageRoot . '/shell-src.php';
+file_put_contents($phpUpload, '<?php echo 1;');
+$forbidden = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $phpUpload,
+    'original_name' => 'shell.php',
+    'user_id' => $uploader,
+]);
+expect_false('a php upload is refused', !empty($forbidden['ok']));
+expect_contains('a php upload names the forbidden type', (string) ($forbidden['error'] ?? ''), 'forbidden');
+unlink($phpUpload);
+
+$tinyUpload = $storageRoot . '/tiny-src.txt';
+file_put_contents($tinyUpload, 'too-big');
+$tooLarge = datadock_ingest_local_file($pdo, ['max_file_size' => 3] + $ingestSettings, [
+    'source_path' => $tinyUpload,
+    'original_name' => 'tiny.txt',
+    'user_id' => $uploader,
+]);
+expect_false('an upload over the limit is refused', !empty($tooLarge['ok']));
+expect_contains('an upload over the limit says it is too large', (string) ($tooLarge['error'] ?? ''), 'too large');
+unlink($tinyUpload);
+
+$jpegBytes = hex2bin('ffd8ffdb00430003020202020202030202020303030304060404040404080606050609080a0a090809090a0c0f0c0a0b0e0b09090d110d0e0f101011100a0c12131210130f101010ffc9000b080001000101011100ffcc000600101005ffda0008010100003f00d2cf20ffd9');
+$scriptJpeg = $storageRoot . '/script.jpg';
+file_put_contents($scriptJpeg, $jpegBytes . '<?php echo 1;');
+$scripted = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $scriptJpeg,
+    'original_name' => 'script.jpg',
+    'user_id' => $uploader,
+]);
+expect_false('a jpeg with php inside is refused', !empty($scripted['ok']));
+expect_contains('a jpeg with php inside is described as a script', (string) ($scripted['error'] ?? ''), 'script content');
+unlink($scriptJpeg);
+
+$cleanJpeg = $storageRoot . '/clean.jpg';
+file_put_contents($cleanJpeg, $jpegBytes);
+$photo = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $cleanJpeg,
+    'original_name' => 'clean.jpg',
+    'user_id' => $uploader,
+]);
+expect_true('a jpeg upload is stored', !empty($photo['ok']));
+$photoId = (int) ($photo['file_id'] ?? 0);
+$photoThumb = $pdo->query('SELECT thumbnail_path FROM files WHERE id = ' . $photoId)->fetchColumn();
+if (function_exists('imagecreatefromstring')) {
+    expect_true('a jpeg upload stores a thumbnail', is_string($photoThumb) && $photoThumb !== '' && is_file(datadock_thumbnails_dir($pdo, 1) . $photoThumb));
+} else {
+    expect_same('a jpeg upload succeeds without a thumbnail', $photoThumb, null);
+}
+
+$pdo->prepare('UPDATE users SET totp_enabled = 1, totp_secret = ? WHERE id = ?')->execute(['JBSWY3DPEHPK3PXP', $ada]);
+expect_true('an authenticator secret makes totp required', datadock_user_needs_totp($pdo, $ada));
+$_SESSION['totp_pending'] = ['user_id' => $ada];
+@datadock_establish_session($pdo, [
+    'id' => $ada,
+    'username' => 'ada',
+    'role' => 'user',
+], ['remember_device' => ['enabled' => false]], false, false);
+expect_same('password login starts a session', (int) ($_SESSION['user_id'] ?? 0), $ada);
+expect_same('password login keeps the username', (string) ($_SESSION['username'] ?? ''), 'ada');
+expect_false('password login clears a pending authenticator step', isset($_SESSION['totp_pending']));
+$pdo->prepare('UPDATE users SET default_expiry = ? WHERE id = ?')->execute(['1_day', $uploader]);
+$ownerDefault = datadock_effective_upload_defaults($pdo, $uploader, 0, 'never');
+expect_same('an owner expiry replaces the site default', $ownerDefault['expiry'], '1_day');
+$pdo->prepare('INSERT INTO folders (user_id, parent_id, name, default_expiry, default_public) VALUES (?, 0, ?, ?, ?)')->execute([$uploader, 'Incoming', '1_week', 1]);
+$incoming = (int) $pdo->lastInsertId();
+$folderDefault = datadock_effective_upload_defaults($pdo, $uploader, $incoming, 'never');
+expect_same('a folder expiry replaces the owner default', $folderDefault['expiry'], '1_week');
+expect_same('a folder can start files as public', $folderDefault['public'], 1);
+$dropToken = datadock_create_drop_link($pdo, $uploader, $incoming);
+expect_true('a drop link is created', is_string($dropToken) && strlen((string) $dropToken) === 64);
+$drop = datadock_drop_link_by_token($pdo, (string) $dropToken);
+expect_same('a drop link points at that folder', (int) ($drop['folder_id'] ?? 0), $incoming);
+
+$dupSettings = $ingestSettings;
+$dupSettings['deduplicate_storage'] = true;
+$dupSrc = $storageRoot . '/dup.txt';
+file_put_contents($dupSrc, 'same-bytes');
+$firstDup = datadock_ingest_local_file($pdo, $dupSettings, [
+    'source_path' => $dupSrc,
+    'original_name' => 'first.txt',
+    'user_id' => $uploader,
+]);
+file_put_contents($dupSrc, 'same-bytes');
+$secondDup = datadock_ingest_local_file($pdo, $dupSettings, [
+    'source_path' => $dupSrc,
+    'original_name' => 'second.txt',
+    'user_id' => $uploader,
+]);
+expect_true('a matching upload is still stored', !empty($secondDup['ok']) && (int) ($secondDup['file_id'] ?? 0) !== (int) ($firstDup['file_id'] ?? 0));
+expect_true('a matching upload tells the owner', (int) $pdo->query("SELECT COUNT(*) FROM user_notices WHERE user_id = {$uploader} AND kind = 'duplicate_file'")->fetchColumn() >= 1);
+
+if ($storedId > 0) {
+    $live = $pdo->query('SELECT * FROM files WHERE id = ' . $storedId)->fetch(PDO::FETCH_ASSOC);
+    $next = $storageRoot . '/note-v2.txt';
+    file_put_contents($next, 'second copy');
+    $replaced = datadock_replace_file_contents($pdo, $ingestSettings, is_array($live) ? $live : [], $next, 'note.txt');
+    expect_true('replacing a file keeps the id', !empty($replaced['ok']));
+    expect_same('the previous copy is listed', count(datadock_file_versions($pdo, $storedId)), 1);
+    [$trashWhere, $trashParams] = build_files_list_where(['user_id' => $uploader, 'trashed_only' => true]);
+    $trashCount = $pdo->prepare("SELECT COUNT(*) FROM files f WHERE {$trashWhere}");
+    $trashCount->execute($trashParams);
+    expect_same('a previous copy stays out of the trash list', (int) $trashCount->fetchColumn(), 0);
+    $versionId = (int) $pdo->query('SELECT id FROM files WHERE replaced_file_id = ' . $storedId)->fetchColumn();
+    $restored = datadock_restore_file_version($pdo, $storedId, $versionId, $uploader);
+    expect_true('a previous copy can be restored', !empty($restored['ok']));
+    $restoredName = (string) $pdo->query('SELECT filename FROM files WHERE id = ' . $storedId)->fetchColumn();
+    expect_same('restoring brings the earlier bytes back', (string) file_get_contents(datadock_upload_dir($pdo, 1) . $restoredName), 'hello dock');
+}
+
+$exportZip = $storageRoot . '/mine.zip';
+$exported = datadock_build_user_export_zip($pdo, $uploader, $exportZip);
+expect_true('a file export is built', !empty($exported['ok']) && $exported['count'] >= 1);
+$exportArchive = new ZipArchive();
+expect_true('a file export opens', $exportArchive->open($exportZip) === true);
+$manifest = (string) $exportArchive->getFromName('manifest.json');
+$exportArchive->close();
+expect_contains('a file export names the file', $manifest, 'note.txt');
+expect_contains('a file export records the hash field', $manifest, 'sha256');
+
+$sealed = $storageRoot . '/sealed.jpg';
+file_put_contents($sealed, "DDE1" . random_bytes(48));
+$unsealed = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $sealed,
+    'original_name' => 'photo.jpg',
+    'user_id' => $uploader,
+]);
+expect_false('an unsealed image still has to match its type', !empty($unsealed['ok']));
+file_put_contents($sealed, "DDE1" . random_bytes(48));
+$sealedOk = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $sealed,
+    'original_name' => 'photo.jpg',
+    'user_id' => $uploader,
+    'client_encrypted' => true,
+]);
+expect_true('a browser-sealed file is stored', !empty($sealedOk['ok']));
+expect_same('a browser-sealed file skips preview', (int) $pdo->query('SELECT client_encrypted FROM files WHERE id = ' . (int) ($sealedOk['file_id'] ?? 0))->fetchColumn(), 1);
+
+$feedToken = datadock_notice_feed_token($pdo, $uploader);
+expect_true('a notice feed token is issued', strlen($feedToken) === 64);
+expect_same('a notice feed token finds the owner', datadock_user_id_for_notice_feed($pdo, $feedToken), $uploader);
+
+datadock_remove_tree($storageRoot);

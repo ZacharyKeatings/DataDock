@@ -130,7 +130,10 @@ require_once __DIR__ . '/includes/header.php';
         <?php datadock_render_pager($uploadPager); ?>
     <?php endif; ?>
 
-    <p class="form-actions"><a href="export_data.php" class="btn btn-quiet">Export my data</a></p>
+    <p class="form-actions">
+        <a href="export_data.php" class="btn btn-quiet">Export my data</a>
+        <a href="export_files.php" class="btn btn-quiet">Download my files</a>
+    </p>
 </div>
 
 <?php if (count($chartLabels) > 0): ?>

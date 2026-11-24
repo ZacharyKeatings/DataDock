@@ -121,8 +121,8 @@ if ($loggedIn && isset($pdo) && $pdo instanceof PDO) {
                 <div class="flash warning persistent">
                     <button type="button" class="close-btn" onclick="this.parentElement.style.display=\'none\'" aria-label="Dismiss">' . icon_svg('close') . '</button>
                     <div>
-                        ' . icon_svg('warning') . ' <strong>Security Warning:</strong> <code>install.php</code> still exists on your server.<br>
-                        For security, please <strong>delete or rename this file immediately</strong>.
+                        ' . icon_svg('warning') . ' <strong>Security Warning:</strong> <code>install.php</code> is still in the web root.<br>
+                        Setup will not run again, but <strong>delete this file</strong> so it is not left on the server.
                     </div>
                 </div>';
             }

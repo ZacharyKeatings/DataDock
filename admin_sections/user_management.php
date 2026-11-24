@@ -8,6 +8,7 @@ $userDirectory = $userDirectory ?? $users;
     <h3 class="settings-card-title">Create account</h3>
     <div class="settings-card-body">
         <form method="post" action="admin_sections/admin_create_user.php" class="form">
+            <?= datadock_csrf_field() ?>
             <div class="form-group">
                 <label for="new_username">Username</label>
                 <input type="text" name="username" id="new_username" required minlength="3" maxlength="50" pattern="[A-Za-z0-9._-]+">
@@ -70,6 +71,7 @@ $quotaFirst = $quotaForm[(int) $userDirectory[0]['id']];
     <div class="settings-card-body">
         <p class="settings-hint">Site default uses the limits from Site Settings. Unlimited ignores those limits for this account. Custom sets a file count and a total size for this account only.</p>
         <form method="post" action="admin_sections/admin_set_quota.php" class="form">
+            <?= datadock_csrf_field() ?>
             <div class="form-group">
                 <label for="quota_user_id">Account</label>
                 <select name="user_id" id="quota_user_id">
@@ -134,6 +136,7 @@ if ($inviteOnly): ?>
     <div class="settings-card-body">
         <p class="settings-hint">Generate a one-time signup link to share with new users. Token is valid for 7 days.</p>
         <form method="post" action="admin_sections/admin_generate_signup_token.php" class="inline-form compact">
+            <?= datadock_csrf_field() ?>
             <button type="submit" class="btn btn-primary">Generate signup link</button>
         </form>
     </div>
@@ -146,6 +149,7 @@ if ($inviteOnly): ?>
     <div class="settings-card-body">
         <p class="settings-hint">Move every file from one account to another before you delete someone. Bytes are copied when the accounts use different storage partitions. Shares and links stay on the same file ids.</p>
         <form method="post" action="admin_sections/admin_transfer_files.php" class="form" onsubmit="return confirm('Move all files to the other account?');">
+            <?= datadock_csrf_field() ?>
             <div class="form-group">
                 <label for="source_user_id">From</label>
                 <select name="source_user_id" id="source_user_id">
@@ -192,6 +196,7 @@ if ($inviteOnly): ?>
                     <?php if (isset($user['email_verified']) && (int) $user['email_verified'] === 0): ?>
                         <span class="badge">Unverified</span>
                         <form method="post" action="admin_sections/admin_confirm_email.php" class="inline-form compact">
+                            <?= datadock_csrf_field() ?>
                             <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
                             <button type="submit" class="btn btn-quiet btn-small">Confirm email</button>
                         </form>
@@ -201,6 +206,7 @@ if ($inviteOnly): ?>
                 <div data-label="Storage"><?= format_filesize($user['total_size']) ?></div>
                 <div data-label="Partition">
                     <form method="post" action="admin_sections/admin_set_user_partition.php" class="inline-form compact">
+                        <?= datadock_csrf_field() ?>
                         <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
                         <select name="storage_partition_id" aria-label="Storage partition" class="select-compact">
                             <option value="">Default</option>
@@ -214,6 +220,7 @@ if ($inviteOnly): ?>
                 <div data-label="Role">
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                         <form method="post" action="admin_sections/admin_change_role.php" class="inline-form compact" onsubmit="return confirm('Change this user’s role?')">
+                            <?= datadock_csrf_field() ?>
                             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                             <select name="role">
                                 <option value="user" <?= $user['role'] === 'user' ? 'selected' : '' ?>>User</option>
@@ -231,6 +238,7 @@ if ($inviteOnly): ?>
                     <?php endif; ?>
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                         <form method="post" action="admin_sections/admin_suspend_user.php" class="inline-form compact" onsubmit="return confirm('<?= !empty($user['suspended']) ? 'Allow this account to log in again?' : 'Suspend this account? Login and new shares will be blocked.' ?>');">
+                            <?= datadock_csrf_field() ?>
                             <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
                             <input type="hidden" name="suspended" value="<?= !empty($user['suspended']) ? '0' : '1' ?>">
                             <button type="submit" class="btn btn-small<?= !empty($user['suspended']) ? '' : ' btn-quiet' ?>"><?= !empty($user['suspended']) ? 'Unsuspend' : 'Suspend' ?></button>
@@ -241,6 +249,7 @@ if ($inviteOnly): ?>
                 </div>
                 <div data-label="Reset password">
                     <form method="post" action="admin_sections/admin_generate_password_reset.php" class="inline-form compact">
+                        <?= datadock_csrf_field() ?>
                         <input type="hidden" name="user_id" value="<?= (int) $user['id'] ?>">
                         <button type="submit" class="btn btn-quiet btn-small">Copy reset link</button>
                     </form>
@@ -248,6 +257,7 @@ if ($inviteOnly): ?>
                 <div data-label="Delete">
                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                         <form method="post" action="admin_sections/admin_delete_user.php" onsubmit="return confirm('Delete this user?');">
+                            <?= datadock_csrf_field() ?>
                             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                             <button type="submit" class="btn btn-danger btn-small">Delete</button>
                         </form>

@@ -103,6 +103,7 @@ if (!file_exists($path) || !is_readable($path)) {
 
 datadock_log_hotlink_if_external($pdo, $settings, 'thumbnail', $fileId);
 datadock_deny_untrusted_hotlink($settings);
+header('X-Content-Type-Options: nosniff');
 header('Content-Type: image/jpeg');
 header('Content-Length: ' . filesize($path));
 header('Cache-Control: public, max-age=86400');

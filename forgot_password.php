@@ -10,6 +10,7 @@ $settings = datadock_load_settings();
 $submitted = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('forgot_password.php');
     $email = trim($_POST['email'] ?? '');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION['flash_error'][] = "❌ Please enter a valid email address.";
@@ -46,6 +47,7 @@ require_once __DIR__ . '/includes/header.php';
         <p class="form-hint"><a href="login.php">Back to login</a></p>
     <?php else: ?>
         <form method="post" class="form">
+            <?= datadock_csrf_field() ?>
             <div class="form-group">
                 <label for="email">Email address</label>
                 <input type="email" name="email" id="email" required>

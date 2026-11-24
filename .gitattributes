@@ -1,0 +1,21 @@
+# Left out of release zip and tar.gz (git archive). The Docker image is built
+# from a full checkout, so these exclusions do not change that build.
+
+.gitignore export-ignore
+.gitattributes export-ignore
+.github/ export-ignore
+hooks/ export-ignore
+tests/ export-ignore
+
+README.md export-ignore
+CONTRIBUTING.md export-ignore
+ROADMAP.md export-ignore
+PRIVACY.md export-ignore
+
+Dockerfile export-ignore
+.dockerignore export-ignore
+docker-compose.example.yml export-ignore
+docker-compose.hub.example.yml export-ignore
+docker-entrypoint.sh export-ignore
+scripts/docker-bootstrap.php export-ignore
+scripts/generate-db-runtime.php export-ignore

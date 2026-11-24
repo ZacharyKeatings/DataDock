@@ -137,6 +137,7 @@ $reportsListQuery = static function (array $parts): string {
                                                 <p class="settings-hint">Expiry and trash retention skip this file.</p>
                                             <?php endif; ?>
                                             <form method="post" action="<?= sanitize_data($reportsListQuery($modActionQs)) ?>" class="inline-form compact">
+                                                <?= datadock_csrf_field() ?>
                                                 <input type="hidden" name="report_id" value="<?= $reportId ?>">
                                                 <?php if (!empty($row['purge_hold'])): ?>
                                                     <button type="submit" name="moderation_report_action" value="clear_hold" class="btn btn-quiet btn-small">Clear purge hold</button>
@@ -152,6 +153,7 @@ $reportsListQuery = static function (array $parts): string {
                                     <dd class="admin-reports-moderation-dd">
                                         <?php if ($isOpen): ?>
                                             <form method="post" action="<?= sanitize_data($reportsListQuery($modActionQs)) ?>" class="admin-reports-moderation-form">
+                                                <?= datadock_csrf_field() ?>
                                                 <input type="hidden" name="report_id" value="<?= $reportId ?>">
                                                 <textarea name="review_note" rows="3" maxlength="1000" placeholder="Review note (optional)" class="admin-reports-review-note"></textarea>
                                                 <div class="admin-reports-actions">

@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: dashboard.php');
     exit;
 }
+datadock_reject_invalid_csrf('dashboard.php');
 
 $userId = (int) $_SESSION['user_id'];
 $isAdmin = ($_SESSION['role'] ?? '') === 'admin';

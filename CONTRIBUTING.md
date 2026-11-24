@@ -83,6 +83,10 @@ Git does not share hook settings, so each clone needs that command. The hook is 
 
 ---
 
+## Security reports
+
+If you found a vulnerability, do not open an issue or a pull request for it. Those are public. Follow **[SECURITY.md](SECURITY.md)** and use GitHub’s private vulnerability report.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the same terms as the project ([Unlicense](LICENSE)).

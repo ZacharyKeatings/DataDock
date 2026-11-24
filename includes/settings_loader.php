@@ -97,8 +97,19 @@ function datadock_apply_env_overrides(array $settings): array {
     if (($b = datadock_env_bool($e('DATADOCK_INVITE_ONLY_REGISTRATION'), null)) !== null) {
         $settings['invite_only_registration'] = $b;
     }
+    if (trim((string) ($settings['trusted_proxies'] ?? '')) === '' && datadock_docker_image_mode()) {
+        $settings['trusted_proxies'] = datadock_docker_default_trusted_proxies();
+    }
 
     return $settings;
+}
+
+/**
+ * Drop the in-process settings and trusted-proxy caches so a changed environment is read again.
+ */
+function datadock_forget_cached_settings(): void {
+    $GLOBALS['datadock_forget_settings_cache'] = true;
+    $GLOBALS['datadock_forget_proxy_cache'] = true;
 }
 
 /**
@@ -109,6 +120,10 @@ function datadock_apply_env_overrides(array $settings): array {
 function datadock_load_settings(): array {
     static $cached = null;
     static $loading = false;
+    if (!empty($GLOBALS['datadock_forget_settings_cache'])) {
+        $cached = null;
+        $GLOBALS['datadock_forget_settings_cache'] = false;
+    }
     if ($cached !== null) {
         return $cached;
     }

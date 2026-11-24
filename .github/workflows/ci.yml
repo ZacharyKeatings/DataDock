@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install PHP
-        run: sudo apt-get update && sudo apt-get install -y php-cli php-mysql php-mbstring php-xml
+        run: sudo apt-get update && sudo apt-get install -y php-cli php-mysql php-mbstring php-xml php-zip
 
       - name: PHP syntax and tests
         run: php tests/run.php

@@ -2,6 +2,9 @@
 require_once __DIR__ . '/../includes/auth.php';
 init_session();
 require_admin();
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    datadock_reject_invalid_csrf('../admin.php?section=users');
+}
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/settings_loader.php';

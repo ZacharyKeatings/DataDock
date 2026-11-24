@@ -51,6 +51,7 @@ $linkExpiryOptions = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    datadock_reject_invalid_csrf('create_onetime.php?id=' . $fileId);
     $linkKey = $_POST['link_expires'] ?? '1_day';
     if (!isset($linkExpiryOptions[$linkKey])) {
         $linkKey = '1_day';
@@ -131,6 +132,7 @@ require_once __DIR__ . '/includes/header.php';
     <p class="page-description">Generate a link that works for a limited number of downloads and until a time limit. A file password and IP rules from Edit file still apply.</p>
     <p class="file-label"><strong>File:</strong> <?= sanitize_data($file['original_name']) ?></p>
     <form method="post" action="create_onetime.php?id=<?= (int) $fileId ?>" class="settings-card narrow-form">
+        <?= datadock_csrf_field() ?>
         <div class="settings-card-body">
             <div class="form-group">
                 <label for="link_expires">Link expires (time)</label>

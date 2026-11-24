@@ -50,6 +50,14 @@ function install_db_form_prefill(): array {
 }
 
 function install_database($host, $user, $pass, $dbname) {
+    $host = (string) $host;
+    $dbname = (string) $dbname;
+    if (!preg_match('/^[A-Za-z0-9._:-]+(?:;port=[0-9]{1,5})?$/', $host)) {
+        return 'Database host is not a valid hostname or address.';
+    }
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $dbname)) {
+        return 'Database name may only contain letters, numbers, and underscores.';
+    }
     try {
         $pdo = new PDO("mysql:host=$host;charset=utf8mb4", $user, $pass);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -249,19 +257,17 @@ function install_database($host, $user, $pass, $dbname) {
 }
 
 function create_db_config_file($host, $user, $pass, $dbname) {
-    $config = "<?php
-\$host = '$host';
-\$dbname = '$dbname';
-\$user = '$user';
-\$pass = '$pass';
-
-try {
-    \$pdo = new PDO(\"mysql:host=\$host;dbname=\$dbname;charset=utf8mb4\", \$user, \$pass);
-    \$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException \$e) {
-    die(\"Database connection failed: \" . \$e->getMessage());
-}
-?>";
+    $config = "<?php\n"
+        . '$host = ' . var_export((string) $host, true) . ";\n"
+        . '$dbname = ' . var_export((string) $dbname, true) . ";\n"
+        . '$user = ' . var_export((string) $user, true) . ";\n"
+        . '$pass = ' . var_export((string) $pass, true) . ";\n\n"
+        . "try {\n"
+        . "    \$pdo = new PDO(\"mysql:host=\$host;dbname=\$dbname;charset=utf8mb4\", \$user, \$pass);\n"
+        . "    \$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);\n"
+        . "} catch (PDOException \$e) {\n"
+        . "    die(\"Database connection failed: \" . \$e->getMessage());\n"
+        . "}\n";
 
     if (!is_dir(__DIR__ . '/../config')) {
         mkdir(__DIR__ . '/../config', 0755, true);

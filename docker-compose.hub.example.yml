@@ -1,5 +1,5 @@
 # Published image (no local build, no source bind mount).
-# Image tags: :latest follows the newest GitHub Release; :dev follows the latest commit on main/master; :<sha> is immutable.
+# Image tags: :latest follows the newest GitHub Release; :dev follows the latest commit on dev-testing; :<sha> is immutable.
 #
 # Copy to docker-compose.yml, change secrets, then: docker compose up -d
 # Open http://localhost:8080/install.php once.
@@ -22,6 +22,9 @@ services:
       DATADOCK_DB_NAME: datadock
       DATADOCK_DB_USER: datadock
       DATADOCK_DB_PASSWORD: changeme_app
+      # Behind Traefik or another proxy, leave this unset: the published image
+      # trusts private-network addresses for X-Forwarded-Proto. Set it only to
+      # replace that list. OpenID Connect then redirects to https://your-host/oidc.php.
     volumes:
       - datadock_data:/var/lib/datadock
     depends_on:

@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Your files** — Activity can download a zip of your files plus a manifest with the name, hash, expiry, and folder of each one.
+- **Drop link** — A folder can have a link that accepts uploads into that folder only. The files count against your quota and follow that folder’s expiry and visibility. The sender does not need an account.
+- **Previous copies** — Replacing a file keeps the last few copies on the file page, with restore, until trash retention removes them.
+- **Upload defaults** — A profile expiry and a share preset (one-time, password, or signed link) prefill the usual choice. A folder can set the expiry and visibility its new files start with.
+- **Folder download** — The folder you are viewing can be downloaded as one zip.
+- **Update from a file** — Admin → Updater can install a release zip that is already on disk, using the same archive checks as the GitHub update.
+- **Browser encryption** — A file or a paste can be encrypted in the browser before it is uploaded. The passphrase is not stored, and preview stays off.
+- **Notice feed** — Notices has a private Atom address so a feed reader can follow them while email is not configured.
+- **Duplicate notice** — Uploading bytes you already have keeps the new copy and tells you which file it matches.
+- **Release packages** — Publishing a GitHub release attaches a zip and a tar.gz of that tag. The in-app updater installs the zip. Pre-releases get the same packages. The archives leave out Git metadata, GitHub Actions, tests, contributor docs, and Docker build files.
+- **Update channel** — Admin → Updater can follow stable releases or development pre-releases. Choosing Stable again installs the newest stable release even when its version number is lower. Settings, uploads, and the database stay in place.
+
+### Changed
+
+- **Docker `dev` tag** — The published `dev` image follows the latest commit on `dev-testing`. Pushes to `main` still publish a SHA tag. SemVer and `latest` stay on published releases.
+- **Docker updates** — A container running the published image turns off the in-app updater. The updater page says to pull a new image instead.
+
+### Security
+
+- **Private reports** — [SECURITY.md](SECURITY.md) is the path for vulnerability reports. Public issues are for bugs that are not security issues.
+- **Archives** — The updater and full-backup restore refuse archive members that escape the destination directory.
+- **Avatars and branding** — An avatar URL is no longer sent as a redirect. New avatar URLs, and the site logo and favicon, must be https or a local path.
+- **Config directory** — `config/.htaccess` uses Apache 2.4 `Require all denied`, with the older syntax kept for Apache 2.2.
+
+### Fixed
+
+- **Authenticator setup** — The QR code is 250 by 250 pixels. Set up and Cancel open and close it on the page, without reloading.
+- **Docker uploads** — Ordinary photos are no longer rejected because compressed image data happens to contain `<?`. The image includes PHP’s image library, so creating a thumbnail cannot crash the upload. A Docker install that still has the original 5 MB limit is raised to 200 MB when the container starts. A limit you already changed is left as you set it. The image also includes PHP’s zip extension, which the file export and the release installer use.
+- **OpenID Connect behind a proxy** — A published image with no trusted-proxy list trusts private-network proxies for `X-Forwarded-Proto`. The sign-in redirect then uses https, which is the address the identity provider has registered. Identity settings show that redirect URI so it can be copied exactly.
+- **File actions** — Opening one file’s Actions menu closes any other open menu.
+- **Midnight theme** — The files list header uses the theme’s dark surface, so the column labels stay readable.
+- **Checkboxes** — Option boxes on login, upload, and settings stay beside their labels.
+- **Theme preview** — The sample shows the header, text, link, accent, panel, input, and button, and each one updates as its color changes.
+- **Pastes on the files page** — Each paste title opens that paste, and a short preview shows the text. Opening your own paste does not count as a view or delete a one-time paste.
+
+- **Installer** — A finished setup deletes `install.php` and will not run it again. If the file cannot be deleted, the admin warning asks for it to be removed and the installer still refuses to start. Database settings are written with escaped PHP values.
+- **OpenID Connect** — An external login no longer attaches itself to an existing account unless the provider says that email is verified, and that first link does not change the account’s role. Discovery addresses must stay on the identity provider’s host.
+- **Previews** — A file’s IP allowlist applies to previews for everyone except the owner and an administrator.
+- **Redirects** — Theme changes and download-password submissions only send the browser back to a local address.
+- **CSRF** — State-changing forms now require the session token, including admin actions, account changes, sharing, and login.
+- **Sessions and links** — The session cookie is limited to the DataDock path. `X-Forwarded-Proto` is trusted only from a configured proxy. Signed download links fail closed when the signing secret cannot be stored. Custom theme CSS cannot load remote `url()` resources. A directory password cannot sign in to a local account of the same name. Forward-auth does not run when the proxy list is every address.
 
 ## [v2.6.1] - 2026-11-21
 

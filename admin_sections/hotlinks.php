@@ -19,10 +19,12 @@
         <div class="file-mgmt-toolbar">
             <span class="file-mgmt-stat"><strong><?= number_format($hotlinkTotal) ?></strong> event<?= $hotlinkTotal !== 1 ? 's' : '' ?></span>
             <form method="post" class="inline-form compact" onsubmit="return confirm('Delete all hotlink log entries?');">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="hotlink_purge_all" value="1">
                 <button type="submit" class="btn btn-danger btn-small">Clear log</button>
             </form>
             <form method="post" class="inline-form compact">
+                <?= datadock_csrf_field() ?>
                 <input type="hidden" name="hotlink_purge_old" value="1">
                 <label for="purge_days">Remove older than</label>
                 <input type="number" name="purge_days" id="purge_days" class="input-compact" value="90" min="1" max="3650">

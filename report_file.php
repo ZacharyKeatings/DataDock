@@ -20,7 +20,7 @@ function datadock_safe_report_return(string $returnTo): string {
     if ($returnTo === '') {
         return 'dashboard.php';
     }
-    if (str_contains($returnTo, '://') || str_starts_with($returnTo, '//')) {
+    if (str_contains($returnTo, '..') || str_contains($returnTo, '://') || str_starts_with($returnTo, '//')) {
         return 'dashboard.php';
     }
     if (str_starts_with($returnTo, '/')) {
@@ -75,6 +75,7 @@ if (!$file) {
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    datadock_reject_invalid_csrf('report_file.php?id=' . $fileId);
     $reason = (string) ($_POST['reason'] ?? 'malicious');
     $details = trim((string) ($_POST['details'] ?? ''));
     if (!isset($reasons[$reason])) {
@@ -124,6 +125,7 @@ require_once __DIR__ . '/includes/header.php';
     </p>
 
     <form method="post" action="report_file.php" class="settings-form">
+        <?= datadock_csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int) $fileId ?>">
         <input type="hidden" name="return_to" value="<?= sanitize_data($returnTo) ?>">
 

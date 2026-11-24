@@ -40,6 +40,10 @@ $file = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$file) {
     datadock_render_status_page(404, 'File not found', 'This preview is not available.');
 }
+if (!empty($file['client_encrypted'])) {
+    header('Location: decrypt.php?id=' . $fileId);
+    exit;
+}
 $kind = datadock_preview_kind((string) ($file['filetype'] ?? ''));
 if ($kind === null) {
     header('Location: download.php?id=' . $fileId);
@@ -63,7 +67,11 @@ if (!$allowed && !empty($file['is_public']) && !empty($settings['public_browsing
 if (!$allowed) {
     datadock_render_status_page(403, 'Preview unavailable', 'You do not have access to this file.');
 }
-if (!empty($file['access_password_hash']) && $ownerId !== $userId && !$isAdmin && !datadock_session_has_file_access($fileId)) {
+$isOwner = $ownerId > 0 && $ownerId === $userId;
+if (!$isOwner && !$isAdmin && !datadock_ip_allowlist_allows($file['ip_allowlist'] ?? null, datadock_client_ip())) {
+    datadock_render_status_page(403, 'Access denied', 'This preview is limited to specific IP addresses.');
+}
+if (!empty($file['access_password_hash']) && !$isOwner && !$isAdmin && !datadock_session_has_file_access($fileId)) {
     datadock_render_download_password_page((string) ($file['original_name'] ?? 'file'), '', ['file_id' => $fileId, 'next' => 'preview.php?id=' . $fileId]);
 }
 $path = datadock_file_main_path($pdo, $file);

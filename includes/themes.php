@@ -257,6 +257,9 @@ function datadock_render_theme_css(array $tokens, string $extra = ''): string {
         . ".sidebar-nav a.active, .sidebar-nav a:hover { background: var(--color-secondary); color: {$stat}; }\n"
         . ".file-row, .file-row-dashboard, .file-row-user-management, .file-row-file-management { border-bottom-color: var(--color-border); }\n"
         . ".welcome-banner { background: var(--color-secondary); border-left-color: var(--color-accent); }\n";
+    if ($scheme === 'dark') {
+        $css .= ".file-header { background-color: var(--color-secondary); color: var(--color-text); }\n";
+    }
     $extra = datadock_sanitize_custom_css($extra);
     if ($extra !== '') {
         $css .= "\n/* Custom rules */\n" . $extra . "\n";
@@ -272,6 +275,8 @@ function datadock_sanitize_custom_css(string $css): string {
     $css = preg_replace('/<\/?[a-zA-Z][^>]*>/', '', $css) ?? $css;
     $css = preg_replace('/expression\s*\(/i', 'blocked(', $css) ?? $css;
     $css = preg_replace('/javascript\s*:/i', 'blocked:', $css) ?? $css;
+    $css = preg_replace('/url\s*\(/i', 'blocked(', $css) ?? $css;
+    $css = preg_replace('/image-set\s*\(/i', 'blocked(', $css) ?? $css;
     $css = preg_replace('/@import\b/i', '/* import removed */', $css) ?? $css;
     $css = preg_replace('/-moz-binding\s*:/i', 'blocked:', $css) ?? $css;
     $css = preg_replace('/behavior\s*:/i', 'blocked:', $css) ?? $css;

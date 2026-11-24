@@ -13,6 +13,7 @@
 #   DATADOCK_SITE_NAME=My Archive
 #   DATADOCK_STORAGE_BASE_PATH=/var/www/html
 #   DATADOCK_SECURITY_HEADERS=recommended   # off | recommended | strict (v2.5+)
+#   DATADOCK_TRUSTED_PROXIES=172.16.0.0/12  # published image already trusts private ranges
 
 services:
   web:

@@ -56,6 +56,25 @@ function datadock_paste_expiry_utc(?string $key, array $settings): ?string {
     return $now->format('Y-m-d H:i:s');
 }
 
+function datadock_paste_preview(string $text, int $limit = 160): string {
+    $flat = preg_replace('/\s+/u', ' ', trim($text));
+    if (!is_string($flat)) {
+        $flat = trim($text);
+    }
+    if ($limit < 8) {
+        $limit = 8;
+    }
+    if (datadock_paste_strlen($flat) <= $limit) {
+        return $flat;
+    }
+    if (function_exists('mb_substr')) {
+        $cut = mb_substr($flat, 0, $limit - 1, 'UTF-8');
+    } else {
+        $cut = substr($flat, 0, $limit - 1);
+    }
+    return rtrim($cut) . '…';
+}
+
 function datadock_paste_strlen(string $value): int {
     if (function_exists('mb_strlen')) {
         return (int) mb_strlen($value, 'UTF-8');
@@ -89,7 +108,13 @@ function datadock_paste_guest_id(bool $create): ?string {
         return null;
     }
     $id = bin2hex(random_bytes(16));
-    setcookie('guest_id', $id, time() + 86400 * 30, '/');
+    setcookie('guest_id', $id, [
+        'expires' => time() + 86400 * 30,
+        'path' => function_exists('datadock_cookie_path') ? datadock_cookie_path() : '/',
+        'secure' => function_exists('datadock_request_is_https') && datadock_request_is_https(),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     $_COOKIE['guest_id'] = $id;
     return $id;
 }
@@ -226,7 +251,8 @@ function datadock_owned_pastes(PDO $pdo, int $limit = 20, int $offset = 0): arra
     try {
         if ($uid) {
             $stmt = $pdo->prepare('
-                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, OCTET_LENGTH(content) AS content_bytes
+                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, client_encrypted, OCTET_LENGTH(content) AS content_bytes,
+                       CASE WHEN client_encrypted = 1 THEN NULL ELSE SUBSTRING(content, 1, 240) END AS preview
                 FROM pastes
                 WHERE user_id = ? AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())
                 ORDER BY created_at DESC
@@ -239,7 +265,8 @@ function datadock_owned_pastes(PDO $pdo, int $limit = 20, int $offset = 0): arra
                 return [];
             }
             $stmt = $pdo->prepare('
-                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, OCTET_LENGTH(content) AS content_bytes
+                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, client_encrypted, OCTET_LENGTH(content) AS content_bytes,
+                       CASE WHEN client_encrypted = 1 THEN NULL ELSE SUBSTRING(content, 1, 240) END AS preview
                 FROM pastes
                 WHERE guest_id = ? AND user_id IS NULL AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())
                 ORDER BY created_at DESC
@@ -303,13 +330,17 @@ function datadock_echo_owned_pastes(PDO $pdo, bool $readOnly, string $returnTo =
         $label = $title !== '' ? $title : ('Paste #' . (int) ($row['id'] ?? 0));
         $expires = $row['expires_at'] ?? null;
         echo '<li>';
+        $preview = datadock_paste_preview((string) ($row['preview'] ?? ''));
         echo '<div class="paste-list-row">';
-        echo '<span class="paste-list-label">' . sanitize_data($label) . '</span>';
+        echo '<a class="paste-list-label" href="paste.php?t=' . rawurlencode($token) . '">' . sanitize_data($label) . '</a>';
         echo '<span class="paste-list-meta">';
         echo (int) ($row['view_count'] ?? 0) . ' views';
         echo ' · ' . sanitize_data(format_filesize((int) ($row['content_bytes'] ?? 0)));
         if (!empty($row['burn_after_read'])) {
             echo ' · one-time';
+        }
+        if (!empty($row['client_encrypted'])) {
+            echo ' · encrypted';
         }
         if ($expires) {
             echo ' · expires <span class="utc-datetime" data-utc="' . sanitize_data((string) $expires) . '"></span>';
@@ -326,6 +357,9 @@ function datadock_echo_owned_pastes(PDO $pdo, bool $readOnly, string $returnTo =
             echo '</form>';
         }
         echo '</div>';
+        if ($preview !== '') {
+            echo '<p class="paste-list-preview">' . sanitize_data($preview) . '</p>';
+        }
         echo '<input type="text" readonly class="paste-url" value="' . sanitize_data($url) . '" onclick="this.select();" aria-label="Share link for ' . sanitize_data($label) . '">';
         echo '</li>';
     }
