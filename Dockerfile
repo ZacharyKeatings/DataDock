@@ -7,8 +7,9 @@ RUN apt-get update \
         libjpeg62-turbo-dev \
         libpng-dev \
         libwebp-dev \
+        libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install gd pdo_mysql \
+    && docker-php-ext-install gd pdo_mysql zip \
     && rm -rf /var/lib/apt/lists/* \
     && a2enmod rewrite headers \
     && printf '%s\n' \

@@ -650,4 +650,60 @@ function run_migrations(PDO $pdo): void {
             $pdo->exec('ALTER TABLE users ADD INDEX idx_users_email_verify_token (email_verify_token)');
         }
     } catch (PDOException $e) {}
+
+    $accountCols = [
+        'users' => [
+            'default_expiry' => 'ALTER TABLE users ADD COLUMN default_expiry VARCHAR(32) DEFAULT NULL',
+            'share_preset' => 'ALTER TABLE users ADD COLUMN share_preset VARCHAR(16) DEFAULT NULL',
+            'notice_feed_token' => 'ALTER TABLE users ADD COLUMN notice_feed_token CHAR(64) DEFAULT NULL',
+        ],
+        'folders' => [
+            'default_expiry' => 'ALTER TABLE folders ADD COLUMN default_expiry VARCHAR(32) DEFAULT NULL',
+            'default_public' => 'ALTER TABLE folders ADD COLUMN default_public TINYINT(1) DEFAULT NULL',
+        ],
+        'files' => [
+            'client_encrypted' => 'ALTER TABLE files ADD COLUMN client_encrypted TINYINT(1) NOT NULL DEFAULT 0',
+            'replaced_file_id' => 'ALTER TABLE files ADD COLUMN replaced_file_id INT DEFAULT NULL',
+        ],
+        'pastes' => [
+            'client_encrypted' => 'ALTER TABLE pastes ADD COLUMN client_encrypted TINYINT(1) NOT NULL DEFAULT 0',
+        ],
+    ];
+    foreach ($accountCols as $table => $cols) {
+        foreach ($cols as $col => $sql) {
+            try {
+                $stmt = $pdo->query('SHOW COLUMNS FROM ' . $table . ' LIKE ' . $pdo->quote($col));
+                if ($stmt && $stmt->rowCount() === 0) {
+                    $pdo->exec($sql);
+                }
+            } catch (PDOException $e) {}
+        }
+    }
+    try {
+        $stmt = $pdo->query("SHOW INDEX FROM files WHERE Key_name = 'idx_files_replaced'");
+        if ($stmt && $stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE files ADD INDEX idx_files_replaced (replaced_file_id)');
+        }
+    } catch (PDOException $e) {}
+    try {
+        $stmt = $pdo->query("SHOW INDEX FROM users WHERE Key_name = 'uniq_users_notice_feed'");
+        if ($stmt && $stmt->rowCount() === 0) {
+            $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uniq_users_notice_feed (notice_feed_token)');
+        }
+    } catch (PDOException $e) {}
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS drop_links (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                folder_id INT NOT NULL,
+                token CHAR(64) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_drop_token (token),
+                INDEX idx_drop_folder (folder_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
+            )
+        ");
+    } catch (PDOException $e) {}
 }

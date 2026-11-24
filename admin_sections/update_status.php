@@ -64,6 +64,19 @@ $confirmMessage = $relation === 'downgrade'
         </fieldset>
     </form>
 
+    <form method="post" action="admin_sections/update_from_file.php" enctype="multipart/form-data" class="form" onsubmit="return confirm('Install this zip over the application files? Settings, uploads, and the database stay in place.');">
+        <?= datadock_csrf_field() ?>
+        <fieldset>
+            <legend>Install a release you already have</legend>
+            <p class="form-hint">Use this when the server cannot reach GitHub. Choose the DataDock zip from a release. The same archive checks apply.</p>
+            <div class="form-group">
+                <label for="release_zip">Release zip</label>
+                <input type="file" name="release_zip" id="release_zip" accept=".zip,application/zip" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Install zip</button>
+        </fieldset>
+    </form>
+
     <?php if (is_array($target) && empty($target['ok'])): ?>
         <div class="flash error persistent" role="alert"><?= sanitize_data((string) ($target['error'] ?? 'Could not check for updates.')) ?></div>
     <?php elseif ($latestTag === null || $latestTag === ''): ?>

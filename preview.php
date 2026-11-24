@@ -40,6 +40,10 @@ $file = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$file) {
     datadock_render_status_page(404, 'File not found', 'This preview is not available.');
 }
+if (!empty($file['client_encrypted'])) {
+    header('Location: decrypt.php?id=' . $fileId);
+    exit;
+}
 $kind = datadock_preview_kind((string) ($file['filetype'] ?? ''));
 if ($kind === null) {
     header('Location: download.php?id=' . $fileId);

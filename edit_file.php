@@ -34,10 +34,10 @@ $userId = $_SESSION['user_id'];
 $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 
 if ($isAdmin) {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND deleted_at IS NULL");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND deleted_at IS NULL AND replaced_file_id IS NULL");
     $stmt->execute([$fileId]);
 } else {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ? AND deleted_at IS NULL");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND replaced_file_id IS NULL");
     $stmt->execute([$fileId, $userId]);
 }
 $file = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -157,7 +157,7 @@ require_once __DIR__ . '/includes/header.php';
                 <input type="text" name="tags" id="tags" value="<?= sanitize_data($fileTagsStr) ?>" maxlength="2000" placeholder="e.g. work, reference">
             </div>
             <?php endif; ?>
-            <div class="form-group">
+            <div class="form-group" id="download-password">
                 <label>Download password <span class="label-optional">(optional gate for public / shared links)</span></label>
                 <?php if (!empty($file['access_password_hash'])): ?>
                     <p class="form-hint">A password is set. Enter a new password below to replace it, or check &quot;Remove download password&quot;.</p>
@@ -195,6 +195,36 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </form>
+
+    <?php if (!empty($file['client_encrypted'])): ?>
+        <p class="page-description">This file was encrypted in the browser, so preview stays off. <a href="decrypt.php?id=<?= (int) $fileId ?>">Decrypt it here</a> with the passphrase. The passphrase is not stored.</p>
+    <?php endif; ?>
+    <?php
+    require_once __DIR__ . '/includes/personal.php';
+    $versions = datadock_file_versions($pdo, (int) $fileId);
+    ?>
+    <?php if ($versions): ?>
+    <h3 class="section-title">Previous copies</h3>
+    <p class="page-description">Replacing this file keeps the last few copies until trash retention removes them. Restoring makes that copy current again.</p>
+    <ul class="notice-list">
+        <?php foreach ($versions as $version): ?>
+            <li class="notice-item">
+                <p class="notice-title"><?= sanitize_data((string) ($version['original_name'] ?? 'file')) ?></p>
+                <p class="notice-meta">
+                    <?= format_filesize((int) ($version['filesize'] ?? 0)) ?>
+                    · replaced <span class="utc-datetime" data-utc="<?= sanitize_data((string) ($version['deleted_at'] ?? '')) ?>"></span>
+                    <?php if (!empty($version['client_encrypted'])): ?> · encrypted<?php endif; ?>
+                </p>
+                <form method="post" action="restore_version.php">
+                    <?= datadock_csrf_field() ?>
+                    <input type="hidden" name="file_id" value="<?= (int) $fileId ?>">
+                    <input type="hidden" name="version_id" value="<?= (int) $version['id'] ?>">
+                    <button type="submit" class="btn btn-quiet btn-small">Restore this copy</button>
+                </form>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <?php endif; ?>
 </div>
 
 <script>

@@ -54,6 +54,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Close your own account | Password-confirmed self-service deletion. Files are purged, an audit row is written, and the last active admin cannot be removed. |
 | ✓ | Claim a guest upload | One-time claim token so a guest upload can be attached to an account at registration or login and counted against that user's quota. |
 | ✓ | Account theme | Profile setting for a default theme, applied while signed in. Guests use the site default. |
+| ✓ | Upload defaults | Profile expiry (“my uploads last 7 days”) and a share preset of one-time, password, or signed link. |
 
 ---
 
@@ -96,6 +97,12 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Replace file contents | Upload new bytes for an existing file and keep the id, shares, and links. The previous blob follows trash retention. |
 | ✓ | Chunked upload | Client sends slices; the server reassembles into the user's partition, then runs MIME, quarantine, deduplication, and quota checks once. |
 | ✓ | Paste passwords | Optional password gate on pastes, including raw and download URLs, using the same idea as per-file download passwords. |
+| ✓ | Download a folder | The folder you are viewing downloads as one zip. |
+| ✓ | Previous copies | Replacing a file keeps the last few copies on the file page, with restore, until trash retention removes them. |
+| ✓ | Folder defaults | A folder can set the expiry and visibility its new files start with. |
+| ✓ | Personal drop link | A link accepts uploads into one folder only. Files count against that user’s quota and use the folder’s expiry and visibility. The sender does not need an account. |
+| ✓ | Duplicate notice | A new upload that matches a file you already have is kept, and a notice names the existing file. |
+| ✓ | Browser-sealed files | Optional encryption in the browser before upload. The passphrase is not stored, and preview stays off. |
 
 ---
 
@@ -155,6 +162,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | — | SMTP configuration | Host, port, user, pass, encryption. Required before verification links are emailed. |
 | ✓ | Email verification toggle | Admins can require confirmation for new local accounts. Until SMTP exists, signup shows the link and an admin can confirm the address from User Management. Existing accounts stay confirmed. |
 | ✓ | In-app notices | Per-user list for shares received, report reviews, quota warnings, and files expiring soon. Works with SMTP off; email can deliver the same events later. |
+| ✓ | Private notice feed | A personal Atom address for those notices. Opening the feed does not mark them read. |
 
 ---
 
@@ -182,6 +190,7 @@ A forward-looking plan for upcoming features, improvements, and maintenance of t
 | ✓ | Version display in admin panel / footer | Show current version. |
 | ✓ | One-click update system | GitHub release fetcher with semver comparison. |
 | ✓ | Changelog viewer | Most recent changelog section and release notes in admin. |
+| ✓ | Install a release zip | Admin → Updater accepts a zip that is already downloaded and applies the same archive checks as the GitHub update. Settings, uploads, and the database stay in place. |
 
 ---
 
@@ -247,6 +256,7 @@ Lightweight transparency and control for users (v2.3.0).
 | ✓ | User activity page | **Activity** nav: uploads list, `file_download_events` tail, IP / optional country (e.g. `CF-IPCountry`). |
 | ✓ | Storage usage graph | `user_storage_snapshots` (hourly cap), line chart on Activity page. |
 | ✓ | Data export | **`export_data.php`**: JSON with account, files metadata, own activity log rows, download events for owned files. |
+| ✓ | File archive | **`export_files.php`**: a zip of the account’s files plus a manifest (name, hash, expiry, folder). |
 
 ---
 
@@ -258,6 +268,7 @@ Light collaboration without a full folder/collab system.
 |--------|---------|-------------|
 | ✓ | Temporary share folders | One share container, multiple files, one link, expiry (no full folder system). |
 | ✓ | Comment field per file | Optional recipient note per file on share-folder page (v2.4+). |
+| ✓ | Browser-sealed pastes | Optional encryption in the browser before a paste is saved. The passphrase is not stored, and the text stays hidden until it is decrypted locally. |
 | ✓ | Live folder link | Link to a real folder that follows adds and removes, with the same expiry, password, and IP options as files. Distinct from snapshot share bundles. |
 
 ---

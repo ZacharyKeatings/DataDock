@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Your files** — Activity can download a zip of your files plus a manifest with the name, hash, expiry, and folder of each one.
+- **Drop link** — A folder can have a link that accepts uploads into that folder only. The files count against your quota and follow that folder’s expiry and visibility. The sender does not need an account.
+- **Previous copies** — Replacing a file keeps the last few copies on the file page, with restore, until trash retention removes them.
+- **Upload defaults** — A profile expiry and a share preset (one-time, password, or signed link) prefill the usual choice. A folder can set the expiry and visibility its new files start with.
+- **Folder download** — The folder you are viewing can be downloaded as one zip.
+- **Update from a file** — Admin → Updater can install a release zip that is already on disk, using the same archive checks as the GitHub update.
+- **Browser encryption** — A file or a paste can be encrypted in the browser before it is uploaded. The passphrase is not stored, and preview stays off.
+- **Notice feed** — Notices has a private Atom address so a feed reader can follow them while email is not configured.
+- **Duplicate notice** — Uploading bytes you already have keeps the new copy and tells you which file it matches.
 - **Release packages** — Publishing a GitHub release attaches a zip and a tar.gz of that tag. The in-app updater installs the zip. Pre-releases get the same packages. The archives leave out Git metadata, GitHub Actions, tests, contributor docs, and Docker build files.
 - **Update channel** — Admin → Updater can follow stable releases or development pre-releases. Choosing Stable again installs the newest stable release even when its version number is lower. Settings, uploads, and the database stay in place.
 
@@ -28,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Docker uploads** — Ordinary photos are no longer rejected because compressed image data happens to contain `<?`. The image includes PHP’s image library, so creating a thumbnail cannot crash the upload. A Docker install that still has the original 5 MB limit is raised to 200 MB when the container starts. A limit you already changed is left as you set it.
+- **Docker uploads** — Ordinary photos are no longer rejected because compressed image data happens to contain `<?`. The image includes PHP’s image library, so creating a thumbnail cannot crash the upload. A Docker install that still has the original 5 MB limit is raised to 200 MB when the container starts. A limit you already changed is left as you set it. The image also includes PHP’s zip extension, which the file export and the release installer use.
 - **OpenID Connect behind a proxy** — A published image with no trusted-proxy list trusts private-network proxies for `X-Forwarded-Proto`. The sign-in redirect then uses https, which is the address the identity provider has registered. Identity settings show that redirect URI so it can be copied exactly.
 - **File actions** — Opening one file’s Actions menu closes any other open menu.
 - **Midnight theme** — The files list header uses the theme’s dark surface, so the column labels stay readable.

@@ -126,72 +126,14 @@ try {
     exit;
 }
 
-// Verify
-if (!file_exists($zipPath) || filesize($zipPath) === 0) {
-    $_SESSION['flash_error'][] = "❌ Downloaded ZIP is empty or missing.";
+$installed = datadock_install_release_zip($zipPath, dirname(__DIR__));
+@unlink($zipPath);
+if (!$installed['ok']) {
+    $_SESSION['flash_error'][] = $installed['error'] ?? 'The release could not be installed.';
     ob_end_clean();
     header("Location: ../admin.php?section=updater");
     exit;
 }
-
-// Extract
-$zip = new ZipArchive;
-if ($zip->open($zipPath) === TRUE) {
-    for ($i = 0; $i < $zip->numFiles; $i++) {
-        $entry = (string) $zip->getNameIndex($i);
-        if (!datadock_archive_entry_is_safe($entry)) {
-            $zip->close();
-            $_SESSION['flash_error'][] = "❌ Release archive contains an unsafe path.";
-            ob_end_clean();
-            header("Location: ../admin.php?section=updater");
-            exit;
-        }
-    }
-    $zip->extractTo($extractPath);
-    $zip->close();
-} else {
-    $_SESSION['flash_error'][] = "❌ Failed to extract release zip.";
-    ob_end_clean();
-    header("Location: ../admin.php?section=updater");
-    exit;
-}
-
-// Find root folder
-$sourceFolder = find_project_root($extractPath);
-if (!$sourceFolder) {
-    $_SESSION['flash_error'][] = "❌ Could not locate extracted project root (missing index.php).";
-    ob_end_clean();
-    header("Location: ../admin.php?section=updater");
-    exit;
-}
-
-// Overwrite files
-$skip = ['config/settings.php', 'config/db.php', 'config/update-channel.txt', 'uploads', 'thumbnails'];
-
-foreach (new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($sourceFolder, RecursiveDirectoryIterator::SKIP_DOTS),
-    RecursiveIteratorIterator::SELF_FIRST
-) as $item) {
-    $destPath = str_replace($sourceFolder, __DIR__ . '/..', $item);
-    $relPath  = str_replace(__DIR__ . '/../', '', $destPath);
-
-    // Skip protected paths
-    foreach ($skip as $skipped) {
-        if (stripos($relPath, rtrim($skipped, '/')) === 0) {
-            continue 2;
-        }
-    }
-
-    if ($item->isDir()) {
-        if (!file_exists($destPath)) mkdir($destPath);
-    } else {
-        copy($item, $destPath);
-    }
-}
-
-// Clean up
-rrmdir($extractPath);
-unlink($zipPath);
 
 $_SESSION['flash_success'][] = ['html' => true, 'msg' => "✅ DataDock has been updated to <strong>" . htmlspecialchars($tag, ENT_QUOTES, 'UTF-8') . "</strong>."];
 

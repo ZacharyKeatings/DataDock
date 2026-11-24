@@ -151,6 +151,7 @@ if ($action === 'finish') {
         'is_public' => isset($_POST['is_public']) ? 1 : 0,
         'expiry_ts' => $expiry,
         'relocate' => 'rename',
+        'client_encrypted' => !empty($_POST['client_encrypted']),
     ]);
     foreach (glob($dir . '/part_*') ?: [] as $part) {
         @unlink($part);

@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         $_SESSION['flash_error'][] = 'Choose a file to upload.';
     } else {
-        $result = datadock_replace_file_contents($pdo, $settings, $file, (string) $upload['tmp_name'], (string) $upload['name']);
+        $result = datadock_replace_file_contents($pdo, $settings, $file, (string) $upload['tmp_name'], (string) $upload['name'], !empty($_POST['client_encrypted']));
         if (!$result['ok']) {
             $_SESSION['flash_error'][] = $result['error'];
         } else {
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'file_id' => $fileId,
                 'detail' => ['name' => (string) $upload['name']],
             ]);
-            $_SESSION['flash_success'][] = 'File contents replaced. Existing links still point at this file. The previous bytes stay in trash until retention removes them.';
+            $_SESSION['flash_success'][] = 'File contents replaced. Existing links still point at this file. The previous copy stays on the file page until trash retention removes it.';
             header('Location: dashboard.php');
             exit;
         }
@@ -63,8 +63,56 @@ require __DIR__ . '/includes/header.php';
             <label for="replacement">New file</label>
             <input type="file" name="replacement" id="replacement" required>
         </div>
+        <div class="form-group settings-row-checkbox">
+            <label>
+                <input type="checkbox" id="client_encrypt">
+                Encrypt in the browser
+            </label>
+            <p class="form-hint">The passphrase stays on this device. Files over 48 MB are left unencrypted.</p>
+            <input type="password" id="client_encrypt_pass" autocomplete="off" placeholder="Passphrase" hidden>
+        </div>
+        <input type="hidden" name="client_encrypted" id="client_encrypted" value="0">
         <button type="submit" class="btn btn-primary">Replace</button>
         <a href="dashboard.php" class="btn btn-quiet">Cancel</a>
     </form>
 </div>
+<script src="<?= sanitize_data(app_asset_url('assets/client_encrypt.js')) ?>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('form.form');
+    var box = document.getElementById('client_encrypt');
+    var pass = document.getElementById('client_encrypt_pass');
+    var flag = document.getElementById('client_encrypted');
+    var input = document.getElementById('replacement');
+    if (!form || !box || !input) return;
+    box.addEventListener('change', function () { pass.hidden = !box.checked; });
+    form.addEventListener('submit', function (event) {
+        if (!box.checked || form.dataset.sealed === '1') return;
+        event.preventDefault();
+        var file = input.files && input.files[0];
+        if (!file) return;
+        if (!pass.value) {
+            window.alert('Enter a passphrase. It stays in this browser.');
+            return;
+        }
+        if (file.size > datadockEncrypt.limit) {
+            window.alert('Encryption keeps the file in memory. Leave this one unencrypted or choose a file of 48 MB or less.');
+            return;
+        }
+        file.arrayBuffer().then(function (buffer) {
+            return datadockEncrypt.encryptBytes(buffer, pass.value);
+        }).then(function (sealed) {
+            var transfer = new DataTransfer();
+            transfer.items.add(new File([sealed], file.name, { type: 'application/octet-stream' }));
+            input.files = transfer.files;
+            flag.value = '1';
+            pass.value = '';
+            form.dataset.sealed = '1';
+            form.submit();
+        }).catch(function (error) {
+            window.alert(error && error.message ? error.message : 'Could not encrypt this file.');
+        });
+    });
+});
+</script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

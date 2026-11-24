@@ -967,6 +967,9 @@ function build_files_list_where(array $options, string $alias = 'f'): array {
     } elseif (!isset($options['exclude_trashed']) || $options['exclude_trashed']) {
         $conditions[] = $pre . 'deleted_at IS NULL';
     }
+    if (empty($options['include_versions'])) {
+        $conditions[] = $pre . 'replaced_file_id IS NULL';
+    }
 
     if (!empty($options['search'])) {
         $term = '%' . trim($options['search']) . '%';

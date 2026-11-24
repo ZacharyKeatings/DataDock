@@ -26,7 +26,7 @@ function datadock_process_dashboard_post(PDO $pdo): void {
 
     require_once __DIR__ . '/settings_loader.php';
     if (datadock_read_only_enabled(datadock_load_settings())) {
-        if (!empty($_POST['datadock_folder_create']) || !empty($_POST['datadock_move_file'])) {
+        if (!empty($_POST['datadock_folder_create']) || !empty($_POST['datadock_move_file']) || !empty($_POST['datadock_folder_defaults'])) {
             $_SESSION['flash_error'][] = '❌ Read-only mode: folder changes are disabled.';
             $rf = isset($_POST['redirect_folder']) ? (int) $_POST['redirect_folder'] : 0;
             datadock_redirect_dashboard($rf > 0 ? $rf : 0);
@@ -71,6 +71,32 @@ function datadock_process_dashboard_post(PDO $pdo): void {
             }
         }
         datadock_redirect_dashboard($redirectFolder);
+    }
+
+    if (!empty($_POST['datadock_folder_defaults'])) {
+        require_once __DIR__ . '/personal.php';
+        $folderId = (int) ($_POST['folder_id'] ?? 0);
+        $chk = $pdo->prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?');
+        $chk->execute([$folderId, $userId]);
+        if (!$chk->fetch()) {
+            $_SESSION['flash_error'][] = 'That folder is not available.';
+            datadock_redirect_dashboard(0);
+        }
+        $expiryRaw = trim((string) ($_POST['default_expiry'] ?? ''));
+        if ($expiryRaw !== '' && !datadock_known_expiry_key($expiryRaw)) {
+            $_SESSION['flash_error'][] = 'Choose a known expiry.';
+            datadock_redirect_dashboard($folderId);
+        }
+        $publicRaw = (string) ($_POST['default_public'] ?? '');
+        $publicValue = $publicRaw === '' ? null : ($publicRaw === '1' ? 1 : 0);
+        $pdo->prepare('UPDATE folders SET default_expiry = ?, default_public = ? WHERE id = ? AND user_id = ?')->execute([
+            $expiryRaw === '' ? null : $expiryRaw,
+            $publicValue,
+            $folderId,
+            $userId,
+        ]);
+        $_SESSION['flash_success'][] = 'Folder defaults saved.';
+        datadock_redirect_dashboard($folderId);
     }
 
     if (!empty($_POST['datadock_move_file'])) {

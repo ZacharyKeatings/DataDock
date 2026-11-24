@@ -9,6 +9,7 @@ require_once __DIR__ . '/includes/settings_loader.php';
 $settings = datadock_load_settings();
 require_once __DIR__ . '/includes/read_only.php';
 require_once __DIR__ . '/includes/pastes.php';
+require_once __DIR__ . '/includes/personal.php';
 
 $pastesEnabled = datadock_pastes_enabled($settings);
 $readOnly = datadock_read_only_enabled($settings);
@@ -101,9 +102,24 @@ function datadock_paste_render_text(array $paste, bool $receipt, bool $readOnly)
     <?php elseif (!$receipt && !$burned && !datadock_paste_is_creator($paste)): ?>
         <p class="settings-hint">Opening this page, the raw link, or the download URL each count as a view.</p>
     <?php endif; ?>
+    <?php if (!empty($paste['client_encrypted']) && datadock_paste_is_sealed((string) ($paste['content'] ?? ''))): ?>
+        <p class="page-description">This paste was encrypted in the browser. The passphrase is not on the server, and the text stays hidden until you decrypt it here.</p>
+        <form class="form" id="pasteDecrypt">
+            <div class="form-group">
+                <label for="pastePass">Passphrase</label>
+                <input type="password" id="pastePass" autocomplete="off" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Decrypt</button>
+        </form>
+        <p class="form-hint" id="pasteDecryptStatus" role="status"></p>
+        <pre class="paste-body" id="pasteBody" hidden></pre>
+        <script type="application/json" id="pasteSealed"><?= json_encode((string) $paste['content'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+    <?php else: ?>
     <pre class="paste-body" id="pasteBody"><?= htmlspecialchars((string) ($paste['content'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
+    <?php endif; ?>
     <p><a href="paste.php" class="btn btn-primary">New paste</a></p>
 </div>
+<script src="<?= sanitize_data(app_asset_url('assets/client_encrypt.js')) ?>"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.utc-datetime').forEach(function (el) {
@@ -114,6 +130,23 @@ document.addEventListener('DOMContentLoaded', function () {
         el.textContent = local.toLocaleString();
     });
     var body = document.getElementById('pasteBody');
+    var sealedNode = document.getElementById('pasteSealed');
+    var decryptForm = document.getElementById('pasteDecrypt');
+    if (sealedNode && decryptForm && window.datadockEncrypt) {
+        decryptForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var status = document.getElementById('pasteDecryptStatus');
+            datadockEncrypt.decryptText(JSON.parse(sealedNode.textContent), document.getElementById('pastePass').value).then(function (text) {
+                if (body) {
+                    body.hidden = false;
+                    body.textContent = text;
+                }
+                if (status) status.textContent = 'Decrypted in this browser. The passphrase was not sent.';
+            }).catch(function () {
+                if (status) status.textContent = 'Could not decrypt that paste. Check the passphrase.';
+            });
+        });
+    }
     var wrap = document.getElementById('pasteWrap');
     if (wrap && body) {
         wrap.addEventListener('change', function () {
@@ -269,6 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formDuration = (string) ($_POST['duration'] ?? $defaultExpiry);
     $formBurn = !empty($_POST['burn_after_read']);
     $formPastePassword = (string) ($_POST['paste_password'] ?? '');
+    $formSealed = !empty($_POST['client_encrypted']);
 
     $postMax = return_bytes((string) ini_get('post_max_size'));
     $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
@@ -278,6 +312,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['flash_error'][] = '❌ Paste some text before sharing.';
     } elseif (strlen($formContent) > $maxBytes) {
         $_SESSION['flash_error'][] = '❌ Paste exceeds the limit of ' . format_filesize($maxBytes) . '.';
+    }
+    if ($formSealed && !datadock_paste_is_sealed($formContent)) {
+        $_SESSION['flash_error'][] = '❌ That paste was not sealed in the browser.';
     }
     if ($formTitle !== '' && datadock_paste_strlen($formTitle) > 200) {
         $_SESSION['flash_error'][] = '❌ Title must be 200 characters or fewer.';
@@ -318,6 +355,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'burn_after_read' => $formBurn ? 1 : 0,
                 ],
             ]);
+            if ($formSealed) {
+                $pdo->prepare('UPDATE pastes SET client_encrypted = 1 WHERE id = ?')->execute([(int) $createdRow['id']]);
+            }
             header('Location: paste.php?created=' . rawurlencode($createdRow['token']));
             exit;
         } catch (Throwable $e) {
@@ -380,13 +420,51 @@ require __DIR__ . '/includes/header.php';
                     </label>
                     <small>The first person who opens the link sees it once. Then it is gone.</small>
                 </div>
+                <div class="upload-option upload-option-checkbox">
+                    <label class="tos-checkbox">
+                        <input type="checkbox" id="client_encrypt">
+                        Encrypt in the browser
+                    </label>
+                    <small>The passphrase is not stored. The paste stays unreadable until someone enters it here.</small>
+                    <input type="password" id="client_encrypt_pass" autocomplete="off" placeholder="Passphrase" hidden>
+                </div>
             </div>
+            <input type="hidden" name="client_encrypted" id="client_encrypted" value="0">
             <div class="upload-submit-wrap">
                 <button type="submit" class="btn btn-primary">Create link</button>
             </div>
         </form>
+        <script src="<?= sanitize_data(app_asset_url('assets/client_encrypt.js')) ?>"></script>
         <script>
         document.addEventListener('DOMContentLoaded', function () {
+            var box = document.getElementById('client_encrypt');
+            var pass = document.getElementById('client_encrypt_pass');
+            var flag = document.getElementById('client_encrypted');
+            var form = document.querySelector('.paste-form');
+            if (box && pass) {
+                box.addEventListener('change', function () { pass.hidden = !box.checked; });
+            }
+            if (form && box) {
+                form.addEventListener('submit', function (event) {
+                    if (!box.checked || form.dataset.sealed === '1') return;
+                    event.preventDefault();
+                    var phrase = pass ? pass.value : '';
+                    var area = document.getElementById('paste_content');
+                    if (!phrase) {
+                        window.alert('Enter a passphrase. It stays in this browser.');
+                        return;
+                    }
+                    datadockEncrypt.encryptText(area.value, phrase).then(function (sealed) {
+                        area.value = sealed;
+                        if (flag) flag.value = '1';
+                        if (pass) pass.value = '';
+                        form.dataset.sealed = '1';
+                        form.submit();
+                    }).catch(function (error) {
+                        window.alert(error && error.message ? error.message : 'Could not encrypt this paste.');
+                    });
+                });
+            }
             var area = document.getElementById('paste_content');
             var hint = document.getElementById('paste_size');
             if (!area || !hint) return;

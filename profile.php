@@ -12,7 +12,7 @@ require_once __DIR__ . '/includes/accounts.php';
 require_once __DIR__ . '/includes/audit_log.php';
 
 $userId = $_SESSION['user_id'];
-$stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at, preferred_theme FROM users WHERE id = ?");
+$stmt = $pdo->prepare("SELECT id, username, email, display_name, avatar, bio, role, created_at, preferred_theme, default_expiry, share_preset FROM users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$user) {
@@ -27,6 +27,8 @@ $displayName = $user['display_name'] ?? '';
 $avatar = $user['avatar'] ?? '';
 $bio = $user['bio'] ?? '';
 $preferredTheme = trim((string) ($user['preferred_theme'] ?? ''));
+$defaultExpiry = trim((string) ($user['default_expiry'] ?? ''));
+$sharePreset = trim((string) ($user['share_preset'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     datadock_reject_invalid_csrf('profile.php');
@@ -48,6 +50,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 datadock_set_theme_cookie($chosen);
             }
             $_SESSION['flash_success'][] = 'Default theme saved.';
+        }
+        header('Location: profile.php');
+        exit;
+    }
+
+    if ($action === 'defaults') {
+        require_once __DIR__ . '/includes/personal.php';
+        $expiryRaw = trim((string) ($_POST['default_expiry'] ?? ''));
+        $presetRaw = datadock_share_preset(trim((string) ($_POST['share_preset'] ?? '')));
+        if ($expiryRaw !== '' && !datadock_known_expiry_key($expiryRaw)) {
+            $_SESSION['flash_error'][] = 'Choose a known expiry.';
+        } else {
+            $pdo->prepare('UPDATE users SET default_expiry = ?, share_preset = ? WHERE id = ?')->execute([
+                $expiryRaw === '' ? null : $expiryRaw,
+                $presetRaw === '' ? null : $presetRaw,
+                $userId,
+            ]);
+            $_SESSION['flash_success'][] = 'Upload defaults saved.';
         }
         header('Location: profile.php');
         exit;
@@ -415,6 +435,39 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="form-hint">Applied while you are signed in. Choose Site default to follow the theme set by an admin.</p>
                 </div>
                 <button type="submit" class="btn btn-primary">Save theme</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="settings-card stack-card">
+        <h3 class="settings-card-title">Upload defaults</h3>
+        <div class="settings-card-body">
+            <form method="post" class="form">
+                <?= datadock_csrf_field() ?>
+                <input type="hidden" name="action" value="defaults">
+                <div class="form-group">
+                    <label for="default_expiry">My uploads last</label>
+                    <select name="default_expiry" id="default_expiry">
+                        <option value=""<?= $defaultExpiry === '' ? ' selected' : '' ?>>Site default</option>
+                        <?php
+                        require_once __DIR__ . '/includes/personal.php';
+                        foreach (datadock_expiry_offsets() as $key => $offset): ?>
+                            <option value="<?= sanitize_data($key) ?>"<?= $defaultExpiry === $key ? ' selected' : '' ?>><?= sanitize_data(ucwords(str_replace('_', ' ', $key))) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="form-hint">Used when a folder does not set its own expiry. You can still change it on each upload.</p>
+                </div>
+                <div class="form-group">
+                    <label for="share_preset">Share preset</label>
+                    <select name="share_preset" id="share_preset">
+                        <option value=""<?= $sharePreset === '' ? ' selected' : '' ?>>No preset</option>
+                        <option value="onetime"<?= $sharePreset === 'onetime' ? ' selected' : '' ?>>One-time link</option>
+                        <option value="password"<?= $sharePreset === 'password' ? ' selected' : '' ?>>Download password</option>
+                        <option value="signed"<?= $sharePreset === 'signed' ? ' selected' : '' ?>>Signed link</option>
+                    </select>
+                    <p class="form-hint">Adds that share action first on each file. The other ways to share stay available.</p>
+                </div>
+                <button type="submit" class="btn btn-primary">Save defaults</button>
             </form>
         </div>
     </div>

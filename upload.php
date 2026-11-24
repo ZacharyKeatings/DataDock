@@ -10,6 +10,7 @@ $settings = datadock_load_settings();
 require_once __DIR__ . '/includes/read_only.php';
 require_once __DIR__ . '/includes/ingest_file.php';
 require_once __DIR__ . '/includes/quotas.php';
+require_once __DIR__ . '/includes/personal.php';
 
 // feature flags & limits
 $guestUploadsEnabled       = $settings['guest_uploads']['enabled']         ?? false;
@@ -280,6 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'is_public' => isset($_POST['is_public']) ? 1 : 0,
             'expiry_ts' => $expiryTs,
             'relocate' => 'upload',
+            'client_encrypted' => !empty($_POST['client_encrypted']),
         ]);
         if (!$stored['ok']) {
             $_SESSION['flash_error'][] = $stored['error'];
@@ -361,6 +363,12 @@ $uploadFolderId = '';
 if (!empty($_SESSION['user_id']) && isset($_GET['folder']) && is_numeric($_GET['folder']) && (int) $_GET['folder'] > 0) {
     $uploadFolderId = (string) (int) $_GET['folder'];
 }
+if (!empty($currentUserId)) {
+    $uploadDefaults = datadock_effective_upload_defaults($pdo, (int) $currentUserId, (int) $uploadFolderId, $defaultFileExpiry);
+    $defaultFileExpiry = $uploadDefaults['expiry'];
+} else {
+    $uploadDefaults = ['expiry' => $defaultFileExpiry, 'public' => null];
+}
 $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolderId : 'dashboard.php';
 ?>
 
@@ -440,7 +448,7 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
           <?php if ($publicBrowsingEnabled): ?>
           <div class="upload-option upload-option-checkbox">
             <label class="tos-checkbox">
-              <input type="checkbox" name="is_public" id="is_public">
+              <input type="checkbox" name="is_public" id="is_public"<?= ($uploadDefaults['public'] ?? null) === 1 ? ' checked' : '' ?>>
               Make public
             </label>
             <small>Anyone can browse and download</small>
@@ -466,12 +474,22 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
         </label>
         <p class="form-hint">Uploads over 512 KB are already split into pieces, so a server size limit does not reject the whole request. Check this to send smaller files that way too.</p>
       </div>
+      <div class="form-group settings-row-checkbox">
+        <label>
+          <input type="checkbox" id="client_encrypt">
+          Encrypt in the browser
+        </label>
+        <p class="form-hint">The passphrase stays on this device and is not sent to the server. Preview stays off. Files over 48 MB are left unencrypted.</p>
+        <input type="password" id="client_encrypt_pass" autocomplete="off" placeholder="Passphrase" hidden>
+      </div>
+      <input type="hidden" name="client_encrypted" id="client_encrypted" value="0">
       <div class="upload-submit-wrap">
         <button type="submit" class="btn btn-primary btn-upload-submit">Upload</button>
       </div>
     </form>
   <?php endif; ?>
 
+  <script src="<?= sanitize_data(app_asset_url('assets/client_encrypt.js')) ?>"></script>
   <script>
     const dropZone          = document.getElementById("dropZone");
     const fileInput         = document.getElementById("upload");
@@ -700,7 +718,42 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       }
     }
 
-    uploadForm.addEventListener("submit", function(event) {
+    const encryptBox = document.getElementById('client_encrypt');
+    const encryptPass = document.getElementById('client_encrypt_pass');
+    const encryptFlag = document.getElementById('client_encrypted');
+    if (encryptBox && encryptPass) {
+      encryptBox.addEventListener('change', function () {
+        encryptPass.hidden = !encryptBox.checked;
+        if (!encryptBox.checked && encryptFlag) encryptFlag.value = '0';
+      });
+    }
+
+    async function sealSelectedFiles() {
+      if (!encryptBox || !encryptBox.checked) return true;
+      const passphrase = encryptPass ? encryptPass.value : '';
+      if (!passphrase) {
+        showUploadResult(['Enter a passphrase. It stays in this browser and is not uploaded.'], []);
+        return false;
+      }
+      const incoming = Array.from(fileInput.files);
+      if (!incoming.length) return true;
+      const oversized = incoming.filter(function (file) { return file.size > datadockEncrypt.limit; });
+      if (oversized.length) {
+        showUploadResult(['Encryption keeps the file in memory. Leave these unencrypted or choose files of 48 MB or less: ' + oversized.map(function (file) { return file.name; }).join(', ')], []);
+        return false;
+      }
+      const transfer = new DataTransfer();
+      for (const file of incoming) {
+        const sealed = await datadockEncrypt.encryptBytes(await file.arrayBuffer(), passphrase);
+        transfer.items.add(new File([sealed], file.name, { type: 'application/octet-stream' }));
+      }
+      fileInput.files = transfer.files;
+      if (encryptFlag) encryptFlag.value = '1';
+      if (encryptPass) encryptPass.value = '';
+      return true;
+    }
+
+    uploadForm.addEventListener("submit", async function(event) {
       event.preventDefault();
       const bad = Array.from(fileInput.files).filter(f =>
         extensionBlocked(f.name) ||
@@ -708,6 +761,13 @@ $filesBackHref = $uploadFolderId !== '' ? 'dashboard.php?folder=' . $uploadFolde
       );
       if (bad.length) {
         showUploadResult(["❌ Remove blocked or oversize files before uploading: " + bad.map(f => f.name).join(", ")], []);
+        return;
+      }
+      try {
+        const sealed = await sealSelectedFiles();
+        if (!sealed) return;
+      } catch (err) {
+        showUploadResult([err && err.message ? err.message : 'Could not encrypt the file in this browser.'], []);
         return;
       }
       uploadButton.disabled    = true;

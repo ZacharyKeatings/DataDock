@@ -146,3 +146,145 @@ function datadock_fetch_update_target(?string $channel = null): array {
         'notes' => (string) ($release['body'] ?? ''),
     ];
 }
+
+/**
+ * Install a release zip that is already on disk.
+ * Settings, the database config, the update channel, and upload storage are left in place.
+ *
+ * @return array{ok:bool,error:?string,label:string}
+ */
+function datadock_install_release_zip(string $zipPath, string $appRoot): array {
+    if (!function_exists('datadock_archive_entry_is_safe')) {
+        require_once __DIR__ . '/functions.php';
+    }
+    if (!function_exists('datadock_remove_tree')) {
+        require_once __DIR__ . '/private_storage.php';
+    }
+    $failed = static function (string $error): array {
+        return ['ok' => false, 'error' => $error, 'label' => ''];
+    };
+    if (!class_exists('ZipArchive')) {
+        return $failed('Zip support is not installed.');
+    }
+    if (!is_file($zipPath) || filesize($zipPath) === 0) {
+        return $failed('The release zip is empty or missing.');
+    }
+    $appReal = realpath($appRoot);
+    if ($appReal === false || !is_dir($appReal)) {
+        return $failed('The application directory could not be found.');
+    }
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        return $failed('That file is not a zip archive.');
+    }
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $entry = (string) $zip->getNameIndex($i);
+        if (!datadock_archive_entry_is_safe($entry)) {
+            $zip->close();
+            return $failed('The archive contains an unsafe path.');
+        }
+    }
+    $extract = sys_get_temp_dir() . '/datadock-release-' . bin2hex(random_bytes(6));
+    if (!@mkdir($extract, 0700, true)) {
+        $zip->close();
+        return $failed('Could not prepare a temporary directory.');
+    }
+    $extracted = $zip->extractTo($extract);
+    $zip->close();
+    if (!$extracted) {
+        datadock_remove_tree($extract);
+        return $failed('Could not extract the release zip.');
+    }
+    $source = datadock_release_project_root($extract);
+    if ($source === null) {
+        datadock_remove_tree($extract);
+        return $failed('The archive does not contain a DataDock release (missing index.php).');
+    }
+    $label = 'the uploaded release';
+    $versionFile = $source . '/VERSION';
+    if (is_file($versionFile)) {
+        $version = trim((string) file_get_contents($versionFile));
+        if ($version !== '') {
+            $label = $version;
+        }
+    }
+    $skip = [
+        'config/settings.php',
+        'config/db.php',
+        'config/update-channel.txt',
+        'config/.db-runtime.php',
+        'config/.docker.php',
+        'uploads',
+        'thumbnails',
+    ];
+    $sourceReal = realpath($source);
+    if ($sourceReal === false) {
+        datadock_remove_tree($extract);
+        return $failed('The extracted release could not be read.');
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($sourceReal, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+    foreach ($iterator as $item) {
+        $itemPath = $item->getPathname();
+        $rel = substr($itemPath, strlen($sourceReal) + 1);
+        $rel = str_replace('\\', '/', $rel);
+        if ($rel === '' || datadock_release_path_is_skipped($rel, $skip)) {
+            continue;
+        }
+        $target = $appReal . '/' . $rel;
+        $parent = dirname($target);
+        if (!is_dir($parent) && !@mkdir($parent, 0755, true)) {
+            datadock_remove_tree($extract);
+            return $failed('Could not create a directory for the release.');
+        }
+        $parentReal = realpath($parent);
+        $rootPrefix = rtrim($appReal, '/') . '/';
+        if ($parentReal === false || ($parentReal !== $appReal && !str_starts_with($parentReal . '/', $rootPrefix))) {
+            datadock_remove_tree($extract);
+            return $failed('The release tried to write outside the application directory.');
+        }
+        if ($item->isDir()) {
+            if (!is_dir($target) && !@mkdir($target, 0755, true)) {
+                datadock_remove_tree($extract);
+                return $failed('Could not create a directory for the release.');
+            }
+            continue;
+        }
+        if (!@copy($itemPath, $target)) {
+            datadock_remove_tree($extract);
+            return $failed('Could not copy a file from the release.');
+        }
+    }
+    datadock_remove_tree($extract);
+    return ['ok' => true, 'error' => null, 'label' => $label];
+}
+
+function datadock_release_project_root(string $extract): ?string {
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($extract, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($iterator as $file) {
+        if ($file->isFile() && $file->getFilename() === 'index.php') {
+            return $file->getPath();
+        }
+    }
+    return null;
+}
+
+/**
+ * @param list<string> $skip
+ */
+function datadock_release_path_is_skipped(string $rel, array $skip): bool {
+    foreach ($skip as $skipped) {
+        $skipped = trim(str_replace('\\', '/', $skipped), '/');
+        if ($skipped === '') {
+            continue;
+        }
+        if ($rel === $skipped || str_starts_with($rel, $skipped . '/')) {
+            return true;
+        }
+    }
+    return false;
+}

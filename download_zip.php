@@ -13,32 +13,51 @@ $ids = [];
 if (isset($_GET['ids'])) {
     $ids = is_array($_GET['ids']) ? array_map('intval', $_GET['ids']) : array_map('intval', explode(',', $_GET['ids']));
 }
-$ids = array_filter(array_unique($ids));
-if (empty($ids)) {
-    $_SESSION['flash_error'][] = "❌ No files selected.";
-    header("Location: dashboard.php");
-    exit;
-}
+$ids = array_values(array_filter(array_unique($ids)));
+$folderId = isset($_GET['folder']) ? (int) $_GET['folder'] : 0;
 
 $userId = $_SESSION['user_id'];
 $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 
+if ($folderId > 0 && $ids === []) {
+    $folder = $pdo->prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?');
+    $folder->execute([$folderId, (int) $userId]);
+    if (!$folder->fetch()) {
+        $_SESSION['flash_error'][] = "❌ That folder is not available.";
+        header("Location: dashboard.php");
+        exit;
+    }
+    $stmt = $pdo->prepare("
+        SELECT * FROM files
+        WHERE user_id = ? AND folder_id = ? AND deleted_at IS NULL AND replaced_file_id IS NULL
+          AND (quarantine_status = 'approved' OR quarantine_status IS NULL)
+          AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())
+    ");
+    $stmt->execute([(int) $userId, $folderId]);
+    $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} elseif ($ids === []) {
+    $_SESSION['flash_error'][] = "❌ No files selected.";
+    header("Location: dashboard.php");
+    exit;
+} else {
+
 $placeholders = implode(',', array_fill(0, count($ids), '?'));
 if ($isAdmin) {
-    $stmt = $pdo->prepare("SELECT * FROM files WHERE id IN ($placeholders) AND deleted_at IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
+    $stmt = $pdo->prepare("SELECT * FROM files WHERE id IN ($placeholders) AND deleted_at IS NULL AND replaced_file_id IS NULL AND (expiry_date IS NULL OR expiry_date > UTC_TIMESTAMP())");
     $stmt->execute($ids);
 } else {
     // Owner OR shared with user; exclude trashed
     $stmt = $pdo->prepare("
         SELECT f.* FROM files f
         LEFT JOIN file_shares fs ON f.id = fs.file_id AND fs.shared_with_user_id = ?
-        WHERE f.id IN ($placeholders) AND f.deleted_at IS NULL AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
+        WHERE f.id IN ($placeholders) AND f.deleted_at IS NULL AND f.replaced_file_id IS NULL AND (f.quarantine_status = 'approved' OR f.quarantine_status IS NULL)
         AND (f.expiry_date IS NULL OR f.expiry_date > UTC_TIMESTAMP())
         AND (f.user_id = ? OR fs.id IS NOT NULL)
     ");
     $stmt->execute(array_merge([$userId], $ids, [$userId]));
 }
 $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 if (empty($files)) {
     $_SESSION['flash_error'][] = "❌ No valid files found or permission denied.";

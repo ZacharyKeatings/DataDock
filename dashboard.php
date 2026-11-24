@@ -14,6 +14,7 @@ require_once __DIR__ . '/includes/user_trust.php';
 require_once __DIR__ . '/includes/notices.php';
 require_once __DIR__ . '/includes/access_control.php';
 require_once __DIR__ . '/includes/pagination.php';
+require_once __DIR__ . '/includes/personal.php';
 
 datadock_process_dashboard_post($pdo);
 datadock_maybe_record_storage_snapshot($pdo, (int) $_SESSION['user_id']);
@@ -26,6 +27,14 @@ $dashUrl = 'dashboard.php';
 $uploadUrl = 'upload.php';
 
 $userId = $_SESSION['user_id'];
+$sharePreset = '';
+try {
+    $presetStmt = $pdo->prepare('SELECT share_preset FROM users WHERE id = ?');
+    $presetStmt->execute([(int) $userId]);
+    $sharePreset = datadock_share_preset((string) ($presetStmt->fetchColumn() ?: ''));
+} catch (Throwable $e) {
+    $sharePreset = '';
+}
 $publicBrowsingEnabled = !empty($settings['public_browsing_enabled']);
 $foldersEnabled = !isset($settings['folders_enabled']) || !empty($settings['folders_enabled']);
 $tagsEnabled = !isset($settings['tags_enabled']) || !empty($settings['tags_enabled']);
@@ -112,7 +121,7 @@ if ($foldersEnabled) {
 
     $fid = $currentFolderId;
     while ($fid > 0) {
-        $stmt = $pdo->prepare('SELECT id, name, parent_id FROM folders WHERE id = ? AND user_id = ?');
+        $stmt = $pdo->prepare('SELECT id, name, parent_id, default_expiry, default_public FROM folders WHERE id = ? AND user_id = ?');
         $stmt->execute([$fid, $userId]);
         $fr = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$fr) {
@@ -286,7 +295,9 @@ if ($foldersEnabled && $currentFolderId > 0) {
         <?php if (empty($readOnly)): ?>
         <a href="<?= sanitize_data($uploadHere) ?>" class="btn btn-primary"><?= ($foldersEnabled && $currentFolderId > 0) ? 'Upload to this folder' : 'Upload files' ?></a>
         <?php if ($foldersEnabled && $currentFolderId > 0): ?>
+        <a href="download_zip.php?folder=<?= (int) $currentFolderId ?>" class="btn btn-quiet">Download this folder</a>
         <a href="create_folder_link.php?folder=<?= (int) $currentFolderId ?>" class="btn btn-quiet">Live folder link</a>
+        <a href="create_drop.php?folder=<?= (int) $currentFolderId ?>" class="btn btn-quiet">Drop link</a>
         <?php endif; ?>
         <?php endif; ?>
     </div>
@@ -364,6 +375,37 @@ if ($foldersEnabled && $currentFolderId > 0) {
         </div>
         <button type="submit" class="btn btn-quiet btn-small">Create folder</button>
     </form>
+    <?php if ($currentFolderId > 0):
+        $currentFolderRow = $folderTrail ? $folderTrail[count($folderTrail) - 1] : null;
+        $folderExpiry = is_array($currentFolderRow) ? (string) ($currentFolderRow['default_expiry'] ?? '') : '';
+        $folderPublic = is_array($currentFolderRow) && $currentFolderRow['default_public'] !== null && $currentFolderRow['default_public'] !== ''
+            ? (string) (int) $currentFolderRow['default_public']
+            : '';
+    ?>
+    <form method="post" action="" class="folder-create-form">
+        <?= datadock_csrf_field() ?>
+        <input type="hidden" name="datadock_folder_defaults" value="1">
+        <input type="hidden" name="folder_id" value="<?= (int) $currentFolderId ?>">
+        <div class="filter-group">
+            <label for="folder-expiry" class="filter-label">New files expire</label>
+            <select name="default_expiry" id="folder-expiry">
+                <option value=""<?= $folderExpiry === '' ? ' selected' : '' ?>>Your default</option>
+                <?php foreach (datadock_expiry_offsets() as $key => $offset): ?>
+                    <option value="<?= sanitize_data($key) ?>"<?= $folderExpiry === $key ? ' selected' : '' ?>><?= sanitize_data(ucwords(str_replace('_', ' ', $key))) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="folder-public" class="filter-label">Visibility</label>
+            <select name="default_public" id="folder-public">
+                <option value=""<?= $folderPublic === '' ? ' selected' : '' ?>>Leave private unless chosen</option>
+                <option value="0"<?= $folderPublic === '0' ? ' selected' : '' ?>>Start private</option>
+                <option value="1"<?= $folderPublic === '1' ? ' selected' : '' ?>>Start public</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-quiet btn-small">Save folder defaults</button>
+    </form>
+    <?php endif; ?>
     <?php endif; ?>
     <?php endif; ?>
 
@@ -542,10 +584,21 @@ if ($foldersEnabled && $currentFolderId > 0) {
                                             </button>
                                         </form>
                                         <?php endif; ?>
+                                        <?php if (!empty($file['client_encrypted'])): ?>
+                                        <a href="decrypt.php?id=<?= $file['id'] ?>" class="dropdown-item">Decrypt</a>
+                                        <?php else: ?>
                                         <a href="preview.php?id=<?= $file['id'] ?>" class="dropdown-item">Preview</a>
+                                        <?php endif; ?>
                                         <a href="replace_file.php?id=<?= $file['id'] ?>" class="dropdown-item">Replace contents</a>
                                         <a href="share.php?id=<?= $file['id'] ?>" class="dropdown-item">Share</a>
                                         <a href="download.php?id=<?= $file['id'] ?>" class="dropdown-item">Download</a>
+                                        <?php if ($sharePreset === 'onetime'): ?>
+                                        <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">Share (one-time)</a>
+                                        <?php elseif ($sharePreset === 'signed'): ?>
+                                        <a href="create_signed.php?id=<?= $file['id'] ?>" class="dropdown-item">Share (signed link)</a>
+                                        <?php elseif ($sharePreset === 'password'): ?>
+                                        <a href="edit_file.php?id=<?= $file['id'] ?>#download-password" class="dropdown-item">Share (password)</a>
+                                        <?php endif; ?>
                                         <a href="create_onetime.php?id=<?= $file['id'] ?>" class="dropdown-item">Share link (token)</a>
                                         <a href="create_signed.php?id=<?= $file['id'] ?>" class="dropdown-item">Signed link (HMAC)</a>
                                     <?php endif; ?>

@@ -15,6 +15,7 @@ require_once dirname(__DIR__) . '/includes/guest_claim.php';
 require_once dirname(__DIR__) . '/includes/folder_links.php';
 require_once dirname(__DIR__) . '/includes/hotlink_log.php';
 require_once dirname(__DIR__) . '/includes/integrity.php';
+require_once dirname(__DIR__) . '/includes/personal.php';
 
 try {
     run_migrations($pdo);
@@ -400,4 +401,85 @@ $_SESSION['totp_pending'] = ['user_id' => $ada];
 expect_same('password login starts a session', (int) ($_SESSION['user_id'] ?? 0), $ada);
 expect_same('password login keeps the username', (string) ($_SESSION['username'] ?? ''), 'ada');
 expect_false('password login clears a pending authenticator step', isset($_SESSION['totp_pending']));
+$pdo->prepare('UPDATE users SET default_expiry = ? WHERE id = ?')->execute(['1_day', $uploader]);
+$ownerDefault = datadock_effective_upload_defaults($pdo, $uploader, 0, 'never');
+expect_same('an owner expiry replaces the site default', $ownerDefault['expiry'], '1_day');
+$pdo->prepare('INSERT INTO folders (user_id, parent_id, name, default_expiry, default_public) VALUES (?, 0, ?, ?, ?)')->execute([$uploader, 'Incoming', '1_week', 1]);
+$incoming = (int) $pdo->lastInsertId();
+$folderDefault = datadock_effective_upload_defaults($pdo, $uploader, $incoming, 'never');
+expect_same('a folder expiry replaces the owner default', $folderDefault['expiry'], '1_week');
+expect_same('a folder can start files as public', $folderDefault['public'], 1);
+$dropToken = datadock_create_drop_link($pdo, $uploader, $incoming);
+expect_true('a drop link is created', is_string($dropToken) && strlen((string) $dropToken) === 64);
+$drop = datadock_drop_link_by_token($pdo, (string) $dropToken);
+expect_same('a drop link points at that folder', (int) ($drop['folder_id'] ?? 0), $incoming);
+
+$dupSettings = $ingestSettings;
+$dupSettings['deduplicate_storage'] = true;
+$dupSrc = $storageRoot . '/dup.txt';
+file_put_contents($dupSrc, 'same-bytes');
+$firstDup = datadock_ingest_local_file($pdo, $dupSettings, [
+    'source_path' => $dupSrc,
+    'original_name' => 'first.txt',
+    'user_id' => $uploader,
+]);
+file_put_contents($dupSrc, 'same-bytes');
+$secondDup = datadock_ingest_local_file($pdo, $dupSettings, [
+    'source_path' => $dupSrc,
+    'original_name' => 'second.txt',
+    'user_id' => $uploader,
+]);
+expect_true('a matching upload is still stored', !empty($secondDup['ok']) && (int) ($secondDup['file_id'] ?? 0) !== (int) ($firstDup['file_id'] ?? 0));
+expect_true('a matching upload tells the owner', (int) $pdo->query("SELECT COUNT(*) FROM user_notices WHERE user_id = {$uploader} AND kind = 'duplicate_file'")->fetchColumn() >= 1);
+
+if ($storedId > 0) {
+    $live = $pdo->query('SELECT * FROM files WHERE id = ' . $storedId)->fetch(PDO::FETCH_ASSOC);
+    $next = $storageRoot . '/note-v2.txt';
+    file_put_contents($next, 'second copy');
+    $replaced = datadock_replace_file_contents($pdo, $ingestSettings, is_array($live) ? $live : [], $next, 'note.txt');
+    expect_true('replacing a file keeps the id', !empty($replaced['ok']));
+    expect_same('the previous copy is listed', count(datadock_file_versions($pdo, $storedId)), 1);
+    [$trashWhere, $trashParams] = build_files_list_where(['user_id' => $uploader, 'trashed_only' => true]);
+    $trashCount = $pdo->prepare("SELECT COUNT(*) FROM files f WHERE {$trashWhere}");
+    $trashCount->execute($trashParams);
+    expect_same('a previous copy stays out of the trash list', (int) $trashCount->fetchColumn(), 0);
+    $versionId = (int) $pdo->query('SELECT id FROM files WHERE replaced_file_id = ' . $storedId)->fetchColumn();
+    $restored = datadock_restore_file_version($pdo, $storedId, $versionId, $uploader);
+    expect_true('a previous copy can be restored', !empty($restored['ok']));
+    $restoredName = (string) $pdo->query('SELECT filename FROM files WHERE id = ' . $storedId)->fetchColumn();
+    expect_same('restoring brings the earlier bytes back', (string) file_get_contents(datadock_upload_dir($pdo, 1) . $restoredName), 'hello dock');
+}
+
+$exportZip = $storageRoot . '/mine.zip';
+$exported = datadock_build_user_export_zip($pdo, $uploader, $exportZip);
+expect_true('a file export is built', !empty($exported['ok']) && $exported['count'] >= 1);
+$exportArchive = new ZipArchive();
+expect_true('a file export opens', $exportArchive->open($exportZip) === true);
+$manifest = (string) $exportArchive->getFromName('manifest.json');
+$exportArchive->close();
+expect_contains('a file export names the file', $manifest, 'note.txt');
+expect_contains('a file export records the hash field', $manifest, 'sha256');
+
+$sealed = $storageRoot . '/sealed.jpg';
+file_put_contents($sealed, "DDE1" . random_bytes(48));
+$unsealed = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $sealed,
+    'original_name' => 'photo.jpg',
+    'user_id' => $uploader,
+]);
+expect_false('an unsealed image still has to match its type', !empty($unsealed['ok']));
+file_put_contents($sealed, "DDE1" . random_bytes(48));
+$sealedOk = datadock_ingest_local_file($pdo, $ingestSettings, [
+    'source_path' => $sealed,
+    'original_name' => 'photo.jpg',
+    'user_id' => $uploader,
+    'client_encrypted' => true,
+]);
+expect_true('a browser-sealed file is stored', !empty($sealedOk['ok']));
+expect_same('a browser-sealed file skips preview', (int) $pdo->query('SELECT client_encrypted FROM files WHERE id = ' . (int) ($sealedOk['file_id'] ?? 0))->fetchColumn(), 1);
+
+$feedToken = datadock_notice_feed_token($pdo, $uploader);
+expect_true('a notice feed token is issued', strlen($feedToken) === 64);
+expect_same('a notice feed token finds the owner', datadock_user_id_for_notice_feed($pdo, $feedToken), $uploader);
+
 datadock_remove_tree($storageRoot);

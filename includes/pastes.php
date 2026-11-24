@@ -251,8 +251,8 @@ function datadock_owned_pastes(PDO $pdo, int $limit = 20, int $offset = 0): arra
     try {
         if ($uid) {
             $stmt = $pdo->prepare('
-                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, OCTET_LENGTH(content) AS content_bytes,
-                       SUBSTRING(content, 1, 240) AS preview
+                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, client_encrypted, OCTET_LENGTH(content) AS content_bytes,
+                       CASE WHEN client_encrypted = 1 THEN NULL ELSE SUBSTRING(content, 1, 240) END AS preview
                 FROM pastes
                 WHERE user_id = ? AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())
                 ORDER BY created_at DESC
@@ -265,8 +265,8 @@ function datadock_owned_pastes(PDO $pdo, int $limit = 20, int $offset = 0): arra
                 return [];
             }
             $stmt = $pdo->prepare('
-                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, OCTET_LENGTH(content) AS content_bytes,
-                       SUBSTRING(content, 1, 240) AS preview
+                SELECT id, token, title, expires_at, burn_after_read, view_count, created_at, client_encrypted, OCTET_LENGTH(content) AS content_bytes,
+                       CASE WHEN client_encrypted = 1 THEN NULL ELSE SUBSTRING(content, 1, 240) END AS preview
                 FROM pastes
                 WHERE guest_id = ? AND user_id IS NULL AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())
                 ORDER BY created_at DESC
@@ -338,6 +338,9 @@ function datadock_echo_owned_pastes(PDO $pdo, bool $readOnly, string $returnTo =
         echo ' · ' . sanitize_data(format_filesize((int) ($row['content_bytes'] ?? 0)));
         if (!empty($row['burn_after_read'])) {
             echo ' · one-time';
+        }
+        if (!empty($row['client_encrypted'])) {
+            echo ' · encrypted';
         }
         if ($expires) {
             echo ' · expires <span class="utc-datetime" data-utc="' . sanitize_data((string) $expires) . '"></span>';
